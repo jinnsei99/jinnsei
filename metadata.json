@@ -1,0 +1,6 @@
+{
+  "name": "ChemVerse",
+  "description": "Interactive undergraduate chemistry learning platform featuring 3D Py3Dmol molecular tutoring, SymPy quantum equation derivations, PubMed literature RAG, and biochemical spectral analysis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
