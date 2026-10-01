@@ -168,12 +168,13 @@ b, strong { font-weight: 700; }
 
 /* 예시 데이터 포스트잇 */
 .note {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 12px;
   padding: 12px 14px; border-radius: 4px 14px 14px 14px;
   background: var(--note); color: var(--note-ink); font-size: 13.5px; line-height: 1.45;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 6px 14px rgba(0, 0, 0, 0.05);
 }
-.note p { margin: 0; }
+.note p { flex: 1 1 200px; margin: 0; }
+.note-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .note .btn { flex: none; background: var(--sheet); color: var(--ink); border-color: transparent; }
 .note.warn { background: var(--sheet); color: var(--bad); border: 1px solid var(--rule-2); box-shadow: none; }
 
@@ -563,6 +564,24 @@ fieldset.cats { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; f
 .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; white-space: pre; }
 textarea.input { resize: vertical; min-height: 200px; }
 
+/* ---------- 안내 · 필터 · 저장 상태 ---------- */
+.hint { margin: 0; color: var(--ink-3); font-size: 12.5px; line-height: 1.45; }
+.sum-note { margin: 8px 0 0; color: var(--ink-3); font-size: 12px; }
+.filter-bar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; padding: 10px 12px; border-radius: 12px; background: var(--pen-soft); }
+.filter-bar .filter-note { color: var(--ink); font-weight: 500; }
+.inline-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 12px; border-radius: 12px; background: var(--paper); }
+.inline-note p { flex: 1 1 200px; margin: 0; color: var(--ink-2); font-size: 13.5px; }
+.inline-note b { color: var(--ink); }
+.done { margin: 0; padding: 9px 12px; border-radius: 12px; background: var(--pen-soft); color: var(--ink); font-size: 13.5px; font-weight: 600; }
+.switch-row.sep { padding-top: 10px; border-top: 1px solid var(--rule); }
+.btn.wrap { white-space: normal; line-height: 1.2; text-align: center; }
+.sheet-actions #txMore { flex: 1 1 auto; }
+#cfBody { white-space: pre-line; }
+.tx-amt.save { color: var(--ink-2); }
+.tx-amt.refund { color: var(--income); }
+.rec.paused :is(.tx-title, .tx-amt) { color: var(--ink-3); }
+.rec.paused .ico { filter: grayscale(1); opacity: 0.6; }
+
 /* ---------- 테마 고르기 ---------- */
 .skins { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .skin-opt {
@@ -610,7 +629,7 @@ textarea.input { resize: vertical; min-height: 200px; }
   --xl-good-fill: #C6EFCE; --xl-good-ink: #006100; --xl-warn-fill: #FFEB9C; --xl-warn-ink: #9C5700; --xl-bad-fill: #FFC7CE; --xl-bad-ink: #9C0006;
   --font-display: "Carlito", "Calibri", "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "IBM Plex Sans KR", "Noto Sans KR", system-ui, sans-serif;
   --font-ui: "Carlito", "Calibri", "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "IBM Plex Sans KR", "Noto Sans KR", system-ui, sans-serif;
-  --xl-top: 50px; --xl-gutter: 28px; --xl-col: 72px; --xl-row: 24px;
+  --xl-top: 46px; --xl-gutter: 28px; --xl-col: 72px; --xl-row: 24px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -660,7 +679,7 @@ textarea.input { resize: vertical; min-height: 200px; }
   display: block; position: fixed; top: 0; left: 0; right: 0; z-index: 15;
   padding-top: env(safe-area-inset-top, 0px); background: var(--xl-bar);
 }
-.xl-title { display: flex; align-items: center; justify-content: center; gap: 6px; height: 30px; padding-inline: 12px; color: var(--xl-bar-ink); font-size: 12.5px; white-space: nowrap; overflow: hidden; }
+.xl-title { display: flex; align-items: center; justify-content: center; gap: 6px; height: 26px; padding-inline: 12px; color: var(--xl-bar-ink); font-size: 12.5px; white-space: nowrap; overflow: hidden; }
 .xl-title b { font-weight: 700; }
 .xl-colhead { display: flex; height: 20px; background: var(--xl-head); border-bottom: 1px solid var(--xl-head-line); }
 .xl-corner { position: relative; flex: none; width: var(--xl-gutter); border-right: 1px solid var(--xl-head-line); }
@@ -701,6 +720,11 @@ textarea.input { resize: vertical; min-height: 200px; }
   background: var(--sheet); border-bottom: 1px solid var(--xl-head-line);
 }
 :root[data-skin="excel"] .mnav-title { font-size: 19px; font-weight: 700; }
+/* 세로가 짧은 휴대폰에서는 제목 표시줄을 접고 열 머리글만 남긴다 */
+@media (max-height: 720px) {
+  :root[data-skin="excel"] { --xl-top: 20px; }
+  :root[data-skin="excel"] .xl-title { display: none; }
+}
 :root[data-skin="excel"] :is(.sec-head h2, .card-title, .page-title, .setup-title, .brand) { font-weight: 700; letter-spacing: 0; }
 :root[data-skin="excel"] .page-title { font-size: 22px; }
 :root[data-skin="excel"] .setup-title { font-size: 26px; }
@@ -711,7 +735,7 @@ textarea.input { resize: vertical; min-height: 200px; }
 /* 모서리는 모두 직각 */
 :root[data-skin="excel"] :is(.card, .btn, .chip, .input, .seg, .seg button, .ico, .note, .cc, .cal-blank, .cat-btn, .opt, .stepper, .empty,
   .tbl-wrap, .tip, .store, .dday, .tag, .bar, .bar i, .meter-track, .meter-fill, .toast, .icon-btn, .tx, .rec, .rank-btn,
-  .store-box, .skin-opt, .skin-prev, .dots li, .k, .ramp i, dialog.sheet, .pace-key i) { border-radius: 0; }
+  .store-box, .skin-opt, .skin-prev, .dots li, .k, .ramp i, dialog.sheet, .pace-key i, .filter-bar, .inline-note, .done) { border-radius: 0; }
 
 /* 수식 입력줄 + 선택된 셀 */
 :root[data-skin="excel"] :is(.hero, .stat-hero) .eyebrow {
@@ -919,6 +943,7 @@ textarea.input { resize: vertical; min-height: 200px; }
 :root[data-skin="receipt"] .tab[aria-current="page"] .ic { color: var(--ink); }
 :root[data-skin="receipt"] dialog.sheet { border-top: 2px dashed var(--ink); }
 :root[data-skin="receipt"] .grab { display: none; }
+:root[data-skin="receipt"] :is(.filter-bar, .inline-note, .done) { border: 1px dashed var(--ink); border-radius: 0; background: transparent; }
 
 /* ---------- 칠판 테마 (밝은·어두운 모드 모두 칠판 하나로) ---------- */
 :root[data-skin="chalk"] {
@@ -995,6 +1020,8 @@ textarea.input { resize: vertical; min-height: 200px; }
 :root[data-skin="chalk"] dialog.sheet { border-top: 6px solid var(--wood); }
 :root[data-skin="chalk"] .grab { background: var(--rule-2); }
 :root[data-skin="chalk"] .switch::after { background: var(--ink); }
+:root[data-skin="chalk"] :is(.filter-bar, .inline-note, .done) { background: transparent; border: 2px dashed var(--rule-2); border-radius: var(--chalk-edge); }
+:root[data-skin="chalk"] :is(.filter-bar, .done) { border-color: var(--pen); }
 
 /* ---------- 다꾸 테마 ---------- */
 :root[data-skin="deco"] {
@@ -1161,6 +1188,7 @@ textarea.input { resize: vertical; min-height: 200px; }
 :root[data-skin="mono"] .cc.today { box-shadow: inset 0 0 0 2px var(--ink); }
 :root[data-skin="mono"] .cc.sel { box-shadow: inset 0 0 0 3px var(--ink); }
 :root[data-skin="mono"] dialog.sheet { border-top: 2px solid var(--ink); }
+:root[data-skin="mono"] :is(.filter-bar, .inline-note, .done) { background: transparent; border: 1.5px solid var(--ink); border-radius: 4px; }
 
 @media (min-width: 600px) {
   .app { gap: 32px; }
@@ -1217,7 +1245,9 @@ textarea.input { resize: vertical; min-height: 200px; }
     <div id="txType" class="seg" role="radiogroup" aria-label="구분">
       <button type="button" role="radio" data-type="out" aria-checked="true">지출</button>
       <button type="button" role="radio" data-type="in" aria-checked="false">수입</button>
+      <button type="button" role="radio" data-type="save" aria-checked="false">저축</button>
     </div>
+    <p id="txDone" class="done" role="status" hidden></p>
     <div id="quickWrap" class="stack" hidden>
       <p class="mini-label">자주 쓰는 기록</p>
       <div id="quick" class="quick"></div>
@@ -1246,6 +1276,8 @@ textarea.input { resize: vertical; min-height: 200px; }
         </div>
         <p id="splitInfo" class="split-info"></p>
       </div>
+      <label class="switch-row sep" for="f-refund"><span><b>환불</b> · 돌려받은 돈이에요</span><input type="checkbox" id="f-refund" class="switch"></label>
+      <p id="refundInfo" class="split-info" hidden>고른 카테고리에서 쓴 돈을 이만큼 빼요. 예: 반품한 옷값은 쇼핑·생활</p>
     </div>
     <div id="wageRow" class="opt" hidden>
       <p class="mini-label">시급으로 계산하기</p>
@@ -1281,6 +1313,7 @@ textarea.input { resize: vertical; min-height: 200px; }
     <p id="txErr" class="err" role="alert"></p>
     <div class="sheet-actions">
       <button type="button" id="txDelete" class="btn danger" hidden>삭제</button>
+      <button type="button" id="txMore" class="btn wrap">저장하고 하나 더</button>
       <button type="submit" id="txSave" class="btn primary block">저장하기</button>
     </div>
   </form>
@@ -1290,13 +1323,18 @@ textarea.input { resize: vertical; min-height: 200px; }
   <form id="recForm" class="sheet-body" novalidate>
     <div class="grab" aria-hidden="true"></div>
     <div class="sheet-head">
-      <h2 id="recTitle">고정 수입·지출</h2>
+      <h2 id="recTitle">고정 항목</h2>
       <button type="button" class="icon-btn" data-close aria-label="닫기"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
-    <p class="sheet-desc">매달 같은 날 나가거나 들어오는 돈을 등록하면, 그날이 되면 알아서 적어 둬요.</p>
+    <p class="sheet-desc">용돈, 휴대폰 요금, 적금처럼 매달 같은 날 오가는 돈을 등록하면 그날이 되면 알아서 적어 둬요.</p>
     <div id="recType" class="seg" role="radiogroup" aria-label="구분">
       <button type="button" role="radio" data-rtype="out" aria-checked="true">지출</button>
       <button type="button" role="radio" data-rtype="in" aria-checked="false">수입</button>
+      <button type="button" role="radio" data-rtype="save" aria-checked="false">저축</button>
+    </div>
+    <div id="r-on-row" class="opt" hidden>
+      <label class="switch-row" for="r-on"><span><b>자동 기록</b> · 매달 그날 적어 두기</span><input type="checkbox" id="r-on" class="switch" checked></label>
+      <p class="split-info">끄면 쉬는 동안은 적지 않아요. 다시 켜도 쉬었던 달은 채우지 않고 그달부터 이어서 적어요.</p>
     </div>
     <div class="field">
       <label class="mini-label" for="r-name">이름</label>
@@ -1330,10 +1368,7 @@ textarea.input { resize: vertical; min-height: 200px; }
     <div class="grab" aria-hidden="true"></div>
     <h2 id="cfTitle" class="sheet-head"></h2>
     <p id="cfBody" class="sheet-desc"></p>
-    <div class="sheet-actions">
-      <button type="button" class="btn" data-cf="0">취소</button>
-      <button type="button" class="btn primary" data-cf="1" id="cfOk">확인</button>
-    </div>
+    <div class="sheet-actions" id="cfActions"></div>
   </div>
 </dialog>
 
@@ -1380,11 +1415,24 @@ const CATS = {
     { id: 'scholarship', name: '장학금', emoji: '🎓' },
     { id: 'resale', name: '중고거래', emoji: '🥕' },
     { id: 'etcin', name: '기타 수입', emoji: '💰' }
+  ],
+  save: [
+    { id: 'deposit', name: '적금', emoji: '🏦' },
+    { id: 'emergency', name: '비상금', emoji: '🐷' },
+    { id: 'goal', name: '목표 저축', emoji: '🎯' },
+    { id: 'invest', name: '투자', emoji: '📈' },
+    { id: 'etcsave', name: '기타 저축', emoji: '🗃️' }
   ]
 };
+const TYPES = ['out', 'in', 'save'];
+const TYPE_NAME = { out: '지출', in: '수입', save: '저축' };
 const CAT = {};
-for (const type of ['out', 'in']) for (const c of CATS[type]) CAT[c.id] = { ...c, type };
-const fallbackCat = type => (type === 'in' ? 'etcin' : 'etc');
+for (const type of TYPES) for (const c of CATS[type]) CAT[c.id] = { ...c, type };
+const fallbackCat = type => (type === 'in' ? 'etcin' : type === 'save' ? 'etcsave' : 'etc');
+const typeOf = v => (TYPES.includes(v) ? v : 'out');
+// 매달 나가는 고정비 카테고리: 직접 적어도 무지출 계산에서 뺀다
+const FIXED_CATS = new Set(['housing', 'sub']);
+const isFixed = t => !!t.rid || FIXED_CATS.has(t.cat);
 const catOf = (id, type) => (CAT[id] && (!type || CAT[id].type === type) ? CAT[id] : CAT[fallbackCat(type)]);
 
 const SKINS = [
@@ -1475,7 +1523,7 @@ let markDefinitive;
 const definitiveReady = new Promise(r => { markDefinitive = r; });
 
 function defaultSettings() {
-  return { budget: 0, catBudgets: {}, wage: MIN_WAGE, recurring: {}, since: null, exBudget: false, exCat: false, skin: 'default' };
+  return { budget: 0, catBudgets: {}, wage: MIN_WAGE, recurring: {}, since: null, exBudget: false, exCat: false, skin: 'default', startDay: 1, periodBudget: null };
 }
 S.settings = defaultSettings();
 
@@ -1491,6 +1539,12 @@ function normSettings(d) {
   s.exBudget = !!d.exBudget;
   s.exCat = !!d.exCat;
   s.skin = skinId(d.skin);
+  const sd = Math.round(Number(d.startDay));
+  s.startDay = sd >= 1 && sd <= 28 ? sd : 1;
+  const pb = d.periodBudget;
+  if (pb && typeof pb === 'object' && isYm(pb.key) && isYmd(pb.from) && Number.isFinite(pb.amount) && pb.amount >= 0) {
+    s.periodBudget = { key: pb.key, amount: Math.round(pb.amount), from: pb.from, base: Math.max(0, Math.round(Number(pb.base) || 0)) };
+  }
   if (d.recurring && typeof d.recurring === 'object') {
     for (const [id, r] of Object.entries(d.recurring)) { const n = normRec(r, id); if (n) s.recurring[id] = n; }
   }
@@ -1498,7 +1552,7 @@ function normSettings(d) {
 }
 function normRec(r, id) {
   if (!r || typeof r !== 'object') return null;
-  const type = r.type === 'in' ? 'in' : 'out';
+  const type = typeOf(r.type);
   const amount = Math.round(Number(r.amount));
   if (!Number.isFinite(amount) || amount <= 0) return null;
   const day = Math.min(31, Math.max(1, Math.round(Number(r.day)) || 1));
@@ -1508,9 +1562,9 @@ function normRec(r, id) {
 }
 function normTx(t, id) {
   if (!t || typeof t !== 'object' || !isYmd(t.date)) return null;
-  const type = t.type === 'in' ? 'in' : 'out';
+  const type = typeOf(t.type);
   const amount = Math.round(Number(t.amount));
-  if (!Number.isFinite(amount) || amount < 0) return null;
+  if (!Number.isFinite(amount) || (amount < 0 && type !== 'out')) return null;
   const cat = CAT[t.cat] && CAT[t.cat].type === type ? t.cat : fallbackCat(type);
   const sp = t.split;
   const split = sp && Number(sp.n) >= 2 && Number(sp.total) > 0 ? { total: Math.round(sp.total), n: Math.round(sp.n) } : null;
@@ -1542,7 +1596,29 @@ function allTx() {
     return [...byId.values()].sort(cmpTx);
   });
 }
-const monthTx = ym => cached('m:' + ym, () => allTx().filter(t => t.date.startsWith(ym)));
+
+/* 한 달 = 시작일부터 다음 달 시작일 전날까지. 기간 키는 시작하는 달(YYYY-MM) */
+const startDay = () => (S.settings && S.settings.startDay) || 1;
+const periodKeyFor = (date, sd) => (dayNum(date) >= sd ? date.slice(0, 7) : addMonths(date.slice(0, 7), -1));
+const periodRangeFor = (key, sd) => [`${key}-${pad(sd)}`, addDays(`${addMonths(key, 1)}-${pad(sd)}`, -1)];
+const periodKeyOf = date => periodKeyFor(date, startDay());
+const periodRange = key => periodRangeFor(key, startDay());
+const curKey = () => periodKeyOf(todayStr());
+const periodTx = key => cached('p:' + key, () => {
+  const [s, e] = periodRange(key);
+  return allTx().filter(t => t.date >= s && t.date <= e);
+});
+function periodName(key) {
+  if (startDay() === 1) return `${monthNum(key)}월`;
+  const [s, e] = periodRange(key);
+  return `${monthNum(s)}/${dayNum(s)}~${monthNum(e)}/${dayNum(e)}`;
+}
+function periodTitle(key) {
+  if (startDay() === 1) return fmtMonth(key);
+  const [s, e] = periodRange(key);
+  return `${monthNum(s)}월 ${dayNum(s)}일 ~ ${monthNum(e)}월 ${dayNum(e)}일`;
+}
+const periodShort = key => (startDay() === 1 ? `${monthNum(key)}월` : `${monthNum(key)}/${startDay()}`);
 const sumBy = (list, type) => list.reduce((s, t) => (t.type === type ? s + t.amount : s), 0);
 function catSums(list, type) {
   const o = {};
@@ -1560,56 +1636,89 @@ function startDate() {
 }
 const spendDates = () => cached('spendDates', () => {
   const s = new Set();
-  for (const t of allTx()) if (t.type === 'out' && !t.rid) s.add(t.date);
+  for (const t of allTx()) if (t.type === 'out' && t.amount > 0 && !isFixed(t)) s.add(t.date);
   return s;
 });
 
-function upcomingRecurring(ym, today) {
+function upcomingRecurring(key, today) {
+  const end = periodRange(key)[1];
   const out = [];
   for (const r of Object.values(S.settings.recurring)) {
-    if (!r.on || (r.last && r.last >= ym)) continue;
-    const date = dueDate(ym, r.day);
-    if (date > today) out.push({ ...r, date });
+    if (!r.on) continue;
+    for (let m = today.slice(0, 7); m <= end.slice(0, 7); m = addMonths(m, 1)) {
+      if (r.last && r.last >= m) continue;
+      const date = dueDate(m, r.day);
+      if (date > today && date <= end) out.push({ ...r, date });
+    }
   }
   return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
 
-function budgetInfo() {
-  const today = todayStr(), ym = today.slice(0, 7), dim = daysIn(ym), day = dayNum(today);
-  let spentBefore = 0, spentToday = 0, spentFuture = 0;
-  for (const t of monthTx(ym)) {
+/* 지금 기간의 지출 합계 (오늘 전 · 오늘 · 미리 적은 날) */
+function spentSplit(key, today) {
+  let before = 0, now = 0, future = 0;
+  for (const t of periodTx(key)) {
     if (t.type !== 'out') continue;
-    if (t.date < today) spentBefore += t.amount;
-    else if (t.date === today) spentToday += t.amount;
-    else spentFuture += t.amount;
+    if (t.date < today) before += t.amount;
+    else if (t.date === today) now += t.amount;
+    else future += t.amount;
   }
-  const upcoming = upcomingRecurring(ym, today).filter(r => r.type === 'out');
+  return { before, now, future };
+}
+function budgetInfo() {
+  const today = todayStr(), key = periodKeyOf(today);
+  const [start, end] = periodRange(key);
+  const dim = daysBetween(start, end) + 1, day = daysBetween(start, today) + 1;
+  const { before: spentBefore, now: spentToday, future: spentFuture } = spentSplit(key, today);
+  const upcoming = upcomingRecurring(key, today).filter(r => r.type === 'out');
   const upcomingFixed = upcoming.reduce((s, r) => s + r.amount, 0);
-  const budget = S.settings.budget;
+  const pb = S.settings.periodBudget && S.settings.periodBudget.key === key ? S.settings.periodBudget : null;
+  const budget = pb ? pb.amount : S.settings.budget;
   const remainingDays = dim - day + 1;
   const pool = budget - spentBefore - spentFuture - upcomingFixed;
   const daily = Math.max(0, Math.floor(pool / remainingDays));
   const spent = spentBefore + spentToday + spentFuture;
+  // 계획: 오늘까지 쓰면 딱 맞는 금액. 남은 돈으로 시작한 달은 시작한 날부터 고르게 나눈다
+  let plan;
+  if (pb) {
+    const span = Math.max(1, daysBetween(pb.from, end) + 1);
+    const done = Math.min(span, Math.max(0, daysBetween(pb.from, today) + 1));
+    plan = pb.base + (budget - pb.base) * done / span;
+  } else {
+    plan = budget * day / dim;
+  }
+  plan = Math.round(plan);
   return {
-    today, ym, dim, day, budget, spentBefore, spentToday, spentFuture, upcoming, upcomingFixed,
-    remainingDays, daily, todayLeft: daily - spentToday, spent, left: budget - spent, pace: day / dim
+    today, key, ym: key, start, end, dim, day, budget, override: pb, spentBefore, spentToday, spentFuture, upcoming, upcomingFixed,
+    remainingDays, daily, todayLeft: daily - spentToday, spent, left: budget - spent, plan, pace: budget ? Math.min(1, plan / budget) : day / dim
   };
 }
+/* '지금 남은 돈'으로 이번 기간 예산을 맞춘다 */
+function makePeriodBudget(left, sd) {
+  const today = todayStr(), key = periodKeyFor(today, sd);
+  const [start, end] = periodRangeFor(key, sd);
+  let before = 0, now = 0;
+  for (const t of allTx()) {
+    if (t.type !== 'out' || t.date < start || t.date > end) continue;
+    if (t.date < today) before += t.amount;
+    else if (t.date === today) now += t.amount;
+  }
+  return { key, amount: Math.max(0, left + before + now), from: today, base: Math.max(0, before) };
+}
 
-function noSpend(ym) {
-  const today = todayStr(), cur = today.slice(0, 7), dim = daysIn(ym);
-  const last = ym < cur ? dim : ym === cur ? dayNum(today) : 0;
+function noSpend(key) {
+  const today = todayStr();
+  const [start, end] = periodRange(key);
   const first = startDate();
   const spend = spendDates();
   const days = [];
   let count = 0;
-  for (let d = 1; d <= dim; d++) {
-    const ds = `${ym}-${pad(d)}`;
-    const st = d > last ? 'future' : !first || ds < first ? 'none' : spend.has(ds) ? 'spent' : 'free';
+  for (let d = start; d <= end; d = addDays(d, 1)) {
+    const st = d > today ? 'future' : !first || d < first ? 'none' : spend.has(d) ? 'spent' : 'free';
     if (st === 'free') count++;
-    days.push(st);
+    days.push({ date: d, st });
   }
-  return { days, count, last };
+  return { days, count };
 }
 function streakNow() {
   const first = startDate();
@@ -1861,7 +1970,11 @@ async function connect() {
 }
 
 /* ================= 화면 상태 ================= */
-const ui = { tab: 'home', month: curYm(), listMode: 'list', fType: 'all', fCat: '', q: '', calSel: null, sType: 'out', tables: {}, skin: 'default' };
+// month: 보고 있는 기간의 키(시작하는 달). monthFollows: 지금 기간을 따라갈지
+const ui = {
+  tab: 'home', month: curYm(), monthFollows: true, listMode: 'list',
+  fType: 'all', fCat: '', q: '', qAll: true, calSel: null, sType: 'out', tables: {}, skin: 'default'
+};
 try {
   const saved = JSON.parse(localStorage.getItem(UI_KEY) || '{}');
   if (saved.listMode === 'cal' || saved.listMode === 'list') ui.listMode = saved.listMode;
@@ -1869,6 +1982,28 @@ try {
 } catch (e) { /* 무시 */ }
 function saveUi() {
   try { localStorage.setItem(UI_KEY, JSON.stringify({ listMode: ui.listMode, skin: ui.skin })); } catch (e) { /* 무시 */ }
+}
+function resetFilters() {
+  ui.fType = 'all';
+  ui.fCat = '';
+  ui.q = '';
+  ui.qAll = true;
+}
+
+/* 휴대폰(이 기기 저장)에서 백업 안내 */
+const BK_KEY = 'campus-gagyebu:backup';
+function backupState() {
+  try { return JSON.parse(localStorage.getItem(BK_KEY) || '{}') || {}; } catch (e) { return {}; }
+}
+function setBackupState(patch) {
+  try { localStorage.setItem(BK_KEY, JSON.stringify({ ...backupState(), ...patch })); } catch (e) { /* 무시 */ }
+}
+function needsBackup() {
+  if (S.mode !== 'local') return false;
+  if (allTx().filter(t => !t.ex).length < 20) return false;
+  const st = backupState(), today = todayStr();
+  if (st.snooze && today < st.snooze) return false;
+  return !st.last || daysBetween(st.last, today) >= 30;
 }
 
 const ICON = {
@@ -1899,53 +2034,66 @@ function notesHtml() {
   if (S.mode !== 'loading' && hasExamples()) {
     h += `<div class="note" role="note"><p><b>예시 데이터</b>가 들어 있어요. 둘러본 뒤 지우고 내 가계부를 시작하세요.</p><button type="button" class="btn small" data-action="clear-examples">예시 지우기</button></div>`;
   }
+  if (ui.tab === 'home' && needsBackup()) {
+    const st = backupState();
+    const when = st.last ? `마지막 백업은 ${daysBetween(st.last, todayStr())}일 전이에요.` : '아직 백업한 적이 없어요.';
+    h += `<div class="note" role="note"><p><b>백업할 때가 됐어요.</b> 이 기록은 이 휴대폰에만 있어요. ${when}</p>
+      <div class="note-actions"><button type="button" class="btn small" data-action="export-json">백업 받기</button><button type="button" class="btn small" data-action="backup-later">나중에</button></div></div>`;
+  }
   if (S.syncError) h += `<div class="note warn" role="alert"><p>저장소 연결이 끊겼어요. 페이지를 새로 열어 주세요.</p></div>`;
   if (S.mode === 'memory') h += `<div class="note warn" role="alert"><p>이 브라우저는 저장을 막고 있어요. 창을 닫으면 기록이 사라져요.</p></div>`;
   return h;
 }
+/* 금액 표시: 수입 +, 지출 −, 저축은 부호 없이, 환불(음수 지출)은 + */
 function signedWon(n, type) {
-  return `${type === 'in' ? '+' : MINUS}${won(n)}`;
+  if (type === 'save') return won(n);
+  if (type === 'in') return '+' + won(n);
+  return n < 0 ? '+' + won(-n) : MINUS + won(n);
 }
+const amountCls = t => (t.type === 'out' && t.amount < 0 ? 'refund' : t.type);
 function txRow(t, opt = {}) {
   const c = catOf(t.cat, t.type);
   const title = t.memo || c.name;
   const sub = [];
   if (opt.date) sub.push(`<span>${fmtMD(t.date)}</span>`);
-  sub.push(`<span${sub.length ? ' class="dot"' : ''}>${esc(c.name)}</span>`);
+  sub.push(`<span${sub.length ? ' class="dot"' : ''}>${t.type === 'save' ? '저축 · ' : ''}${esc(c.name)}</span>`);
   if (t.split) sub.push(`<span class="dot">N빵 ${t.split.n}명 (총 ${won(t.split.total)}원)</span>`);
   if (t.rid) sub.push('<span class="dot">고정</span>');
+  if (t.type === 'out' && t.amount < 0) sub.push('<span class="tag">환불</span>');
   if (t.ex) sub.push('<span class="tag">예시</span>');
   return `<li><button type="button" class="tx" data-action="edit-tx" data-id="${esc(t.id)}">
     <span class="ico" aria-hidden="true">${c.emoji}</span>
     <span class="tx-main"><span class="tx-title">${esc(title)}</span><span class="tx-sub">${sub.join('')}</span></span>
-    <span class="tx-amt ${t.type}">${signedWon(t.amount, t.type)}<small>원</small></span>
+    <span class="tx-amt ${amountCls(t)}">${signedWon(t.amount, t.type)}<small>원</small></span>
   </button></li>`;
 }
-function dayTitle(s) {
+function dayTitle(s, withMonth = false) {
   const t = todayStr();
   const rel = s === t ? '오늘 · ' : s === addDays(t, -1) ? '어제 · ' : '';
-  return `${rel}${dayNum(s)}일 ${wd(s)}요일`;
+  const y = s.slice(0, 4) !== t.slice(0, 4) ? `${s.slice(0, 4)}년 ` : '';
+  return `${rel}${withMonth || startDay() !== 1 ? `${y}${monthNum(s)}월 ` : ''}${dayNum(s)}일 ${wd(s)}요일`;
 }
-function sum3(ym, labels = ['들어온 돈', '나간 돈', '남은 돈']) {
-  const list = monthTx(ym);
-  const inc = sumBy(list, 'in'), out = sumBy(list, 'out'), net = inc - out;
+function sum3(key, labels = ['들어온 돈', '나간 돈', '남은 돈']) {
+  const list = periodTx(key);
+  const inc = sumBy(list, 'in'), out = sumBy(list, 'out'), sav = sumBy(list, 'save'), net = inc - out - sav;
+  const outText = out > 0 ? MINUS + won(out) : out < 0 ? '+' + won(-out) : '0';
   return `<div class="sum3">
     <div><span>${labels[0]}</span><b class="pos">+${won(inc)}</b></div>
-    <div><span>${labels[1]}</span><b class="${out ? 'out' : ''}">${out ? MINUS : ''}${won(out)}</b></div>
+    <div><span>${labels[1]}</span><b class="${out > 0 ? 'out' : ''}">${outText}</b></div>
     <div><span>${labels[2]}</span><b class="${net < 0 ? 'neg' : ''}">${net < 0 ? MINUS : ''}${won(Math.abs(net))}</b></div>
-  </div>`;
+  </div>${sav ? `<p class="sum-note">🏦 저축 ${won(sav)}원은 지출에 넣지 않고, ${labels[2]}에서만 뺐어요.</p>` : ''}`;
 }
 function monthNav() {
-  const cur = curYm();
   return `<div class="mnav">
     <button type="button" class="icon-btn" data-action="month-prev" aria-label="이전 달">${ICON.left}</button>
-    <div class="mnav-mid"><h1 class="mnav-title">${fmtMonth(ui.month)}</h1>${ui.month !== cur ? '<button type="button" class="chip sm" data-action="month-now">이번 달로</button>' : ''}</div>
+    <div class="mnav-mid"><h1 class="mnav-title">${periodTitle(ui.month)}</h1>${ui.month !== curKey() ? '<button type="button" class="chip sm" data-action="month-now">이번 달로</button>' : ''}</div>
     <button type="button" class="icon-btn" data-action="month-next" aria-label="다음 달">${ICON.right}</button>
   </div>`;
 }
 function emptyBox(title, body) {
   return `<div class="empty"><p class="empty-title">${title}</p>${body ? `<p>${body}</p>` : ''}</div>`;
 }
+const dayOptions = sel => Array.from({ length: 28 }, (_, i) => `<option value="${i + 1}"${sel === i + 1 ? ' selected' : ''}>매달 ${i + 1}일</option>`).join('');
 
 /* ================= 홈 ================= */
 function viewHome() {
@@ -1956,9 +2104,9 @@ function viewHome() {
     return h + `<section class="hero"><p class="eyebrow">오늘 쓸 수 있는 돈</p><p class="hero-num loading">—</p><p class="hero-sub">가계부를 펼치는 중이에요…</p></section>`;
   }
   const b = budgetInfo();
-  h += S.settings.budget > 0 ? heroHtml(b) : setupHtml();
-  h += `<section class="sec"><div class="sec-head"><h2>${monthNum(b.ym)}월 살림</h2><button type="button" class="link" data-action="goto-stats">통계 보기</button></div>${sum3(b.ym)}</section>`;
-  h += noSpendHtml(b.ym);
+  h += S.settings.budget > 0 || b.override ? heroHtml(b) : setupHtml();
+  h += `<section class="sec"><div class="sec-head"><h2>${periodName(b.key)} 살림</h2><button type="button" class="link" data-action="goto-stats">통계 보기</button></div>${sum3(b.key)}</section>`;
+  h += noSpendHtml(b.key);
   h += catHomeHtml(b);
   h += upcomingHtml(b);
   h += recentHtml();
@@ -1971,19 +2119,19 @@ function heroHtml(b) {
   const neg = num < 0;
   const label = monthOver ? '이번 달 예산을 넘었어요' : '오늘 쓸 수 있는 돈';
   let sub;
-  if (monthOver) sub = `월 예산 ${won(b.budget)}원보다 <b>${won(-b.left)}원</b> 더 썼어요`;
+  if (monthOver) sub = `이번 달 예산 ${won(b.budget)}원보다 <b>${won(-b.left)}원</b> 더 썼어요`;
   else if (!b.spentToday) sub = `남은 ${b.remainingDays}일 동안 하루 <b>${won(b.daily)}원</b>씩 쓸 수 있어요`;
   else if (neg) sub = `하루 예산 ${won(b.daily)}원보다 <b>${won(-b.todayLeft)}원</b> 더 썼어요`;
   else sub = `하루 예산 ${won(b.daily)}원 중 <b>${won(b.spentToday)}원</b> 썼어요`;
-  const pct = b.budget ? b.spent / b.budget : 0;
-  const plan = Math.round(b.budget * b.pace);
+  const pct = b.budget ? Math.max(0, b.spent) / b.budget : 0;
+  const plan = b.plan;
   let st;
   if (b.spent > b.budget) st = ['bad', '✕', `예산을 ${won(b.spent - b.budget)}원 넘었어요`];
   else if (b.spent > plan) st = ['warn', '!', `계획보다 ${won(b.spent - plan)}원 빨리 쓰고 있어요`];
   else st = ['good', '✓', plan > b.spent ? `계획보다 ${won(plan - b.spent)}원 아꼈어요` : '계획대로 쓰고 있어요'];
   const notes = [];
   if (b.upcomingFixed) notes.push(`곧 나갈 고정지출 ${won(b.upcomingFixed)}원(${b.upcoming.length}건)`);
-  if (b.spentFuture) notes.push(`미리 적어 둔 지출 ${won(b.spentFuture)}원`);
+  if (b.spentFuture > 0) notes.push(`미리 적어 둔 지출 ${won(b.spentFuture)}원`);
   const sweep = heroSwept ? '' : ' sweep';
   heroSwept = true;
   return `<section class="hero${sweep}" aria-labelledby="heroLabel">
@@ -1991,31 +2139,42 @@ function heroHtml(b) {
     <p class="hero-num"><span class="hl${neg ? ' over' : ''}">${neg ? MINUS : ''}${won(Math.abs(num))}</span><span class="unit">원</span></p>
     <p class="hero-sub">${sub}</p>
     <div class="meter">
-      <div class="meter-track" role="img" aria-label="월 예산 ${won(b.budget)}원 중 ${won(b.spent)}원 사용. 오늘까지 계획 ${won(plan)}원">
+      <div class="meter-track" role="img" aria-label="이번 달 예산 ${won(b.budget)}원 중 ${won(Math.max(0, b.spent))}원 사용. 오늘까지 계획 ${won(plan)}원">
         <span class="meter-fill ${st[0]}" style="width:${Math.min(100, pct * 100).toFixed(2)}%"></span>
         <span class="meter-pace" style="left:${(b.pace * 100).toFixed(2)}%"></span>
       </div>
-      <div class="meter-row"><span>${monthNum(b.ym)}월 <b>${won(b.spent)}</b> / ${won(b.budget)}원</span><span>${Math.round(pct * 100)}%</span></div>
+      <div class="meter-row"><span>${periodName(b.key)} <b>${won(Math.max(0, b.spent))}</b> / ${won(b.budget)}원</span><span>${Math.round(pct * 100)}%</span></div>
       <div class="meter-row"><span class="st ${st[0]}"><i aria-hidden="true">${st[1]}</i>${st[2]}</span><span class="pace-key"><i aria-hidden="true"></i>오늘까지 계획 ${won(plan)}원</span></div>
     </div>
     ${notes.length ? `<p class="hero-foot">${notes.join(', ')}은 미리 빼고 계산했어요.</p>` : ''}
+    ${b.override ? `<p class="hero-foot">이번 달은 ${fmtMD(b.override.from)}에 남은 돈으로 맞춰서 시작했어요. ${S.settings.budget ? `다음 달부터는 월 예산 ${won(S.settings.budget)}원으로 계산해요.` : '다음 달 예산은 설정에서 정해 주세요.'}</p>` : ''}
   </section>`;
 }
 
 function setupHtml() {
+  const sd = startDay();
   return `<section class="setup" aria-labelledby="setupTitle">
     <p class="eyebrow">시작하기</p>
     <h2 id="setupTitle" class="setup-title">한 달에 <span class="hl">얼마로</span> 살아 볼까요?</h2>
-    <p class="setup-desc">용돈과 알바비 가운데 이번 달에 쓸 돈을 정해 주세요. 매일 <b>오늘 쓸 수 있는 돈</b>을 계산해 드려요.</p>
+    <p class="setup-desc">용돈과 알바비 가운데 한 달에 쓸 돈을 정해 주세요. 매일 <b>오늘 쓸 수 있는 돈</b>을 계산해 드려요.</p>
     <div class="money-row big"><label class="sr" for="ob-budget">한 달 예산</label><input id="ob-budget" class="input money-in" inputmode="numeric" placeholder="500,000" autocomplete="off" enterkeyhint="done"><span>원</span></div>
     <div class="chips">${[300000, 500000, 700000, 1000000].map(v => `<button type="button" class="chip" data-action="ob-preset" data-v="${v}">${compact(v)}원</button>`).join('')}</div>
+    <div class="field"><label class="mini-label" for="ob-start">한 달 시작일</label>
+      <select id="ob-start" class="input">${dayOptions(sd)}</select>
+      <p class="hint">용돈이나 알바비가 들어오는 날로 맞추면 그날부터 한 달로 계산해요.</p></div>
+    <label class="check-row" for="ob-partial"><input type="checkbox" id="ob-partial"><span>이번 달은 이미 일부 썼어요</span></label>
+    <div id="ob-partial-box" class="field" hidden>
+      <label class="mini-label" for="ob-left">지금 남은 돈</label>
+      <div class="money-row"><input id="ob-left" class="input money-in" inputmode="numeric" placeholder="0" autocomplete="off"><span>원</span></div>
+      <p class="hint">이번 달은 오늘부터 이 돈으로 나눠 계산하고, 다음 달부터는 위의 한 달 예산을 써요.</p>
+    </div>
     <p id="obErr" class="err" role="alert"></p>
     <button type="button" class="btn primary block" data-action="save-onboard">이 예산으로 시작하기</button>
   </section>`;
 }
 
-function noSpendHtml(ym) {
-  const ns = noSpend(ym);
+function noSpendHtml(key) {
+  const ns = noSpend(key);
   const today = todayStr();
   const streak = streakNow();
   const todaySpent = spendDates().has(today);
@@ -2024,48 +2183,48 @@ function noSpendHtml(ym) {
   else if (streak > 0) text = `<b>${streak}일째</b> 무지출 이어가는 중`;
   else if (todaySpent) text = '오늘은 지출이 있었어요. 내일 다시 도전!';
   else text = '고정지출 말고 한 푼도 안 쓴 날을 세요';
-  const dots = ns.days.map((st, i) => {
-    const ds = `${ym}-${pad(i + 1)}`;
-    const label = `${i + 1}일 ${st === 'free' ? '무지출' : st === 'spent' ? '지출 있음' : ''}`.trim();
-    return `<li class="${st}${ds === today ? ' today' : ''}" title="${label}"></li>`;
+  const dots = ns.days.map(({ date, st }) => {
+    const label = `${monthNum(date)}월 ${dayNum(date)}일 ${st === 'free' ? '무지출' : st === 'spent' ? '지출 있음' : ''}`.trim();
+    return `<li class="${st}${date === today ? ' today' : ''}" title="${label}"></li>`;
   }).join('');
   return `<section class="sec" aria-labelledby="nsTitle">
-    <div class="sec-head"><h2 id="nsTitle">무지출 챌린지</h2><span class="muted">${monthNum(ym)}월</span></div>
+    <div class="sec-head"><h2 id="nsTitle">무지출 챌린지</h2><span class="muted">${periodName(key)}</span></div>
     <div class="ns"><p class="ns-big">${ns.count}<small>일</small></p><p class="ns-text">${text}</p></div>
-    <ol class="dots" aria-label="${monthNum(ym)}월 날짜별 무지출 기록: 무지출 ${ns.count}일">${dots}</ol>
-    <p class="legend"><span><i class="k free"></i>무지출</span><span><i class="k spent"></i>쓴 날</span><span>고정지출 자동 기록은 빼고 세요</span></p>
+    <ol class="dots" aria-label="${periodName(key)} 날짜별 무지출 기록: 무지출 ${ns.count}일">${dots}</ol>
+    <p class="legend"><span><i class="k free"></i>무지출</span><span><i class="k spent"></i>쓴 날</span><span>고정지출(자동 기록·주거·통신·구독)은 빼고 세요</span></p>
   </section>`;
 }
 
 function catHomeHtml(b) {
   const caps = S.settings.catBudgets;
-  const spent = catSums(monthTx(b.ym), 'out');
+  const spent = catSums(periodTx(b.key), 'out');
   const keys = Object.keys(caps);
   if (keys.length) {
     const rows = keys.map(k => ({ k, s: spent[k] || 0, cap: caps[k] })).sort((x, y) => y.s / y.cap - x.s / x.cap);
     return `<section class="sec" aria-labelledby="cbTitle">
       <div class="sec-head"><h2 id="cbTitle">카테고리 예산</h2><button type="button" class="link" data-action="goto-settings">바꾸기</button></div>
       <ul class="rank">${rows.map(r => {
-        const c = CAT[r.k], ratio = r.s / r.cap;
+        const c = CAT[r.k], ratio = Math.max(0, r.s) / r.cap;
         let st = '';
         let cls = '';
         if (ratio > 1) { cls = 'bad'; st = `<span class="st bad"><i aria-hidden="true">✕</i>${won(r.s - r.cap)}원 넘었어요</span>`; }
         else if (ratio >= 0.8) { cls = 'warn'; st = `<span class="st warn"><i aria-hidden="true">!</i>${won(r.cap - r.s)}원 남았어요</span>`; }
-        return `<li><button type="button" class="rank-btn" data-action="goto-cat" data-cat="${r.k}" data-month="${b.ym}">
+        return `<li><button type="button" class="rank-btn" data-action="goto-cat" data-cat="${r.k}" data-month="${b.key}">
           <span class="ico" aria-hidden="true">${c.emoji}</span>
           <span class="rank-name">${esc(c.name)}</span>
-          <span class="rank-val">${won(r.s)}<small>/ ${won(r.cap)}원</small></span>
+          <span class="rank-val">${won(Math.max(0, r.s))}<small>/ ${won(r.cap)}원</small></span>
           <span class="rank-meta"><span class="bar"><i class="${cls}" style="width:${Math.min(100, ratio * 100).toFixed(1)}%"></i></span>${st}</span>
         </button></li>`;
       }).join('')}</ul>
     </section>`;
   }
-  const rows = Object.entries(spent).sort((x, y) => y[1] - x[1]).slice(0, 3);
+  const rows = Object.entries(spent).filter(([, v]) => v > 0).sort((x, y) => y[1] - x[1]).slice(0, 3);
   if (!rows.length) return '';
-  const max = rows[0][1], total = sumBy(monthTx(b.ym), 'out');
+  const max = rows[0][1];
+  const total = Object.values(spent).filter(v => v > 0).reduce((a, v) => a + v, 0);
   return `<section class="sec" aria-labelledby="topTitle">
     <div class="sec-head"><h2 id="topTitle">많이 쓴 곳</h2><button type="button" class="link" data-action="goto-settings">카테고리 예산 정하기</button></div>
-    <ul class="rank">${rows.map(([k, v]) => `<li><button type="button" class="rank-btn" data-action="goto-cat" data-cat="${k}" data-month="${b.ym}">
+    <ul class="rank">${rows.map(([k, v]) => `<li><button type="button" class="rank-btn" data-action="goto-cat" data-cat="${k}" data-month="${b.key}">
       <span class="ico" aria-hidden="true">${CAT[k].emoji}</span>
       <span class="rank-name">${esc(CAT[k].name)}</span>
       <span class="rank-val">${won(v)}원<small>${Math.round((v / total) * 100)}%</small></span>
@@ -2075,15 +2234,17 @@ function catHomeHtml(b) {
 }
 
 function upcomingHtml(b) {
-  const ups = upcomingRecurring(b.ym, b.today);
+  const ups = upcomingRecurring(b.key, b.today);
   if (!ups.length) return '';
+  const thisMonth = b.today.slice(0, 7);
   return `<section class="sec" aria-labelledby="upTitle">
     <div class="sec-head"><h2 id="upTitle">곧 나갈 돈·들어올 돈</h2><button type="button" class="link" data-action="goto-settings">고정 항목 관리</button></div>
     <ul class="ups">${ups.map(r => {
       const c = catOf(r.cat, r.type);
+      const dLabel = r.date.slice(0, 7) === thisMonth ? `${dayNum(r.date)}일` : `${monthNum(r.date)}/${dayNum(r.date)}`;
       return `<li class="up">
-        <span class="up-date"><b>${dayNum(r.date)}일</b>${wd(r.date)}요일<span class="dday">D-${daysBetween(b.today, r.date)}</span></span>
-        <span class="tx-main"><span class="tx-title">${esc(r.name)}</span><span class="tx-sub"><span>${c.emoji} ${esc(c.name)}</span>${r.ex ? '<span class="tag">예시</span>' : ''}</span></span>
+        <span class="up-date"><b>${dLabel}</b>${wd(r.date)}요일<span class="dday">D-${daysBetween(b.today, r.date)}</span></span>
+        <span class="tx-main"><span class="tx-title">${esc(r.name)}</span><span class="tx-sub"><span>${c.emoji} ${r.type === 'save' ? '저축 · ' : ''}${esc(c.name)}</span>${r.ex ? '<span class="tag">예시</span>' : ''}</span></span>
         <span class="tx-amt ${r.type}">${signedWon(r.amount, r.type)}<small>원</small></span>
       </li>`;
     }).join('')}</ul>
@@ -2112,21 +2273,22 @@ function viewList() {
 function filtersHtml() {
   const opt = (c, sel) => `<option value="${c.id}"${sel === c.id ? ' selected' : ''}>${c.emoji} ${esc(c.name)}</option>`;
   return `<div class="filters">
-    <div class="chips" role="group" aria-label="구분">${[['all', '전체'], ['out', '지출'], ['in', '수입']].map(([v, l]) =>
+    <div class="chips" role="group" aria-label="구분">${[['all', '전체'], ['out', '지출'], ['in', '수입'], ['save', '저축']].map(([v, l]) =>
       `<button type="button" class="chip" data-action="flt-type" data-v="${v}" aria-pressed="${ui.fType === v}">${l}</button>`).join('')}</div>
     <div class="filter-row">
       <label class="sr" for="flt-cat">카테고리</label>
       <select id="flt-cat" class="input"><option value="">모든 카테고리</option>
-        <optgroup label="지출">${CATS.out.map(c => opt(c, ui.fCat)).join('')}</optgroup>
-        <optgroup label="수입">${CATS.in.map(c => opt(c, ui.fCat)).join('')}</optgroup>
+        ${TYPES.map(type => `<optgroup label="${TYPE_NAME[type]}">${CATS[type].map(c => opt(c, ui.fCat)).join('')}</optgroup>`).join('')}
       </select>
       <label class="sr" for="flt-q">메모 검색</label>
-      <input id="flt-q" class="input" type="search" placeholder="메모 검색" value="${esc(ui.q)}" autocomplete="off" enterkeyhint="search">
+      <input id="flt-q" class="input" type="search" placeholder="메모 검색 (${ui.qAll ? '전체 기간' : '이 달'})" value="${esc(ui.q)}" autocomplete="off" enterkeyhint="search">
     </div>
   </div>`;
 }
+const searching = () => !!ui.q.trim();
+const searchAll = () => searching() && ui.qAll;
 function filteredList() {
-  let list = monthTx(ui.month);
+  let list = searchAll() ? allTx() : periodTx(ui.month);
   if (ui.fType !== 'all') list = list.filter(t => t.type === ui.fType);
   if (ui.fCat) list = list.filter(t => t.cat === ui.fCat);
   const q = ui.q.trim().toLowerCase();
@@ -2134,27 +2296,38 @@ function filteredList() {
   return list;
 }
 function listResultsHtml() {
-  const all = monthTx(ui.month);
+  const global = searchAll();
+  const base = global ? allTx() : periodTx(ui.month);
   const list = filteredList();
-  const filtered = ui.fType !== 'all' || ui.fCat || ui.q.trim();
-  if (!all.length) return emptyBox(`${monthNum(ui.month)}월 기록이 아직 없어요`, '아래 <b>+</b> 버튼으로 첫 기록을 남겨 보세요.');
-  if (!list.length) return emptyBox('조건에 맞는 기록이 없어요', '필터나 검색어를 바꿔 보세요.');
+  const filtered = ui.fType !== 'all' || ui.fCat || searching();
+  let h = '';
+  if (filtered) {
+    const parts = [];
+    if (ui.fType !== 'all') parts.push(TYPE_NAME[ui.fType]);
+    if (ui.fCat && CAT[ui.fCat]) parts.push(CAT[ui.fCat].name);
+    if (searching()) parts.push(`'${esc(ui.q.trim())}' ${global ? '전체 기간' : '이 달'} 검색`);
+    const o = sumBy(list, 'out'), i = sumBy(list, 'in'), sv = sumBy(list, 'save');
+    const sums = [o ? `지출 ${won(o)}원` : '', i ? `수입 ${won(i)}원` : '', sv ? `저축 ${won(sv)}원` : ''].filter(Boolean).join(' · ');
+    h += `<div class="filter-bar"><p class="filter-note">${parts.join(' · ')} — ${list.length}건${sums ? ` · ${sums}` : ''}</p>
+      <div class="chips">${searching() ? `<button type="button" class="chip sm" data-action="search-scope">${global ? '이 달에서만 찾기' : '전체 기간에서 찾기'}</button>` : ''}<button type="button" class="chip sm" data-action="clear-filters">필터 지우기</button></div></div>`;
+  }
+  if (!base.length && !global) return h + emptyBox(`${periodName(ui.month)} 기록이 아직 없어요`, '아래 <b>+</b> 버튼으로 첫 기록을 남겨 보세요.');
+  if (!list.length) return h + emptyBox('조건에 맞는 기록이 없어요', '필터나 검색어를 바꿔 보세요.');
   const groups = [];
   let g = null;
   for (const t of list) {
-    if (!g || g.date !== t.date) { g = { date: t.date, items: [], out: 0, in: 0 }; groups.push(g); }
+    if (!g || g.date !== t.date) { g = { date: t.date, items: [], out: 0, in: 0, save: 0 }; groups.push(g); }
     g.items.push(t);
     g[t.type] += t.amount;
   }
-  let h = '';
-  if (filtered) {
-    const o = sumBy(list, 'out'), i = sumBy(list, 'in');
-    h += `<p class="filter-note">${list.length}건${o ? ` · 지출 ${won(o)}원` : ''}${i ? ` · 수입 ${won(i)}원` : ''}</p>`;
-  }
-  h += groups.map(gr => `<section aria-label="${dayTitle(gr.date)}">
-    <header class="day-head"><h3>${dayTitle(gr.date)}</h3><span>${gr.in ? `<span class="pos">+${won(gr.in)}</span>` : ''}${gr.in && gr.out ? ' ' : ''}${gr.out ? `${MINUS}${won(gr.out)}` : ''}</span></header>
+  h += groups.map(gr => {
+    const title = dayTitle(gr.date, global);
+    const outText = gr.out > 0 ? `${MINUS}${won(gr.out)}` : gr.out < 0 ? `+${won(-gr.out)}` : '';
+    return `<section aria-label="${title}">
+    <header class="day-head"><h3>${title}</h3><span>${gr.in ? `<span class="pos">+${won(gr.in)}</span>` : ''}${gr.in && outText ? ' ' : ''}${outText}</span></header>
     <ul class="txs">${gr.items.map(t => txRow(t)).join('')}</ul>
-  </section>`).join('');
+  </section>`;
+  }).join('');
   return h;
 }
 
@@ -2163,42 +2336,49 @@ function heatLevel(v, ref) {
   const r = v / ref;
   return r <= 0.5 ? 1 : r <= 1 ? 2 : r <= 2 ? 3 : 4;
 }
-function calHtml(ym) {
-  const dim = daysIn(ym), first = parseYmd(ym + '-01').getDay(), today = todayStr();
-  const out = Array(dim + 1).fill(0), inc = Array(dim + 1).fill(0);
-  for (const t of monthTx(ym)) (t.type === 'out' ? out : inc)[dayNum(t.date)] += t.amount;
+function calHtml(key) {
+  const [start, end] = periodRange(key);
+  const today = todayStr();
+  const dim = daysBetween(start, end) + 1, first = parseYmd(start).getDay();
+  const outBy = {}, inBy = {};
+  for (const t of periodTx(key)) {
+    if (t.type === 'out') outBy[t.date] = (outBy[t.date] || 0) + t.amount;
+    else if (t.type === 'in') inBy[t.date] = (inBy[t.date] || 0) + t.amount;
+  }
   const budget = S.settings.budget;
   let ref = budget ? budget / dim : 0;
   if (!ref) {
-    const nz = out.filter(v => v > 0).sort((a, b) => a - b);
+    const nz = Object.values(outBy).filter(v => v > 0).sort((a, b) => a - b);
     ref = nz.length ? nz[Math.floor(nz.length / 2)] : 1;
   }
-  const ns = noSpend(ym);
-  const sel = ui.calSel && ui.calSel.startsWith(ym) ? ui.calSel : today.startsWith(ym) ? today : null;
+  const free = new Set(noSpend(key).days.filter(d => d.st === 'free').map(d => d.date));
+  const sel = ui.calSel && ui.calSel >= start && ui.calSel <= end ? ui.calSel : today >= start && today <= end ? today : null;
   let cells = '';
   for (let i = 0; i < first; i++) cells += '<span class="cal-blank" aria-hidden="true"></span>';
-  for (let d = 1; d <= dim; d++) {
-    const ds = `${ym}-${pad(d)}`, dw = (first + d - 1) % 7;
-    const free = ns.days[d - 1] === 'free';
-    const lv = heatLevel(out[d], ref);
+  let i = 0;
+  for (let ds = start; ds <= end; ds = addDays(ds, 1), i++) {
+    const dw = (first + i) % 7, d = dayNum(ds);
+    const shown = (i === 0 && startDay() !== 1) || (d === 1 && i > 0) ? `${monthNum(ds)}/${d}` : String(d);
+    const out = outBy[ds] || 0, inc = inBy[ds] || 0, isFree = free.has(ds);
+    const lv = heatLevel(out, ref);
     const cls = ['cc', lv ? 'lv' + lv : '', dw === 0 ? 'sun' : dw === 6 ? 'sat' : '', ds === today ? 'today' : '', ds === sel ? 'sel' : '', ds > today ? 'future' : ''].filter(Boolean).join(' ');
-    const label = `${monthNum(ym)}월 ${d}일 ${WEEK[dw]}요일${out[d] ? `, 지출 ${won(out[d])}원` : ''}${inc[d] ? `, 수입 ${won(inc[d])}원` : ''}${free ? ', 무지출' : ''}`;
+    const label = `${monthNum(ds)}월 ${d}일 ${WEEK[dw]}요일${out > 0 ? `, 지출 ${won(out)}원` : ''}${inc ? `, 수입 ${won(inc)}원` : ''}${isFree ? ', 무지출' : ''}`;
     cells += `<button type="button" class="${cls}" data-action="cal-pick" data-date="${ds}" aria-label="${label}" aria-pressed="${ds === sel}">
-      <span class="cc-top"><span class="cd">${d}</span>${free ? '<span class="cf" aria-hidden="true">✓</span>' : ''}</span>${out[d] ? `<span class="ca">${compact(out[d])}</span>` : ''}${inc[d] ? `<span class="ci"${out[d] ? '' : ' style="margin-top:auto"'}>+${compact(inc[d])}</span>` : ''}
+      <span class="cc-top"><span class="cd">${shown}</span>${isFree ? '<span class="cf" aria-hidden="true">✓</span>' : ''}</span>${out > 0 ? `<span class="ca">${compact(out)}</span>` : ''}${inc ? `<span class="ci"${out > 0 ? '' : ' style="margin-top:auto"'}>+${compact(inc)}</span>` : ''}
     </button>`;
   }
   const trail = (7 - ((first + dim) % 7)) % 7;
-  for (let i = 0; i < trail; i++) cells += '<span class="cal-blank" aria-hidden="true"></span>';
+  for (let k = 0; k < trail; k++) cells += '<span class="cal-blank" aria-hidden="true"></span>';
   const legendRef = budget ? `하루 예산 ${won(Math.round(ref))}원 기준` : '이달 하루 지출 중앙값 기준';
   let h = `<div class="cal">
-    <div class="cal-head" aria-hidden="true">${WEEK.map((w, i) => `<span class="${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${w}</span>`).join('')}</div>
+    <div class="cal-head" aria-hidden="true">${WEEK.map((w, k) => `<span class="${k === 0 ? 'sun' : k === 6 ? 'sat' : ''}">${w}</span>`).join('')}</div>
     <div class="cal-grid">${cells}</div>
     <div class="cal-legend"><span class="ramp" aria-hidden="true"><span>적게</span><i></i><i></i><i></i><i></i><span>많이</span></span><span>${legendRef} · <b class="st good" style="font-size:12px">✓</b> 무지출</span></div>
   </div>`;
   if (sel) {
-    const list = monthTx(ym).filter(t => t.date === sel);
-    h += `<section class="sec" aria-labelledby="selTitle">
-      <div class="sec-head"><h2 id="selTitle">${dayTitle(sel)}</h2><button type="button" class="link" data-action="cal-add" data-date="${sel}">+ 이날 기록하기</button></div>
+    const list = periodTx(key).filter(t => t.date === sel);
+    h += `<section class="sec" id="calDay" aria-labelledby="selTitle">
+      <div class="sec-head"><h2 id="selTitle">${dayTitle(sel, true)}</h2><button type="button" class="link" data-action="cal-add" data-date="${sel}">+ 이날 기록하기</button></div>
       ${list.length ? `<ul class="txs">${list.map(t => txRow(t)).join('')}</ul>` : emptyBox('이날은 기록이 없어요', sel <= today ? '고정지출 말고 쓴 돈이 없다면 무지출 날이에요.' : '')}
     </section>`;
   } else {
@@ -2209,68 +2389,71 @@ function calHtml(ym) {
 
 /* ================= 통계 ================= */
 function viewStats() {
-  const ym = ui.month, today = todayStr(), cur = today.slice(0, 7);
-  const isCur = ym === cur, isFuture = ym > cur;
-  const list = monthTx(ym);
+  const key = ui.month, today = todayStr(), cur = curKey();
+  const isCur = key === cur, isFuture = key > cur;
+  const [start, end] = periodRange(key);
+  const list = periodTx(key);
   const out = sumBy(list, 'out'), inc = sumBy(list, 'in');
-  const elapsed = isFuture ? 0 : isCur ? dayNum(today) : daysIn(ym);
-  const pym = addMonths(ym, -1);
+  const elapsed = isFuture ? 0 : isCur ? daysBetween(start, today) + 1 : daysBetween(start, end) + 1;
+  const pkey = addMonths(key, -1), plist = periodTx(pkey);
   let prevOut, cmpLabel;
   if (isCur) {
-    const cutoff = dueDate(pym, dayNum(today));
-    prevOut = sumBy(monthTx(pym).filter(t => t.date <= cutoff), 'out');
+    const cutoff = addDays(periodRange(pkey)[0], elapsed - 1);
+    prevOut = sumBy(plist.filter(t => t.date <= cutoff), 'out');
     cmpLabel = '지난달 이맘때';
   } else {
-    prevOut = sumBy(monthTx(pym), 'out');
+    prevOut = sumBy(plist, 'out');
     cmpLabel = '지난달';
   }
   const diff = out - prevOut;
   let delta = '';
-  if (!monthTx(pym).length) {
+  if (!plist.length) {
     if (out) delta = '<p class="delta flat">지난달 기록이 없어서 아직 비교할 수 없어요</p>';
   } else if (out || prevOut) {
     if (diff < 0) delta = `<p class="delta good"><span aria-hidden="true">▼</span>${cmpLabel}보다 ${won(-diff)}원 덜 썼어요</p>`;
     else if (diff > 0) delta = `<p class="delta bad"><span aria-hidden="true">▲</span>${cmpLabel}보다 ${won(diff)}원 더 썼어요</p>`;
     else delta = `<p class="delta flat">${cmpLabel}와 똑같이 썼어요</p>`;
   }
-  const ns = noSpend(ym);
+  const ns = noSpend(key);
   let h = monthNav() + notesHtml();
   h += `<section class="stat-hero" aria-labelledby="shTitle">
-    <p class="eyebrow" id="shTitle">${monthNum(ym)}월에 쓴 돈</p>
-    <p class="big-num">${won(out)}<span class="unit">원</span></p>${delta}
+    <p class="eyebrow" id="shTitle">${periodName(key)}에 쓴 돈</p>
+    <p class="big-num">${won(Math.max(0, out))}<span class="unit">원</span></p>${delta}
   </section>`;
   h += `<div class="kpis">
-    <div><span>하루 평균</span><b>${elapsed ? won(Math.round(out / elapsed)) : 0}원</b></div>
+    <div><span>하루 평균</span><b>${elapsed ? won(Math.round(Math.max(0, out) / elapsed)) : 0}원</b></div>
     <div><span>들어온 돈</span><b>${won(inc)}원</b></div>
     <div><span>무지출</span><b>${ns.count}일</b></div>
   </div>`;
-  h += catCard(ym, list);
+  h += catCard(key, list);
   if (isFuture) return h;
-  h += chartCard('daily', '날마다 쓴 돈', dailySub(ym), dailySpec(ym));
-  const wk = weekSpec(ym);
+  h += chartCard('daily', '날마다 쓴 돈', dailySub(key), dailySpec(key));
+  const wk = weekSpec(key);
   h += chartCard('week', '요일별 평균', wk.sub, wk);
-  h += chartCard('months', '최근 6개월', '고른 달을 진하게 표시했어요', monthsSpec(ym));
+  h += chartCard('months', '최근 6개월', '고른 달을 진하게 표시했어요', monthsSpec(key));
   return h;
 }
-function catCard(ym, list) {
+function catCard(key, list) {
   const type = ui.sType;
-  const sums = Object.entries(catSums(list, type)).sort((a, b) => b[1] - a[1]);
-  const total = sums.reduce((s, [, v]) => s + v, 0);
-  const max = sums.length ? sums[0][1] : 0;
-  const seg = `<div class="seg" role="radiogroup" aria-label="구분" style="min-width:132px">
-    <button type="button" role="radio" aria-checked="${type === 'out'}" data-action="stats-type" data-v="out">지출</button>
-    <button type="button" role="radio" aria-checked="${type === 'in'}" data-action="stats-type" data-v="in">수입</button></div>`;
+  const sums = Object.entries(catSums(list, type)).filter(([, v]) => v !== 0).sort((a, b) => b[1] - a[1]);
+  const pos = sums.filter(([, v]) => v > 0);
+  const total = pos.reduce((s, [, v]) => s + v, 0);
+  const max = pos.length ? pos[0][1] : 0;
+  const titles = { out: '어디에 썼나', in: '어디서 들어왔나', save: '어디에 모았나' };
+  const empties = { out: '이달 지출 기록이 없어요', in: '이달 수입 기록이 없어요', save: '이달 저축 기록이 없어요' };
+  const seg = `<div class="seg" role="radiogroup" aria-label="구분" style="min-width:168px">
+    ${TYPES.map(v => `<button type="button" role="radio" aria-checked="${type === v}" data-action="stats-type" data-v="${v}">${TYPE_NAME[v]}</button>`).join('')}</div>`;
   const body = sums.length ? `<ol class="rank">${sums.map(([k, v]) => {
     const c = catOf(k, type);
-    return `<li><button type="button" class="rank-btn" data-action="goto-cat" data-cat="${k}" data-month="${ym}">
+    return `<li><button type="button" class="rank-btn" data-action="goto-cat" data-cat="${k}" data-month="${key}">
       <span class="ico" aria-hidden="true">${c.emoji}</span>
       <span class="rank-name">${esc(c.name)}</span>
-      <span class="rank-val">${won(v)}원<small>${Math.round((v / total) * 100)}%</small></span>
-      <span class="rank-meta"><span class="bar"><i style="width:${((v / max) * 100).toFixed(1)}%"></i></span></span>
+      <span class="rank-val">${v < 0 ? '+' + won(-v) : won(v)}원<small>${v > 0 && total ? Math.round((v / total) * 100) + '%' : '환불'}</small></span>
+      <span class="rank-meta"><span class="bar"><i style="width:${v > 0 && max ? ((v / max) * 100).toFixed(1) : 0}%"></i></span></span>
     </button></li>`;
-  }).join('')}</ol>` : emptyBox(type === 'out' ? '이달 지출 기록이 없어요' : '이달 수입 기록이 없어요', '');
+  }).join('')}</ol>` : emptyBox(empties[type], '');
   return `<section class="card" aria-labelledby="ccTitle">
-    <div class="card-head"><div><h2 class="card-title" id="ccTitle">${type === 'out' ? '어디에 썼나' : '어디서 들어왔나'}</h2><p class="card-sub">누르면 그 카테고리 내역으로 가요</p></div>${seg}</div>
+    <div class="card-head"><div><h2 class="card-title" id="ccTitle">${titles[type]}</h2><p class="card-sub">누르면 그 카테고리 내역으로 가요</p></div>${seg}</div>
     ${body}
   </section>`;
 }
@@ -2289,45 +2472,60 @@ function chartTable(spec) {
   return `<div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">${spec.tcols[0]}</th><th scope="col" class="r">${spec.tcols[1]}</th></tr></thead>
     <tbody>${rows.map(d => `<tr><td>${esc(d.tipL)}</td><td class="r">${won(d.v)}원</td></tr>`).join('')}</tbody></table></div>`;
 }
-function dailySub(ym) {
+function periodDays(key) {
+  const [start, end] = periodRange(key);
+  const days = [];
+  for (let d = start; d <= end; d = addDays(d, 1)) days.push(d);
+  return days;
+}
+function dailyTotals(key) {
+  const days = periodDays(key);
+  const idx = Object.fromEntries(days.map((d, i) => [d, i]));
+  const arr = Array(days.length).fill(0);
+  for (const t of periodTx(key)) if (t.type === 'out' && idx[t.date] !== undefined) arr[idx[t.date]] += t.amount;
+  return { days, arr: arr.map(v => Math.max(0, v)) };
+}
+function dailySub(key) {
   const b = S.settings.budget;
   if (!b) return '점선 없이 그날 쓴 돈만 보여요. 예산을 정하면 하루 예산선이 생겨요.';
-  const dim = daysIn(ym), ref = Math.round(b / dim);
-  const daily = Array(dim).fill(0);
-  for (const t of monthTx(ym)) if (t.type === 'out') daily[dayNum(t.date) - 1] += t.amount;
-  const over = daily.filter(v => v > ref).length;
+  const { days, arr } = dailyTotals(key);
+  const ref = Math.round(b / days.length);
+  const over = arr.filter(v => v > ref).length;
   return `점선은 하루 예산 ${won(ref)}원이에요. 이 선을 넘긴 날은 모두 <b>${over}일</b>이에요.`;
 }
-function dailySpec(ym) {
-  const dim = daysIn(ym), arr = Array(dim).fill(0);
-  for (const t of monthTx(ym)) if (t.type === 'out') arr[dayNum(t.date) - 1] += t.amount;
-  const marks = new Set([1, 5, 10, 15, 20, 25, dim]);
-  if (dim - 25 < 3) marks.delete(25);
+function dailySpec(key) {
+  const { days, arr } = dailyTotals(key);
+  const n = days.length;
+  const marks = new Set();
+  days.forEach((d, i) => { if (i === 0 || i === n - 1 || (dayNum(d) % 5 === 0 && i > 2 && i < n - 3)) marks.add(i); });
   let mx = 0;
   arr.forEach((v, i) => { if (v > arr[mx]) mx = i; });
-  const b = S.settings.budget, ref = b ? Math.round(b / dim) : 0;
+  const b = S.settings.budget, ref = b ? Math.round(b / n) : 0;
   return {
-    aria: `${monthNum(ym)}월 날짜별 지출 막대그래프. 가장 많이 쓴 날은 ${mx + 1}일 ${won(arr[mx])}원`,
-    data: arr.map((v, i) => ({ v, xl: marks.has(i + 1) ? String(i + 1) : '', tipL: `${monthNum(ym)}월 ${i + 1}일 (${wd(`${ym}-${pad(i + 1)}`)})`, tipV: `${won(v)}원` })),
+    aria: `${periodName(key)} 날짜별 지출 막대그래프. 가장 많이 쓴 날은 ${fmtMD(days[mx])} ${won(arr[mx])}원`,
+    data: arr.map((v, i) => {
+      const d = days[i];
+      return { v, xl: marks.has(i) ? (dayNum(d) === 1 && i > 0 ? `${monthNum(d)}/1` : String(dayNum(d))) : '', tipL: `${monthNum(d)}월 ${dayNum(d)}일 (${wd(d)})`, tipV: `${won(v)}원` };
+    }),
     labels: arr[mx] > 0 ? [mx] : [],
     ref: ref ? { v: ref, label: `하루 예산 ${compact(ref)}` } : null,
     tcols: ['날짜', '지출']
   };
 }
-function weekSpec(ym) {
-  const today = todayStr(), cur = today.slice(0, 7);
-  const end = ym === cur ? today : `${ym}-${pad(daysIn(ym))}`;
+function weekSpec(key) {
+  const today = todayStr();
+  const end = key === curKey() ? today : periodRange(key)[1];
   const first = startDate();
   let from = addDays(end, -55);
   if (first && first > from) from = first;
   const sums = Array(7).fill(0), cnt = Array(7).fill(0);
   if (first && from <= end) {
     for (let d = from; d <= end; d = addDays(d, 1)) cnt[parseYmd(d).getDay()]++;
-    for (const t of allTx()) if (t.type === 'out' && !t.rid && t.date >= from && t.date <= end) sums[parseYmd(t.date).getDay()] += t.amount;
+    for (const t of allTx()) if (t.type === 'out' && !isFixed(t) && t.date >= from && t.date <= end) sums[parseYmd(t.date).getDay()] += t.amount;
   }
   const order = [1, 2, 3, 4, 5, 6, 0];
   const data = order.map(k => {
-    const v = cnt[k] ? Math.round(sums[k] / cnt[k]) : 0;
+    const v = cnt[k] ? Math.max(0, Math.round(sums[k] / cnt[k])) : 0;
     return { v, k, xl: WEEK[k], tipL: `${WEEK[k]}요일 평균`, tipV: `${won(v)}원` };
   });
   const days = cnt.reduce((a, b) => a + b, 0);
@@ -2347,11 +2545,11 @@ function weekSpec(ym) {
     tableAll: true
   };
 }
-function monthsSpec(ym) {
-  const months = Array.from({ length: 6 }, (_, i) => addMonths(ym, i - 5));
-  const data = months.map(m => {
-    const v = sumBy(monthTx(m), 'out');
-    return { v, xl: `${monthNum(m)}월`, tipL: `${fmtMonth(m)} 지출`, tipV: `${won(v)}원` };
+function monthsSpec(key) {
+  const keys = Array.from({ length: 6 }, (_, i) => addMonths(key, i - 5));
+  const data = keys.map(k => {
+    const v = Math.max(0, sumBy(periodTx(k), 'out'));
+    return { v, xl: periodShort(k), tipL: `${periodTitle(k)} 지출`, tipV: `${won(v)}원` };
   });
   let mx = 0;
   data.forEach((d, i) => { if (d.v > data[mx].v) mx = i; });
@@ -2359,7 +2557,7 @@ function monthsSpec(ym) {
   if (mx !== 5 && data[mx].v > 0) labels.push(mx);
   const b = S.settings.budget;
   return {
-    aria: `최근 6개월 월별 지출 막대그래프. ${fmtMonth(ym)} ${won(data[5].v)}원`,
+    aria: `최근 6개월 지출 막대그래프. ${periodTitle(key)} ${won(data[5].v)}원`,
     data,
     emph: i => i === 5,
     emphX: 5,
@@ -2373,7 +2571,7 @@ function monthsSpec(ym) {
 /* ================= 설정 ================= */
 function viewSettings() {
   const s = S.settings;
-  const today = todayStr(), cur = today.slice(0, 7);
+  const today = todayStr(), cur = today.slice(0, 7), key = curKey();
   const cbCount = Object.keys(s.catBudgets).length;
   let h = `<h1 class="page-title">설정</h1>` + notesHtml();
   const skinOpt = k => `<button type="button" role="radio" class="skin-opt" data-action="set-skin" data-v="${k.id}" aria-checked="${s.skin === k.id}">
@@ -2386,11 +2584,23 @@ function viewSettings() {
       ${SKINS.map(skinOpt).join('')}
     </div>
   </section>`;
+  const pb = s.periodBudget && s.periodBudget.key === key ? s.periodBudget : null;
+  const overrideRow = pb
+    ? `<div class="inline-note"><p>이번 달(${periodName(key)})은 <b>남은 돈으로 맞춰서</b> 예산 ${won(pb.amount)}원으로 계산하고 있어요.</p><button type="button" class="btn small" data-action="clear-override">월 예산으로 되돌리기</button></div>`
+    : `<details class="more"><summary>이번 달만 남은 돈으로 맞추기<span>선택</span></summary>
+        <p class="hint" style="margin-top:10px">달 중간에 시작했거나 계획이 틀어졌을 때 지금 남은 돈을 넣으면, 오늘부터 이 돈으로 나눠 계산해요. 다음 달부터는 월 예산으로 돌아가요.</p>
+        <div class="money-row" style="margin-top:8px"><label class="sr" for="set-left">지금 남은 돈</label><input id="set-left" class="input money-in" inputmode="numeric" placeholder="0" autocomplete="off"><span>원</span></div>
+        <div class="row-end" style="margin-top:10px"><button type="button" class="btn" data-action="set-override">남은 돈으로 맞추기</button></div>
+      </details>`;
   h += `<section class="card" aria-labelledby="sbTitle">
     <div><h2 class="card-title" id="sbTitle">예산</h2><p class="card-sub">한 달에 쓸 돈이에요. 오늘 쓸 수 있는 돈은 이걸로 계산해요.</p></div>
     <div class="field"><label class="mini-label" for="set-budget">월 예산</label>
       <div class="money-row"><input id="set-budget" class="input money-in" inputmode="numeric" autocomplete="off" placeholder="0" value="${s.budget ? won(s.budget) : ''}"><span>원</span></div></div>
     <div class="row-end"><button type="button" class="btn primary" data-action="save-budget">예산 저장</button></div>
+    <div class="field"><label class="mini-label" for="set-start">한 달 시작일</label>
+      <select id="set-start" class="input">${dayOptions(s.startDay)}</select>
+      <p class="hint">용돈이나 알바비가 들어오는 날로 맞추면 그날부터 한 달로 계산해요. 지금은 ${periodTitle(key)}이 이번 달이에요.</p></div>
+    ${overrideRow}
     <details class="more"${cbCount ? ' open' : ''}>
       <summary>카테고리별 예산<span>${cbCount ? `${cbCount}개 정함` : '선택'}</span></summary>
       <div class="cb-list">${CATS.out.map(c => `<label class="cb-row" for="cb-${c.id}"><span>${c.emoji} ${esc(c.name)}</span>
@@ -2398,16 +2608,16 @@ function viewSettings() {
       <div class="row-end" style="margin-top:12px"><button type="button" class="btn" data-action="save-cats">카테고리 예산 저장</button></div>
     </details>
   </section>`;
-  const recs = Object.values(s.recurring).sort((a, b) => a.day - b.day || (a.name < b.name ? -1 : 1));
+  const recs = Object.values(s.recurring).sort((a, b) => (a.on === b.on ? 0 : a.on ? -1 : 1) || a.day - b.day || (a.name < b.name ? -1 : 1));
   h += `<section class="card" aria-labelledby="srTitle">
-    <div><h2 class="card-title" id="srTitle">고정 수입·지출</h2><p class="card-sub">용돈, 휴대폰 요금, 구독료처럼 매달 같은 날 오가는 돈이에요. 그날이 되면 자동으로 적어 둬요.</p></div>
+    <div><h2 class="card-title" id="srTitle">고정 수입·지출·저축</h2><p class="card-sub">용돈, 휴대폰 요금, 적금처럼 매달 같은 날 오가는 돈이에요. 그날이 되면 자동으로 적어 둬요.</p></div>
     ${recs.length ? `<ul class="recs">${recs.map(r => {
       const c = catOf(r.cat, r.type);
       const nm = r.last && r.last >= cur ? addMonths(cur, 1) : cur;
       const next = dueDate(nm, r.day);
-      return `<li><button type="button" class="rec" data-action="edit-rec" data-id="${esc(r.id)}">
+      return `<li><button type="button" class="rec${r.on ? '' : ' paused'}" data-action="edit-rec" data-id="${esc(r.id)}">
         <span class="ico" aria-hidden="true">${c.emoji}</span>
-        <span class="tx-main"><span class="tx-title">${esc(r.name)}</span><span class="tx-sub"><span>매달 ${r.day >= 31 ? '말일' : r.day + '일'}</span><span class="dot">다음 ${fmtMD(next)}</span>${r.ex ? '<span class="tag">예시</span>' : ''}</span></span>
+        <span class="tx-main"><span class="tx-title">${esc(r.name)}</span><span class="tx-sub"><span>매달 ${r.day >= 31 ? '말일' : r.day + '일'}</span>${r.on ? `<span class="dot">다음 ${fmtMD(next)}</span>` : '<span class="tag">일시정지</span>'}${r.ex ? '<span class="tag">예시</span>' : ''}</span></span>
         <span class="tx-amt ${r.type}">${signedWon(r.amount, r.type)}<small>원</small></span>
       </button></li>`;
     }).join('')}</ul>` : emptyBox('등록한 항목이 없어요', '용돈 들어오는 날이나 구독료 나가는 날을 등록해 보세요.')}
@@ -2424,17 +2634,19 @@ function viewSettings() {
     : S.mode === 'local'
       ? '<b>이 브라우저에만</b> 저장돼요. 브라우저 데이터를 지우면 기록도 사라지니 가끔 백업 파일을 받아 두세요.'
       : '이 브라우저는 저장을 막고 있어요. 창을 닫기 전에 백업 파일을 받아 두세요.';
+  const bk = backupState();
   h += `<section class="card" aria-labelledby="sdTitle">
     <div><h2 class="card-title" id="sdTitle">데이터</h2></div>
-    <div class="store-box">${S.mode === 'cloud' ? ICON.cloud : S.mode === 'local' ? ICON.phone : ICON.alert}<p>${storeText}</p></div>
+    <div class="store-box">${S.mode === 'cloud' ? ICON.cloud : S.mode === 'local' ? ICON.phone : ICON.alert}<p>${storeText}${S.mode === 'local' && bk.last ? ` 마지막 백업: ${fmtMD(bk.last)}.` : ''}</p></div>
     <div class="btn-row">
-      <button type="button" class="btn" data-action="export-csv" data-scope="month">${monthNum(cur)}월 엑셀(CSV)</button>
+      <button type="button" class="btn" data-action="export-csv" data-scope="month">이번 달 엑셀(CSV)</button>
       <button type="button" class="btn" data-action="export-csv" data-scope="all">전체 엑셀(CSV)</button>
     </div>
     <div class="btn-row">
       <button type="button" class="btn" data-action="export-json">백업 파일 받기</button>
       <button type="button" class="btn" data-action="import-json">백업 불러오기</button>
     </div>
+    <p class="hint">Claude 링크와 휴대폰 앱의 기록을 한곳에 모으려면 한쪽에서 <b>백업 파일 받기</b>, 다른 쪽에서 <b>백업 불러오기 → 합치기</b>를 누르세요.</p>
     ${hasExamples() ? '<button type="button" class="btn" data-action="clear-examples">예시 데이터 지우기</button>' : ''}
     <button type="button" class="btn danger" data-action="reset-all">모든 기록 지우기</button>
   </section>`;
@@ -2579,6 +2791,7 @@ function isTyping() {
 function doRender() {
   if (isTyping()) { pendingRender = true; updateChrome(); return; }
   pendingRender = false;
+  if (ui.monthFollows) ui.month = curKey();
   for (const k of Object.keys(CH)) delete CH[k];
   view.innerHTML = ui.tab === 'list' ? viewList() : ui.tab === 'stats' ? viewStats() : ui.tab === 'settings' ? viewSettings() : viewHome();
   updateChrome();
@@ -2596,7 +2809,7 @@ function updateChrome() {
   }
 }
 function xlStatus() {
-  const list = ui.tab === 'list' ? filteredList() : ui.tab === 'stats' ? monthTx(ui.month) : monthTx(curYm());
+  const list = ui.tab === 'list' && ui.listMode === 'list' ? filteredList() : periodTx(ui.tab === 'list' || ui.tab === 'stats' ? ui.month : curKey());
   const net = list.reduce((s, t) => s + (t.type === 'in' ? t.amount : -t.amount), 0);
   return `개수: ${list.length}    합계: ${net < 0 ? MINUS : ''}${won(Math.abs(net))}`;
 }
@@ -2703,23 +2916,28 @@ function toast(msg, opt = {}) {
 
 /* ================= 기록 시트 ================= */
 const txSheet = $('#txSheet');
-const T = { type: 'out', cat: null, edit: null, split: false, n: 2, picks: [] };
+const T = { type: 'out', cat: null, edit: null, split: false, refund: false, n: 2, picks: [], mem: null };
+const MEM_MS = 10 * 60 * 1000; // 방금 고른 날짜를 기억하는 시간
+const memDate = () => (T.mem && Date.now() - T.mem.at < MEM_MS ? T.mem.date : null);
 function openTx({ tx = null, date = null } = {}) {
   T.edit = tx;
   T.type = tx ? tx.type : 'out';
   T.cat = tx ? tx.cat : null;
   T.split = !!(tx && tx.split);
+  T.refund = !!(tx && tx.type === 'out' && tx.amount < 0);
   T.n = tx && tx.split ? tx.split.n : 2;
   $('#txTitle').textContent = tx ? '기록 고치기' : '새 기록';
-  $('#f-amount').value = tx ? won(tx.split ? tx.split.total : tx.amount) : '';
-  $('#f-date').value = tx ? tx.date : date || todayStr();
+  $('#f-amount').value = tx ? won(tx.split ? tx.split.total : Math.abs(tx.amount)) : '';
+  $('#f-date').value = tx ? tx.date : date || memDate() || todayStr();
   $('#f-memo').value = tx ? tx.memo : '';
   $('#f-hours').value = '';
   $('#f-wage').value = won(S.settings.wage);
   $('#txDelete').hidden = !tx;
-  $('#txSave').textContent = tx ? '고친 내용 저장' : '저장하기';
+  $('#txMore').hidden = !!tx;
+  $('#txDone').hidden = true;
   $('#txErr').textContent = '';
   syncTx();
+  updateSaveLabel();
   updateWage();
   txSheet.showModal();
   txSheet.scrollTop = 0;
@@ -2730,14 +2948,27 @@ function syncTx() {
   $('#catGrid').innerHTML = CATS[T.type].map(c =>
     `<button type="button" class="cat-btn" data-cat="${c.id}" aria-pressed="${c.id === T.cat}"><span class="e" aria-hidden="true">${c.emoji}</span><span>${esc(c.name)}</span></button>`).join('');
   $('#splitRow').hidden = T.type !== 'out';
+  $('#wageRow').hidden = !(T.type === 'in' && T.cat === 'parttime');
+  syncOpts();
+  renderPicks();
+  renderMemoList();
+}
+/* N빵과 환불은 지출에서만, 둘 중 하나만 */
+function syncOpts() {
+  if (T.type !== 'out') { T.split = false; T.refund = false; }
   $('#f-split').checked = T.split;
   $('#splitCtl').hidden = !T.split;
   $('#splitN').textContent = T.n;
-  $('#wageRow').hidden = !(T.type === 'in' && T.cat === 'parttime');
-  $('#amountLabel').textContent = T.type === 'in' ? '들어온 돈' : T.split ? '모두 함께 낸 돈' : '쓴 돈';
+  $('#f-refund').checked = T.refund;
+  $('#refundInfo').hidden = !T.refund;
+  $('#amountLabel').textContent = T.type === 'in' ? '들어온 돈' : T.type === 'save' ? '모은 돈' : T.refund ? '돌려받은 돈' : T.split ? '모두 함께 낸 돈' : '쓴 돈';
   updateSplitInfo();
-  renderPicks();
-  renderMemoList();
+}
+function updateSaveLabel() {
+  const d = $('#f-date').value, today = todayStr();
+  $('#txSave').textContent = T.edit ? '고친 내용 저장'
+    : !isYmd(d) || d === today ? '저장하기'
+    : d === addDays(today, -1) ? '어제 날짜로 저장' : `${fmtMD(d)}에 저장`;
 }
 function updateSplitInfo() {
   const total = parseAmount($('#f-amount').value);
@@ -2760,7 +2991,7 @@ function quickPicks(type) {
   const since = addDays(todayStr(), -90);
   const m = new Map();
   for (const t of allTx()) {
-    if (t.type !== type || t.rid || t.split || t.date < since) continue;
+    if (t.type !== type || t.rid || t.split || t.amount <= 0 || t.date < since) continue;
     const memoText = t.memo.trim();
     if (!memoText) continue;
     const k = `${t.cat}|${memoText}|${t.amount}`;
@@ -2785,17 +3016,18 @@ function renderMemoList() {
   }
   $('#memoList').innerHTML = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([v]) => `<option value="${esc(v)}"></option>`).join('');
 }
-function submitTx(e) {
-  e.preventDefault();
+/* 입력을 읽어 저장할 기록을 만든다. 잘못된 칸이 있으면 알려 주고 null */
+function readTx() {
   const err = $('#txErr');
   const raw = parseAmount($('#f-amount').value);
   const date = $('#f-date').value;
   const memoText = $('#f-memo').value.trim().slice(0, 40);
-  if (!raw) { err.textContent = '금액을 넣어 주세요.'; $('#f-amount').focus(); return; }
-  if (!T.cat) { err.textContent = '카테고리를 골라 주세요.'; const b = $('#catGrid .cat-btn'); if (b) b.focus(); return; }
-  if (!isYmd(date)) { err.textContent = '날짜를 다시 골라 주세요.'; $('#f-date').focus(); return; }
+  if (!raw) { err.textContent = '금액을 넣어 주세요.'; $('#f-amount').focus(); return null; }
+  if (!T.cat) { err.textContent = '카테고리를 골라 주세요.'; const b = $('#catGrid .cat-btn'); if (b) b.focus(); return null; }
+  if (!isYmd(date)) { err.textContent = '날짜를 다시 골라 주세요.'; $('#f-date').focus(); return null; }
   let amount = raw, split = null;
-  if (T.type === 'out' && T.split) { split = { total: raw, n: T.n }; amount = Math.ceil(raw / T.n); }
+  if (T.type === 'out' && T.refund) amount = -raw; // 환불은 지출에서 빼는 음수 금액
+  else if (T.type === 'out' && T.split) { split = { total: raw, n: T.n }; amount = Math.ceil(raw / T.n); }
   const prev = T.edit;
   const tx = {
     id: prev ? prev.id : newId('t'), type: T.type, amount, cat: T.cat, date, memo: memoText, split,
@@ -2804,11 +3036,45 @@ function submitTx(e) {
   const ch = { put: [tx] };
   const wage = parseAmount($('#f-wage').value);
   if (T.type === 'in' && T.cat === 'parttime' && parseFloat($('#f-hours').value) > 0 && wage && wage !== S.settings.wage) ch.settings = { wage };
+  return { tx, ch };
+}
+function submitTx(e) {
+  e.preventDefault();
+  const got = readTx();
+  if (!got) return;
+  const { tx, ch } = got;
+  const prev = T.edit;
+  if (!prev) T.mem = { date: tx.date, at: Date.now() };
   txSheet.close();
   commit(ch).then(ok => {
     if (!ok) return;
-    toast(prev ? '고쳤어요' : date === todayStr() ? '기록했어요' : `${fmtMD(date)}에 기록했어요`);
+    toast(prev ? '고쳤어요' : tx.date === todayStr() ? '기록했어요' : `${fmtMD(tx.date)}에 기록했어요`);
   });
+}
+/* 저장하고 시트를 그대로 둔 채 다음 기록 받기 (구분·날짜는 유지) */
+function saveAndMore() {
+  if (T.edit) return;
+  const got = readTx();
+  if (!got) return;
+  const { tx, ch } = got;
+  T.mem = { date: tx.date, at: Date.now() };
+  commit(ch).then(ok => { if (!ok) $('#txErr').textContent = '방금 기록을 저장하지 못했어요. 잠시 뒤에 다시 시도해 주세요.'; });
+  const c = catOf(tx.cat, tx.type);
+  const done = $('#txDone');
+  done.hidden = false; // 보이게 한 뒤에 글을 바꿔야 화면 낭독기가 읽어 준다
+  done.textContent = `✓ ${tx.date === todayStr() ? '' : fmtMD(tx.date) + ' · '}${tx.memo || c.name} ${signedWon(tx.amount, tx.type)}원 저장했어요. 다음 기록을 적어 주세요.`;
+  T.cat = null;
+  T.split = false;
+  T.refund = false;
+  T.n = 2;
+  $('#f-amount').value = '';
+  $('#f-memo').value = '';
+  $('#f-hours').value = '';
+  $('#txErr').textContent = '';
+  syncTx();
+  updateWage();
+  txSheet.scrollTop = 0;
+  $('#f-amount').focus({ preventScroll: true });
 }
 function deleteTx() {
   const t = T.edit;
@@ -2822,6 +3088,7 @@ function deleteTx() {
 /* ================= 고정 항목 시트 ================= */
 const recSheet = $('#recSheet');
 const R = { type: 'out', edit: null };
+const REC_CAT = { out: 'housing', in: 'allowance', save: 'deposit' };
 function fillRecCats() {
   const sel = $('#r-cat'), keep = sel.value;
   sel.innerHTML = CATS[R.type].map(c => `<option value="${c.id}">${c.emoji} ${esc(c.name)}</option>`).join('');
@@ -2832,7 +3099,7 @@ function openRec(r = null) {
   R.type = r ? r.type : 'out';
   for (const b of $$('#recType [data-rtype]')) b.setAttribute('aria-checked', String(b.dataset.rtype === R.type));
   fillRecCats();
-  $('#r-cat').value = r ? r.cat : R.type === 'in' ? 'allowance' : 'housing';
+  $('#r-cat').value = r ? r.cat : REC_CAT[R.type];
   $('#r-name').value = r ? r.name : '';
   $('#r-amount').value = r ? won(r.amount) : '';
   $('#r-day').value = String(r ? r.day : Math.min(28, dayNum(todayStr())));
@@ -2840,20 +3107,21 @@ function openRec(r = null) {
   $('#recDelete').hidden = !r;
   $('#recSave').textContent = r ? '고친 내용 저장' : '등록하기';
   $('#recErr').textContent = '';
+  $('#r-on-row').hidden = !r;
+  $('#r-on').checked = r ? r.on : true;
   $('#r-now').checked = true;
   syncRecNow();
   recSheet.showModal();
   recSheet.scrollTop = 0;
 }
+/* 새로 등록하거나 멈췄던 항목을 다시 켤 때, 이미 지난 이번 달 날짜를 지금 적을지 묻는다 */
 function syncRecNow() {
   const today = todayStr(), cur = today.slice(0, 7);
-  const day = Number($('#r-day').value);
-  const due = dueDate(cur, day);
-  const editingDone = R.edit && R.edit.last && R.edit.last >= cur;
-  const show = !R.edit && due <= today;
-  $('#r-now-row').hidden = !show;
+  const due = dueDate(cur, Number($('#r-day').value));
+  const resuming = !!(R.edit && !R.edit.on && $('#r-on').checked);
+  const fresh = !R.edit || (resuming && !(R.edit.last && R.edit.last >= cur));
+  $('#r-now-row').hidden = !(fresh && due <= today);
   $('#r-now-text').textContent = `이번 달 ${fmtMD(due)} 것도 지금 적어 두기`;
-  return { cur, due, editingDone };
 }
 function submitRec(e) {
   e.preventDefault();
@@ -2865,18 +3133,25 @@ function submitRec(e) {
   if (!name) { err.textContent = '이름을 넣어 주세요.'; $('#r-name').focus(); return; }
   if (!amount) { err.textContent = '금액을 넣어 주세요.'; $('#r-amount').focus(); return; }
   const today = todayStr(), cur = today.slice(0, 7), due = dueDate(cur, day);
+  const prev = R.edit;
+  const on = prev ? $('#r-on').checked : true;
+  // last = 마지막으로 적은 달. 새로 시작할 때는 이번 달부터만 적고 지난달까지는 채우지 않는다
+  const fromNow = () => (due <= today && !$('#r-now').checked ? cur : addMonths(cur, -1));
   let last;
-  if (R.edit) last = R.edit.last;
-  else if (due <= today) last = $('#r-now').checked ? addMonths(cur, -1) : cur;
-  else last = addMonths(cur, -1);
+  if (!prev) last = fromNow();
+  else if (on && !prev.on) last = prev.last && prev.last >= cur ? prev.last : fromNow();
+  else last = prev.last;
   const r = {
-    id: R.edit ? R.edit.id : newId('r'), name, type: R.type, cat: CAT[cat] && CAT[cat].type === R.type ? cat : fallbackCat(R.type),
-    amount, day, last, on: true, ex: R.edit ? R.edit.ex : false, created: R.edit ? R.edit.created : Date.now()
+    id: prev ? prev.id : newId('r'), name, type: R.type, cat: CAT[cat] && CAT[cat].type === R.type ? cat : fallbackCat(R.type),
+    amount, day, last, on, ex: prev ? prev.ex : false, created: prev ? prev.created : Date.now()
   };
+  const msg = !prev ? '고정 항목을 등록했어요'
+    : on === prev.on ? '고정 항목을 고쳤어요'
+    : on ? '다시 켰어요. 이번 달부터 이어서 적어요' : '잠시 멈췄어요. 다시 켤 때까지 적지 않아요';
   recSheet.close();
   commit({ rec: { [r.id]: r } }).then(ok => {
     if (!ok) return;
-    toast(R.edit ? '고정 항목을 고쳤어요' : '고정 항목을 등록했어요');
+    toast(msg);
     autoPost();
   });
 }
@@ -2892,18 +3167,20 @@ function deleteRec() {
 /* ================= 확인 · 복사 시트 ================= */
 const cfSheet = $('#confirmSheet');
 let cfResolve = null;
-function confirmBox({ title, body, ok = '확인', danger = false }) {
+/* 선택지 여러 개 중 하나를 고른다. 닫거나 취소하면 '0' */
+function chooseBox({ title, body, choices }) {
   $('#cfTitle').textContent = title;
   $('#cfBody').textContent = body;
-  const okBtn = $('#cfOk');
-  okBtn.textContent = ok;
-  okBtn.style.background = danger ? 'var(--bad)' : '';
-  okBtn.style.borderColor = danger ? 'var(--bad)' : '';
+  $('#cfActions').innerHTML = choices.map(c =>
+    `<button type="button" class="btn${c.cls ? ' ' + c.cls : ''}" data-cf="${esc(c.v)}"${c.id ? ` id="${c.id}"` : ''}${c.danger ? ' style="background:var(--bad);border-color:var(--bad)"' : ''}>${esc(c.label)}</button>`).join('');
   cfSheet.returnValue = '0';
   cfSheet.showModal();
   return new Promise(res => { cfResolve = res; });
 }
-cfSheet.addEventListener('close', () => { if (cfResolve) { cfResolve(cfSheet.returnValue === '1'); cfResolve = null; } });
+function confirmBox({ title, body, ok = '확인', danger = false }) {
+  return chooseBox({ title, body, choices: [{ v: '0', label: '취소' }, { v: '1', label: ok, cls: 'primary', id: 'cfOk', danger }] }).then(v => v === '1');
+}
+cfSheet.addEventListener('close', () => { if (cfResolve) { cfResolve(cfSheet.returnValue || '0'); cfResolve = null; } });
 cfSheet.addEventListener('click', e => {
   const b = e.target.closest('[data-cf]');
   if (b) cfSheet.close(b.dataset.cf);
@@ -2931,19 +3208,20 @@ const csvCell = v => {
 function toCsv(list) {
   const head = ['날짜', '구분', '카테고리', '금액', '메모', 'N빵 총액', 'N빵 인원', '고정'];
   const rows = [...list].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.created - b.created)).map(t => [
-    t.date, t.type === 'in' ? '수입' : '지출', catOf(t.cat, t.type).name, t.amount, t.memo,
+    t.date, TYPE_NAME[t.type], catOf(t.cat, t.type).name, t.amount, t.memo,
     t.split ? t.split.total : '', t.split ? t.split.n : '', t.rid ? '예' : ''
   ]);
   return '﻿' + [head, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
 }
+/* 파일을 건넨다. 저장·공유·복사 창까지 갔으면 true */
 async function offerFile(filename, data, mime) {
   if (S.downloads) {
     try {
       await S.downloads.save({ filename, data });
       toast('파일을 저장했어요');
-      return;
+      return true;
     } catch (e) {
-      if (e && (e.code === 'declined' || e.code === 'rate_limited')) return;
+      if (e && (e.code === 'declined' || e.code === 'rate_limited')) return false;
     }
   }
   if (!window.claude) {
@@ -2951,10 +3229,10 @@ async function offerFile(filename, data, mime) {
       const file = new File([data], filename, { type: mime });
       if (navigator.canShare && navigator.canShare({ files: [file] }) && matchMedia('(pointer: coarse)').matches) {
         await navigator.share({ files: [file], title: filename });
-        return;
+        return true;
       }
     } catch (e) {
-      if (e && e.name === 'AbortError') return;
+      if (e && e.name === 'AbortError') return false;
     }
     try {
       const url = URL.createObjectURL(new Blob([data], { type: mime }));
@@ -2965,59 +3243,96 @@ async function offerFile(filename, data, mime) {
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 2000);
-      return;
+      return true;
     } catch (e) { /* 아래 복사로 */ }
   }
   showCopy(data);
+  return true;
 }
 function exportCsv(scope) {
-  const cur = curYm();
-  const list = scope === 'month' ? monthTx(cur) : allTx();
+  const key = curKey();
+  const list = scope === 'month' ? periodTx(key) : allTx();
   if (!list.length) { toast('내보낼 기록이 없어요'); return; }
-  offerFile(scope === 'month' ? `gagyebu_${cur}.csv` : `gagyebu_all_${todayStr()}.csv`, toCsv(list), 'text/csv');
+  const [s, e] = periodRange(key);
+  const name = scope !== 'month' ? `gagyebu_all_${todayStr()}.csv` : startDay() === 1 ? `gagyebu_${key}.csv` : `gagyebu_${s}_${e}.csv`;
+  offerFile(name, toCsv(list), 'text/csv');
 }
-function exportJson() {
+async function exportJson() {
   const docs = {};
   for (const [id, d] of Object.entries(S.docs)) docs[id] = cleanDoc(d);
   const data = JSON.stringify({ app: 'campus-gagyebu', v: 1, exportedAt: new Date().toISOString(), docs }, null, 1);
-  offerFile(`gagyebu_backup_${todayStr()}.json`, data, 'application/json');
+  if (await offerFile(`gagyebu_backup_${todayStr()}.json`, data, 'application/json')) {
+    setBackupState({ last: todayStr(), snooze: null });
+    render();
+  }
 }
 function parseBackup(text) {
   const d = JSON.parse(text);
   if (!d || typeof d !== 'object' || !d.docs || typeof d.docs !== 'object') throw new Error('shape');
-  const docs = {};
-  let count = 0;
+  const docs = {}, txs = [];
+  let settings = null;
   for (const [id, doc] of Object.entries(d.docs)) {
     if (!doc || typeof doc !== 'object') continue;
     if (id === 'settings') {
-      const s = normSettings(doc);
+      const s = settings = normSettings(doc);
       const rec = {};
       for (const r of Object.values(s.recurring)) rec[r.id] = recDoc(r);
-      docs.settings = { budget: s.budget, catBudgets: s.catBudgets, wage: s.wage, recurring: rec, since: s.since, exBudget: s.exBudget, exCat: s.exCat, skin: SKIN[doc.skin] ? doc.skin : S.settings.skin };
+      docs.settings = {
+        budget: s.budget, catBudgets: s.catBudgets, wage: s.wage, recurring: rec, since: s.since, exBudget: s.exBudget, exCat: s.exCat,
+        skin: SKIN[doc.skin] ? doc.skin : S.settings.skin, startDay: s.startDay, periodBudget: s.periodBudget
+      };
     } else if (/^m-\d{4}-(0[1-9]|1[0-2])$/.test(id) && doc.tx && typeof doc.tx === 'object') {
       const tx = {};
       for (const [tid, raw] of Object.entries(doc.tx)) {
         const t = normTx(raw, tid);
-        if (t && monthDoc(t.date.slice(0, 7)) === id) { tx[tid] = txDoc(t); count++; }
+        if (t && monthDoc(t.date.slice(0, 7)) === id) { tx[tid] = txDoc(t); txs.push(t); }
       }
       docs[id] = { tx };
     }
   }
-  return { docs, count };
+  return { docs, count: txs.length, txs, settings };
 }
 async function importFile(file) {
   let parsed;
   try { parsed = parseBackup(await file.text()); }
   catch (e) { toast('캠퍼스 가계부 백업 파일이 아니에요. 파일을 다시 골라 주세요.', { kind: 'error' }); return; }
-  const ok = await confirmBox({
-    title: '백업으로 바꿀까요?',
-    body: `백업 파일의 기록 ${parsed.count}건과 설정으로 지금 가계부를 바꿔요. 지금 있는 기록 ${allTx().length}건은 사라져요.`,
-    ok: '바꾸기',
-    danger: true
-  });
-  if (!ok) return;
+  const have = allTx().length;
+  let how;
+  if (!have) {
+    how = (await confirmBox({ title: '백업을 불러올까요?', body: `백업 파일의 기록 ${parsed.count}건과 예산·설정을 불러와요.`, ok: '불러오기' })) ? 'replace' : '0';
+  } else {
+    how = await chooseBox({
+      title: '백업을 어떻게 불러올까요?',
+      body: `백업 파일에 기록 ${parsed.count}건, 지금 가계부에 ${have}건이 있어요.\n· 합치기: 지금 기록은 그대로 두고 백업에만 있는 기록을 더해요. 예산과 설정은 지금 것을 써요.\n· 바꾸기: 지금 기록과 설정을 모두 지우고 백업으로 바꿔요.`,
+      choices: [{ v: '0', label: '취소' }, { v: 'replace', label: '바꾸기', cls: 'danger' }, { v: 'merge', label: '합치기', cls: 'primary' }]
+    });
+  }
+  if (how === 'merge') { await mergeBackup(parsed); return; }
+  if (how !== 'replace') return;
   if (!parsed.docs.settings) parsed.docs.settings = { skin: S.settings.skin };
   if (await replaceAll(parsed.docs)) toast(`백업을 불러왔어요 (${parsed.count}건)`);
+  autoPost();
+}
+/* 합치기: 같은 id는 지금 것을 두고, 백업에만 있는 기록과 고정 항목을 더한다 */
+async function mergeBackup(parsed) {
+  const mine = allTx();
+  const ids = new Set(mine.map(t => t.id));
+  // 같은 고정 항목을 두 곳에서 따로 등록해 자동으로 적힌 기록은 한 번만
+  const sig = t => `${t.date}|${t.type}|${t.amount}|${t.memo}`;
+  const autoSigs = new Set(mine.filter(t => t.rid).map(sig));
+  const put = parsed.txs.filter(t => !ids.has(t.id) && !(t.rid && autoSigs.has(sig(t)))).map(t => ({ ...t, prevDate: null }));
+  const rec = {};
+  if (parsed.settings) {
+    const recSig = r => `${r.type}|${r.name}|${r.amount}|${r.day}`;
+    const have = new Set(Object.values(S.settings.recurring).map(recSig));
+    for (const r of Object.values(parsed.settings.recurring)) if (!S.settings.recurring[r.id] && !have.has(recSig(r))) rec[r.id] = r;
+  }
+  const nRec = Object.keys(rec).length;
+  if (!put.length && !nRec) { toast('더할 기록이 없어요. 백업의 기록이 이미 모두 들어 있어요.'); return; }
+  const ch = { put };
+  if (nRec) ch.rec = rec;
+  const parts = [put.length ? `기록 ${put.length}건` : '', nRec ? `고정 항목 ${nRec}개` : ''].filter(Boolean);
+  if (await commit(ch)) toast(`${parts.join(', ')}${nRec ? '를' : '을'} 더했어요`);
   autoPost();
 }
 async function resetAll() {
@@ -3051,40 +3366,63 @@ function clearExamples() {
 
 /* ================= 이벤트 ================= */
 function findTx(id) { return allTx().find(t => t.id === id) || null; }
+/* 보는 기간 바꾸기. 지금 기간이면 날이 바뀌어도 따라간다 */
+function setMonth(key) {
+  ui.month = key;
+  ui.monthFollows = key === curKey();
+  ui.calSel = null;
+}
 
 document.addEventListener('click', e => {
   const tabBtn = e.target.closest('[data-tab]');
-  if (tabBtn) { blurTyping(); go(tabBtn.dataset.tab); return; }
+  if (tabBtn) {
+    blurTyping();
+    // 내역 탭은 늘 필터 없이 연다 (지난번 검색이 남아 있으면 헷갈려서)
+    if (tabBtn.dataset.tab === 'list') resetFilters();
+    go(tabBtn.dataset.tab);
+    return;
+  }
   const el = e.target.closest('[data-action]');
   if (!el) return;
   const a = el.dataset.action;
   if (a !== 'ob-preset') blurTyping();
   switch (a) {
     case 'add': {
-      const date = ui.tab === 'list' && ui.listMode === 'cal' && ui.calSel && ui.calSel.startsWith(ui.month) ? ui.calSel : null;
+      let date = null;
+      if (ui.tab === 'list' && ui.listMode === 'cal' && ui.calSel) {
+        const [s, end] = periodRange(ui.month);
+        if (ui.calSel >= s && ui.calSel <= end) date = ui.calSel;
+      }
       openTx({ date });
       break;
     }
     case 'edit-tx': { const t = findTx(el.dataset.id); if (t) openTx({ tx: t }); break; }
     case 'cal-add': openTx({ date: el.dataset.date }); break;
     case 'cal-pick': ui.calSel = el.dataset.date; render(); break;
-    case 'month-prev': ui.month = addMonths(ui.month, -1); ui.calSel = null; render(); break;
-    case 'month-next': ui.month = addMonths(ui.month, 1); ui.calSel = null; render(); break;
-    case 'month-now': ui.month = curYm(); ui.calSel = null; render(); break;
+    case 'month-prev': setMonth(addMonths(ui.month, -1)); render(); break;
+    case 'month-next': setMonth(addMonths(ui.month, 1)); render(); break;
+    case 'month-now': setMonth(curKey()); render(); break;
     case 'list-mode': ui.listMode = el.dataset.mode; saveUi(); render(); break;
-    case 'flt-type': ui.fType = el.dataset.v; render(); break;
+    case 'flt-type': {
+      ui.fType = el.dataset.v;
+      if (ui.fCat && ui.fType !== 'all' && CAT[ui.fCat].type !== ui.fType) ui.fCat = '';
+      render();
+      break;
+    }
+    case 'clear-filters': resetFilters(); render(); break;
+    case 'search-scope': ui.qAll = !ui.qAll; render(); break;
     case 'stats-type': ui.sType = el.dataset.v; render(); break;
     case 'toggle-table': ui.tables[el.dataset.id] = !ui.tables[el.dataset.id]; render(); break;
-    case 'goto-list': ui.month = curYm(); ui.listMode = 'list'; ui.fType = 'all'; ui.fCat = ''; ui.q = ''; saveUi(); go('list'); break;
-    case 'goto-stats': ui.month = curYm(); go('stats'); break;
+    case 'goto-list': setMonth(curKey()); ui.listMode = 'list'; resetFilters(); saveUi(); go('list'); break;
+    case 'goto-stats': setMonth(curKey()); go('stats'); break;
     case 'goto-settings': go('settings'); break;
     case 'goto-cat': {
       const c = CAT[el.dataset.cat];
-      ui.month = el.dataset.month || ui.month;
+      setMonth(el.dataset.month || ui.month);
       ui.listMode = 'list';
+      resetFilters();
       ui.fCat = c ? c.id : '';
       ui.fType = c ? c.type : 'all';
-      ui.q = '';
       saveUi();
       go('list');
       break;
@@ -3092,8 +3430,17 @@ document.addEventListener('click', e => {
     case 'ob-preset': { const inp = $('#ob-budget'); if (inp) inp.value = won(Number(el.dataset.v)); break; }
     case 'save-onboard': {
       const v = parseAmount($('#ob-budget') && $('#ob-budget').value);
-      if (!v) { const err = $('#obErr'); if (err) err.textContent = '한 달 예산을 넣어 주세요.'; return; }
-      commit({ settings: { budget: v, exBudget: false, since: S.settings.since || todayStr() } }).then(ok => ok && toast('예산을 정했어요. 오늘 쓴 돈부터 적어 볼까요?'));
+      const err = $('#obErr');
+      if (!v) { if (err) err.textContent = '한 달 예산을 넣어 주세요.'; return; }
+      const sd = Number($('#ob-start').value) || 1;
+      const settings = { budget: v, exBudget: false, since: S.settings.since || todayStr(), startDay: sd, periodBudget: null };
+      if ($('#ob-partial').checked) {
+        const left = $('#ob-left');
+        if (!left.value.trim()) { if (err) err.textContent = '지금 남은 돈을 넣어 주세요.'; left.focus(); return; }
+        settings.periodBudget = makePeriodBudget(parseAmount(left.value), sd);
+      }
+      ui.monthFollows = true;
+      commit({ settings }).then(ok => ok && toast('예산을 정했어요. 오늘 쓴 돈부터 적어 볼까요?'));
       break;
     }
     case 'save-budget': {
@@ -3101,6 +3448,14 @@ document.addEventListener('click', e => {
       commit({ settings: { budget: v, exBudget: false, since: S.settings.since || todayStr() } }).then(ok => ok && toast(v ? '월 예산을 저장했어요' : '월 예산을 지웠어요'));
       break;
     }
+    case 'set-override': {
+      const inp = $('#set-left');
+      if (!inp || !inp.value.trim()) { toast('지금 남은 돈을 넣어 주세요', { kind: 'error' }); if (inp) inp.focus(); return; }
+      const pb = makePeriodBudget(parseAmount(inp.value), startDay());
+      commit({ settings: { periodBudget: pb } }).then(ok => ok && toast(`이번 달은 남은 ${won(parseAmount(inp.value))}원으로 계산할게요`));
+      break;
+    }
+    case 'clear-override': commit({ settings: { periodBudget: null } }).then(ok => ok && toast('이번 달도 월 예산으로 계산해요')); break;
     case 'save-cats': {
       const patch = {};
       for (const c of CATS.out) {
@@ -3130,6 +3485,7 @@ document.addEventListener('click', e => {
     case 'edit-rec': { const r = S.settings.recurring[el.dataset.id]; if (r) openRec(r); break; }
     case 'export-csv': exportCsv(el.dataset.scope); break;
     case 'export-json': exportJson(); break;
+    case 'backup-later': setBackupState({ snooze: addDays(todayStr(), 7) }); render(); toast('일주일 뒤에 다시 알려 드릴게요'); break;
     case 'import-json': $('#importFile').click(); break;
     case 'clear-examples': clearExamples(); break;
     case 'reset-all': resetAll(); break;
@@ -3143,6 +3499,7 @@ document.addEventListener('input', e => {
     ui.q = el.value;
     const box = $('#listResults');
     if (box) box.innerHTML = listResultsHtml();
+    updateChrome();
   }
 });
 document.addEventListener('change', e => {
@@ -3153,13 +3510,26 @@ document.addEventListener('change', e => {
     el.blur();
     pendingRender = false;
     doRender();
+  } else if (el.id === 'ob-partial') {
+    $('#ob-partial-box').hidden = !el.checked;
+    if (el.checked) $('#ob-left').focus();
+  } else if (el.id === 'set-start') {
+    const sd = Number(el.value);
+    if (sd === startDay()) return;
+    el.blur();
+    // 남은 돈 맞춤은 예전 시작일 기준으로 계산한 값이라 함께 지운다
+    const had = !!S.settings.periodBudget;
+    ui.monthFollows = true;
+    ui.calSel = null;
+    commit({ settings: { startDay: sd, periodBudget: null } }).then(ok => ok && toast(`이제 매달 ${sd}일부터 한 달로 계산해요${had ? '. 남은 돈 맞춤은 새 기준으로 다시 해 주세요' : ''}`));
   }
 });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   const id = e.target && e.target.id;
-  if (id === 'ob-budget') { e.preventDefault(); $('[data-action="save-onboard"]').click(); }
+  if (id === 'ob-budget' || id === 'ob-left') { e.preventDefault(); $('[data-action="save-onboard"]').click(); }
   else if (id === 'set-budget') { e.preventDefault(); $('[data-action="save-budget"]').click(); }
+  else if (id === 'set-left') { e.preventDefault(); $('[data-action="set-override"]').click(); }
   else if (id === 'flt-q') { e.preventDefault(); e.target.blur(); }
 });
 $('#importFile').addEventListener('change', e => {
@@ -3178,6 +3548,7 @@ txForm.addEventListener('click', e => {
       T.type = typeBtn.dataset.type;
       if (T.cat && CAT[T.cat].type !== T.type) T.cat = null;
       T.split = false;
+      T.refund = false;
       $('#txErr').textContent = '';
       syncTx();
     }
@@ -3209,13 +3580,14 @@ txForm.addEventListener('click', e => {
     return;
   }
   const dq = e.target.closest('[data-date-q]');
-  if (dq) { $('#f-date').value = addDays(todayStr(), Number(dq.dataset.dateQ)); return; }
+  if (dq) { $('#f-date').value = addDays(todayStr(), Number(dq.dataset.dateQ)); updateSaveLabel(); return; }
   const qp = e.target.closest('[data-qp]');
   if (qp) {
     const p = T.picks[Number(qp.dataset.qp)];
     if (!p) return;
     T.cat = p.cat;
     T.split = false;
+    T.refund = false;
     $('#f-amount').value = won(p.amount);
     $('#f-memo').value = p.memo;
     $('#txErr').textContent = '';
@@ -3225,14 +3597,21 @@ txForm.addEventListener('click', e => {
 });
 $('#f-split').addEventListener('change', e => {
   T.split = e.target.checked;
-  $('#splitCtl').hidden = !T.split;
-  $('#amountLabel').textContent = T.split ? '모두 함께 낸 돈' : '쓴 돈';
-  updateSplitInfo();
+  if (T.split) T.refund = false;
+  syncOpts();
+});
+$('#f-refund').addEventListener('change', e => {
+  T.refund = e.target.checked;
+  if (T.refund) T.split = false;
+  syncOpts();
 });
 $('#f-amount').addEventListener('input', updateSplitInfo);
 $('#f-amount').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
+$('#f-date').addEventListener('input', updateSaveLabel);
+$('#f-date').addEventListener('change', updateSaveLabel);
 $('#f-hours').addEventListener('input', updateWage);
 $('#f-wage').addEventListener('input', updateWage);
+$('#txMore').addEventListener('click', saveAndMore);
 $('#txDelete').addEventListener('click', deleteTx);
 
 /* 고정 항목 시트 */
@@ -3244,10 +3623,11 @@ recForm.addEventListener('click', e => {
   R.type = tb.dataset.rtype;
   for (const b of $$('#recType [data-rtype]')) b.setAttribute('aria-checked', String(b.dataset.rtype === R.type));
   fillRecCats();
-  $('#r-cat').value = R.type === 'in' ? 'allowance' : 'housing';
+  $('#r-cat').value = REC_CAT[R.type];
 });
 $('#r-day').innerHTML = Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}">${i + 1 === 31 ? '31일 (말일)' : `${i + 1}일`}</option>`).join('');
 $('#r-day').addEventListener('change', syncRecNow);
+$('#r-on').addEventListener('change', syncRecNow);
 $('#recDelete').addEventListener('click', deleteRec);
 
 /* 시트 공통: 닫기 버튼, 바깥 누르면 닫기 */
@@ -3263,9 +3643,7 @@ let lastToday = todayStr();
 function tick() {
   const t = todayStr();
   if (t === lastToday) return;
-  const prevYm = lastToday.slice(0, 7);
   lastToday = t;
-  if (ui.month === prevYm) ui.month = t.slice(0, 7);
   S.rev++;
   render();
   autoPost();
