@@ -45,6 +45,27 @@
   --shadow: 0 1px 2px rgba(21, 26, 45, 0.06), 0 10px 30px rgba(21, 26, 45, 0.10);
   --font-display: "Do Hyeon", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --font-ui: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sun: #C93636;
+  --sat: #2F55D4;
+  --bar: #2F55D4;
+  --bar-mute: #BDC4D4;
+  --databar: #2F55D4;
+  --meter: #2F55D4;
+  --meter-warn: #E59A0B;
+  --meter-bad: #C93636;
+  --neg: #151A2D;
+  --xl-bar: #107C41;
+  --xl-bar-ink: #FFFFFF;
+  --xl-head: #F3F3F3;
+  --xl-head-ink: #5F5F5F;
+  --xl-head-line: #D4D4D4;
+  --xl-flag: #E00000;
+  --xl-good-fill: #C6EFCE;
+  --xl-good-ink: #006100;
+  --xl-warn-fill: #FFEB9C;
+  --xl-warn-ink: #9C5700;
+  --xl-bad-fill: #FFC7CE;
+  --xl-bad-ink: #9C0006;
   --nav-h: 64px;
   --col: 560px;
 }
@@ -59,6 +80,8 @@
     --heat-1: #1D2547; --heat-2: #27377A; --heat-3: #3753BE; --heat-4: #6E89F5; --heat-4-ink: #0D1020;
     --toast-bg: #EDEFF6; --toast-ink: #0D1020; --toast-act: #2F55D4; --fab-glow: rgba(0, 0, 0, 0.45);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
+    --sun: #FF7B7B; --sat: #8BA2FF; --bar: #8BA2FF; --bar-mute: #3D4566; --databar: #8BA2FF;
+    --meter: #8BA2FF; --meter-warn: #F2B33D; --meter-bad: #FF7B7B; --neg: #EDEFF6;
     color-scheme: dark;
   }
 }
@@ -72,6 +95,8 @@
   --heat-1: #1D2547; --heat-2: #27377A; --heat-3: #3753BE; --heat-4: #6E89F5; --heat-4-ink: #0D1020;
   --toast-bg: #EDEFF6; --toast-ink: #0D1020; --toast-act: #2F55D4; --fab-glow: rgba(0, 0, 0, 0.45);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
+  --sun: #FF7B7B; --sat: #8BA2FF; --bar: #8BA2FF; --bar-mute: #3D4566; --databar: #8BA2FF;
+  --meter: #8BA2FF; --meter-warn: #F2B33D; --meter-bad: #FF7B7B; --neg: #EDEFF6;
   color-scheme: dark;
 }
 
@@ -158,9 +183,9 @@ b, strong { font-weight: 700; }
 
 .meter { margin-top: 16px; display: flex; flex-direction: column; gap: 7px; }
 .meter-track { position: relative; height: 10px; border-radius: 999px; background: var(--pen-soft); }
-.meter-fill { position: absolute; inset: 0 auto 0 0; min-width: 6px; border-radius: 999px; background: var(--pen); }
-.meter-fill.warn { background: var(--warn-mark); }
-.meter-fill.bad { background: var(--bad); }
+.meter-fill { position: absolute; inset: 0 auto 0 0; min-width: 6px; border-radius: 999px; background: var(--meter); }
+.meter-fill.warn { background: var(--meter-warn); }
+.meter-fill.bad { background: var(--meter-bad); }
 .meter-pace { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--ink); }
 .meter-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; color: var(--ink-2); font-size: 13px; }
 .meter-row b { color: var(--ink); font-weight: 600; }
@@ -229,6 +254,7 @@ b, strong { font-weight: 700; }
 .tx-amt { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
 .tx-amt small { margin-left: 1px; font-size: 12px; font-weight: 500; }
 .tx-amt.in { color: var(--pen); }
+.tx-amt.out, .sum3 b.out { color: var(--neg); }
 
 .day-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 14px 0 6px; border-bottom: 1px solid var(--rule-2); }
 .day-head h3 { margin: 0; color: var(--ink-2); font-size: 13.5px; font-weight: 600; }
@@ -243,9 +269,9 @@ b, strong { font-weight: 700; }
 .rank-val small { margin-left: 6px; color: var(--ink-3); font-size: 12px; font-weight: 500; }
 .rank-meta { grid-column: 2 / span 2; display: flex; flex-direction: column; gap: 5px; }
 .bar { position: relative; height: 6px; overflow: hidden; border-radius: 3px; background: var(--pen-soft); }
-.bar i { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--pen); }
-.bar i.warn { background: var(--warn-mark); }
-.bar i.bad { background: var(--bad); }
+.bar i { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--databar); }
+.bar i.warn { background: var(--meter-warn); }
+.bar i.bad { background: var(--meter-bad); }
 .rank-meta .st { font-size: 12px; }
 .rank-meta .st i { width: 15px; height: 15px; font-size: 9px; }
 
@@ -345,8 +371,8 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .chart .base { stroke: var(--rule-2); stroke-width: 1; }
 .chart .ytick, .chart .xtick { fill: var(--ink-3); font-family: var(--font-ui); font-size: 10.5px; letter-spacing: 0; }
 .chart .xtick.em { fill: var(--ink); font-weight: 700; }
-.chart .bar-m { fill: var(--pen); }
-.chart .bar-m.mute { fill: var(--mute-mark); }
+.chart .bar-m { fill: var(--bar); }
+.chart .bar-m.mute { fill: var(--bar-mute); }
 .chart .band { fill: var(--pen-soft); }
 .chart .ref { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 4 3; }
 .chart .reflabel, .chart .vlabel {
@@ -379,16 +405,16 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .cal { display: flex; flex-direction: column; gap: 4px; }
 .cal-head, .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
 .cal-head span { padding: 4px 0; text-align: center; color: var(--ink-2); font-size: 12px; font-weight: 600; }
-.cal-head .sun { color: var(--bad); }
-.cal-head .sat { color: var(--pen); }
+.cal-head .sun { color: var(--sun); }
+.cal-head .sat { color: var(--sat); }
 .cc {
   display: flex; flex-direction: column; gap: 1px; min-width: 0; min-height: 60px; padding: 5px 4px 4px;
   border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); text-align: left; line-height: 1.2;
 }
 .cc-top { display: flex; align-items: baseline; justify-content: space-between; gap: 2px; }
 .cc .cd { font-size: 12px; font-weight: 600; }
-.cc.sun .cd { color: var(--bad); }
-.cc.sat .cd { color: var(--pen); }
+.cc.sun .cd { color: var(--sun); }
+.cc.sat .cd { color: var(--sat); }
 .cc .ca { margin-top: auto; font-size: 11px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
 .cc .ci { font-size: 10px; font-weight: 600; text-align: right; color: var(--pen); letter-spacing: -0.03em; }
 .cc .cf { color: var(--good); font-size: 11px; font-weight: 700; }
@@ -520,6 +546,228 @@ fieldset.cats { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; f
 .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; white-space: pre; }
 textarea.input { resize: vertical; min-height: 200px; }
 
+/* ---------- 테마 고르기 ---------- */
+.skins { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.skin-opt {
+  display: flex; flex-direction: column; gap: 4px; padding: 10px;
+  border: 1.5px solid var(--rule); border-radius: 14px; background: var(--sheet); text-align: left;
+}
+.skin-opt:hover { border-color: var(--rule-2); }
+.skin-opt[aria-checked="true"] { border-color: var(--pen); box-shadow: 0 0 0 3px var(--pen-soft); }
+.skin-name { margin-top: 4px; font-size: 15px; font-weight: 700; }
+.skin-desc { color: var(--ink-3); font-size: 12.5px; }
+/* 미리보기 그림은 각 테마의 밝은 화면을 그대로 옮긴 작은 견본이에요 */
+.skin-prev { position: relative; display: block; height: 66px; overflow: hidden; border: 1px solid var(--rule); border-radius: 8px; }
+.prev-default {
+  background-color: #F6F7F9;
+  background-image: linear-gradient(rgba(47, 85, 212, 0.13) 1px, transparent 1px), linear-gradient(90deg, rgba(47, 85, 212, 0.13) 1px, transparent 1px);
+  background-size: 10px 10px;
+}
+.prev-default i { position: absolute; left: 10px; top: 20px; width: 58%; height: 13px; border-radius: 3px 8px 4px 6px; background: #FFE45C; transform: rotate(-2deg); }
+.prev-default b { position: absolute; left: 10px; bottom: 12px; width: 40%; height: 6px; border-radius: 3px; background: #2F55D4; }
+.prev-excel {
+  background-color: #FFFFFF;
+  background-image: linear-gradient(#DADADA 1px, transparent 1px), linear-gradient(90deg, #DADADA 1px, transparent 1px);
+  background-size: 24px 11px; background-position: 9px 22px;
+}
+.prev-excel::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 13px; background: #107C41; }
+.prev-excel::after { content: ""; position: absolute; left: 0; right: 0; top: 13px; height: 9px; background: #F3F3F3; border-bottom: 1px solid #D4D4D4; }
+.prev-excel i { position: absolute; left: 32px; top: 32px; width: 26px; height: 13px; border: 2px solid #107C41; background: #FFFFFF; }
+.prev-excel b { position: absolute; left: 54px; top: 41px; width: 6px; height: 6px; border: 1px solid #FFFFFF; background: #107C41; }
+
+/* ---------- 엑셀 테마 ---------- */
+.xl-chrome, .xl-rowhead, .xl-status { display: none; }
+:root[data-skin="excel"] {
+  --paper: #FFFFFF; --sheet: #FFFFFF; --ink: #1B1B1B; --ink-2: #404040; --ink-3: #595959;
+  --rule: #E1E1E1; --rule-2: #C8C8C8; --grid: #E1E1E1;
+  --pen: #107C41; --pen-ink: #FFFFFF; --pen-soft: #E2EFDA;
+  --hl: transparent; --hl-over: #FFC7CE;
+  --note: #FFFFE1; --note-ink: #1B1B1B;
+  --good: #006100; --warn: #9C5700; --warn-mark: #FFB628; --bad: #9C0006; --mute-mark: #A5A5A5;
+  --heat-1: #63BE7B; --heat-2: #FFEB84; --heat-3: #FBAA77; --heat-4: #F8696B; --heat-4-ink: #000000;
+  --toast-bg: #323130; --toast-ink: #FFFFFF; --toast-act: #A9D08E; --fab-glow: transparent;
+  --shadow: 0 2px 6px rgba(0, 0, 0, 0.12), 0 10px 26px rgba(0, 0, 0, 0.12);
+  --sun: #C00000; --sat: #0070C0; --bar: #4472C4; --bar-mute: #A5A5A5; --databar: #638EC6;
+  --meter: #63BE7B; --meter-warn: #FFB628; --meter-bad: #FF555A; --neg: #C00000;
+  --xl-bar: #107C41; --xl-bar-ink: #FFFFFF; --xl-head: #F3F3F3; --xl-head-ink: #5F5F5F; --xl-head-line: #D4D4D4; --xl-flag: #E00000;
+  --xl-good-fill: #C6EFCE; --xl-good-ink: #006100; --xl-warn-fill: #FFEB9C; --xl-warn-ink: #9C5700; --xl-bad-fill: #FFC7CE; --xl-bad-ink: #9C0006;
+  --font-display: "Carlito", "Calibri", "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "IBM Plex Sans KR", "Noto Sans KR", system-ui, sans-serif;
+  --font-ui: "Carlito", "Calibri", "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "IBM Plex Sans KR", "Noto Sans KR", system-ui, sans-serif;
+  --xl-top: 50px; --xl-gutter: 28px; --xl-col: 72px; --xl-row: 24px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-skin="excel"]:not([data-theme="light"]) {
+    --paper: #1F1F1F; --sheet: #262626; --ink: #F2F2F2; --ink-2: #D0D0D0; --ink-3: #A6A6A6;
+    --rule: #3A3A3A; --rule-2: #4A4A4A; --grid: #333333;
+    --pen: #4CC38A; --pen-ink: #0B1F14; --pen-soft: #1D3A2A;
+    --hl: transparent; --hl-over: #5C1E24;
+    --note: #3A3A22; --note-ink: #F2F2F2;
+    --good: #7FD99A; --warn: #F5C96B; --warn-mark: #E8A33A; --bad: #FF8A8A; --mute-mark: #5E5E5E;
+    --heat-1: #2E5E3E; --heat-2: #5E5A28; --heat-3: #7A4E2A; --heat-4: #7E2F33; --heat-4-ink: #F2F2F2;
+    --toast-bg: #F2F2F2; --toast-ink: #1B1B1B; --toast-act: #107C41; --fab-glow: transparent;
+    --shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 10px 26px rgba(0, 0, 0, 0.5);
+    --sun: #FF8A8A; --sat: #7FB2FF; --bar: #6F9AE0; --bar-mute: #5E5E5E; --databar: #6F9AE0;
+    --meter: #3FAF6A; --meter-warn: #E8A33A; --meter-bad: #E5535A; --neg: #FF8A8A;
+    --xl-bar: #0E5C2F; --xl-bar-ink: #FFFFFF; --xl-head: #2B2B2B; --xl-head-ink: #BDBDBD; --xl-head-line: #3F3F3F; --xl-flag: #FF5A5A;
+    --xl-good-fill: #1E4D2B; --xl-good-ink: #B5F0C4; --xl-warn-fill: #4D3D10; --xl-warn-ink: #F8DB8A; --xl-bad-fill: #5C1E24; --xl-bad-ink: #FFC2C8;
+    color-scheme: dark;
+  }
+}
+:root[data-skin="excel"][data-theme="dark"] {
+  --paper: #1F1F1F; --sheet: #262626; --ink: #F2F2F2; --ink-2: #D0D0D0; --ink-3: #A6A6A6;
+  --rule: #3A3A3A; --rule-2: #4A4A4A; --grid: #333333;
+  --pen: #4CC38A; --pen-ink: #0B1F14; --pen-soft: #1D3A2A;
+  --hl: transparent; --hl-over: #5C1E24;
+  --note: #3A3A22; --note-ink: #F2F2F2;
+  --good: #7FD99A; --warn: #F5C96B; --warn-mark: #E8A33A; --bad: #FF8A8A; --mute-mark: #5E5E5E;
+  --heat-1: #2E5E3E; --heat-2: #5E5A28; --heat-3: #7A4E2A; --heat-4: #7E2F33; --heat-4-ink: #F2F2F2;
+  --toast-bg: #F2F2F2; --toast-ink: #1B1B1B; --toast-act: #107C41; --fab-glow: transparent;
+  --shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 10px 26px rgba(0, 0, 0, 0.5);
+  --sun: #FF8A8A; --sat: #7FB2FF; --bar: #6F9AE0; --bar-mute: #5E5E5E; --databar: #6F9AE0;
+  --meter: #3FAF6A; --meter-warn: #E8A33A; --meter-bad: #E5535A; --neg: #FF8A8A;
+  --xl-bar: #0E5C2F; --xl-bar-ink: #FFFFFF; --xl-head: #2B2B2B; --xl-head-ink: #BDBDBD; --xl-head-line: #3F3F3F; --xl-flag: #FF5A5A;
+  --xl-good-fill: #1E4D2B; --xl-good-ink: #B5F0C4; --xl-warn-fill: #4D3D10; --xl-warn-ink: #F8DB8A; --xl-bad-fill: #5C1E24; --xl-bad-ink: #FFC2C8;
+  color-scheme: dark;
+}
+
+/* 배경: 셀 격자 (A열은 행 머리글 바로 오른쪽, 1행은 열 머리글 바로 아래에서 시작) */
+:root[data-skin="excel"] body {
+  letter-spacing: 0;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: var(--xl-col) var(--xl-row);
+  background-position: var(--xl-gutter) calc(env(safe-area-inset-top, 0px) + var(--xl-top));
+}
+/* 제목 표시줄 + 열 머리글 */
+:root[data-skin="excel"] .xl-chrome {
+  display: block; position: fixed; top: 0; left: 0; right: 0; z-index: 15;
+  padding-top: env(safe-area-inset-top, 0px); background: var(--xl-bar);
+}
+.xl-title { display: flex; align-items: center; justify-content: center; gap: 6px; height: 30px; padding-inline: 12px; color: var(--xl-bar-ink); font-size: 12.5px; white-space: nowrap; overflow: hidden; }
+.xl-title b { font-weight: 700; }
+.xl-colhead { display: flex; height: 20px; background: var(--xl-head); border-bottom: 1px solid var(--xl-head-line); }
+.xl-corner { position: relative; flex: none; width: var(--xl-gutter); border-right: 1px solid var(--xl-head-line); }
+.xl-corner::after { content: ""; position: absolute; right: 3px; bottom: 3px; border-style: solid; border-width: 0 0 8px 8px; border-color: transparent transparent var(--xl-head-line) transparent; }
+.xl-cols { display: flex; min-width: 0; overflow: hidden; }
+.xl-cols span { flex: none; width: var(--xl-col); border-right: 1px solid var(--xl-head-line); color: var(--xl-head-ink); font-size: 11px; line-height: 19px; text-align: center; }
+/* 행 머리글 (스크롤에 맞춰 번호가 바뀜) */
+:root[data-skin="excel"] .xl-rowhead {
+  display: block; position: fixed; left: 0; bottom: 0; z-index: 4; overflow: hidden;
+  top: calc(env(safe-area-inset-top, 0px) + var(--xl-top)); width: var(--xl-gutter);
+  background: var(--xl-head); border-right: 1px solid var(--xl-head-line);
+}
+.xl-rows span { display: block; height: var(--xl-row); border-bottom: 1px solid var(--xl-head-line); color: var(--xl-head-ink); font-size: 10.5px; line-height: calc(var(--xl-row) - 1px); text-align: center; font-variant-numeric: tabular-nums; }
+/* 시트 탭 + 상태 표시줄 */
+#xlStat { white-space: pre; }
+:root[data-skin="excel"] .xl-status {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  height: 22px; padding-inline: 10px; background: var(--xl-bar); color: var(--xl-bar-ink); font-size: 11.5px; white-space: nowrap;
+}
+:root[data-skin="excel"] .tabbar { background: var(--xl-head); border-top: 1px solid var(--xl-head-line); }
+:root[data-skin="excel"] .tabbar-in { height: calc(var(--nav-h) - 22px); grid-template-columns: repeat(2, minmax(0, 1fr)) 60px repeat(2, minmax(0, 1fr)); align-items: stretch; }
+:root[data-skin="excel"] .tab { flex-direction: row; justify-content: center; padding: 0; border-right: 1px solid var(--xl-head-line); color: var(--xl-head-ink); font-size: 14px; }
+:root[data-skin="excel"] .tab .ic { display: none; }
+:root[data-skin="excel"] .tab[aria-current="page"] { background: var(--paper); color: var(--pen); box-shadow: inset 0 -3px 0 var(--pen); }
+:root[data-skin="excel"] .fab { align-self: center; width: 40px; height: 40px; transform: none; box-shadow: none; border-right: 0; }
+:root[data-skin="excel"] .fab .ic { width: 24px; height: 24px; }
+
+/* 레이아웃: 행 머리글만큼 비켜 앉기 */
+:root[data-skin="excel"] .app {
+  max-width: calc(var(--col) + var(--xl-gutter));
+  padding-top: calc(var(--xl-top) + 10px);
+  padding-left: calc(var(--xl-gutter) + 14px);
+  padding-right: 14px;
+}
+:root[data-skin="excel"] .mnav {
+  top: calc(env(safe-area-inset-top, 0px) + var(--xl-top));
+  margin-inline: -14px; padding: 6px 8px;
+  background: var(--sheet); border-bottom: 1px solid var(--xl-head-line);
+}
+:root[data-skin="excel"] .mnav-title { font-size: 19px; font-weight: 700; }
+:root[data-skin="excel"] :is(.sec-head h2, .card-title, .page-title, .setup-title, .brand) { font-weight: 700; letter-spacing: 0; }
+:root[data-skin="excel"] .page-title { font-size: 22px; }
+:root[data-skin="excel"] .setup-title { font-size: 26px; }
+:root[data-skin="excel"] .mast { padding-top: 4px; }
+:root[data-skin="excel"] .mast :is(.brand, .store) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+:root[data-skin="excel"] .brand-date { margin: 0; color: var(--ink); font-size: 15px; font-weight: 700; }
+
+/* 모서리는 모두 직각 */
+:root[data-skin="excel"] :is(.card, .btn, .chip, .input, .seg, .seg button, .ico, .note, .cc, .cal-blank, .cat-btn, .opt, .stepper, .empty,
+  .tbl-wrap, .tip, .store, .dday, .tag, .bar, .bar i, .meter-track, .meter-fill, .toast, .icon-btn, .tx, .rec, .rank-btn,
+  .store-box, .skin-opt, .skin-prev, .dots li, .k, .ramp i, dialog.sheet, .pace-key i) { border-radius: 0; }
+
+/* 수식 입력줄 + 선택된 셀 */
+:root[data-skin="excel"] :is(.hero, .stat-hero) .eyebrow {
+  display: flex; align-items: center; gap: 8px; padding: 3px 8px;
+  border: 1px solid var(--xl-head-line); background: var(--sheet); color: var(--ink); font-size: 13px; font-weight: 400;
+}
+:root[data-skin="excel"] :is(.hero, .stat-hero) .eyebrow::before {
+  content: "fx"; padding-right: 8px; border-right: 1px solid var(--xl-head-line);
+  color: var(--ink-3); font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 700;
+}
+:root[data-skin="excel"] :is(.hero-num, .big-num) { letter-spacing: 0; }
+:root[data-skin="excel"] .hl { display: inline-block; padding: 0 10px; border: 2px solid var(--pen); background: var(--sheet); line-height: 1.12; }
+:root[data-skin="excel"] .hl::before {
+  top: auto; left: auto; right: -5px; bottom: -5px; z-index: 1; width: 8px; height: 8px;
+  border: 1.5px solid var(--sheet); border-radius: 0; background: var(--pen); transform: none; animation: none;
+}
+:root[data-skin="excel"] .hl.over { background: var(--xl-bad-fill); color: var(--xl-bad-ink); }
+:root[data-skin="excel"] .hl.over::before { background: var(--pen); }
+
+/* 데이터 막대 · 셀 스타일(좋음/보통/나쁨) */
+:root[data-skin="excel"] .meter-track { height: 22px; border: 1px solid var(--xl-head-line); background: var(--sheet); }
+:root[data-skin="excel"] .meter-fill { inset: 2px auto 2px 2px; min-width: 3px; }
+:root[data-skin="excel"] .meter-pace { top: -4px; bottom: -4px; }
+:root[data-skin="excel"] .st { padding: 1px 8px 1px 6px; }
+:root[data-skin="excel"] .st i { width: auto; height: auto; border: 0; font-size: 12px; }
+:root[data-skin="excel"] .st.good { background: var(--xl-good-fill); color: var(--xl-good-ink); }
+:root[data-skin="excel"] .st.warn { background: var(--xl-warn-fill); color: var(--xl-warn-ink); }
+:root[data-skin="excel"] .st.bad { background: var(--xl-bad-fill); color: var(--xl-bad-ink); }
+:root[data-skin="excel"] .bar { height: 8px; background: transparent; }
+
+/* 머리글 행처럼 보이는 제목 · 표 */
+:root[data-skin="excel"] .sec-head { align-items: center; padding: 4px 8px; background: var(--xl-head); border: 1px solid var(--xl-head-line); }
+:root[data-skin="excel"] .sec-head h2 { font-size: 15px; }
+:root[data-skin="excel"] :is(.sum3, .kpis) { border: 1px solid var(--xl-head-line); background: var(--sheet); }
+:root[data-skin="excel"] :is(.sum3, .kpis) > div { padding: 0; }
+:root[data-skin="excel"] :is(.sum3, .kpis) > div + div { padding-left: 0; border-left: 1px solid var(--xl-head-line); }
+:root[data-skin="excel"] :is(.sum3, .kpis) span { padding: 3px 8px; background: var(--xl-head); border-bottom: 1px solid var(--xl-head-line); color: var(--xl-head-ink); font-size: 12px; }
+:root[data-skin="excel"] :is(.sum3, .kpis) b { padding: 6px 8px; text-align: right; font-variant-numeric: tabular-nums; }
+:root[data-skin="excel"] .day-head { margin-top: 10px; padding: 4px 8px; background: var(--xl-head); border: 1px solid var(--xl-head-line); }
+:root[data-skin="excel"] :is(.tx, .rec, .rank-btn) { padding-inline: 6px; }
+:root[data-skin="excel"] :is(.tx, .rec, .rank-btn):hover { background: var(--pen-soft); }
+:root[data-skin="excel"] .ico { border-color: var(--rule); background: var(--paper); }
+:root[data-skin="excel"] .tbl :is(th, td) { border: 1px solid var(--rule); }
+:root[data-skin="excel"] .tbl th { background: var(--xl-head); color: var(--xl-head-ink); }
+:root[data-skin="excel"] .card { border-color: var(--xl-head-line); }
+
+/* 메모 (빨간 삼각형 표시) */
+:root[data-skin="excel"] .note { position: relative; border: 1px solid var(--rule-2); box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.12); }
+:root[data-skin="excel"] .note:not(.warn)::after { content: ""; position: absolute; top: 0; right: 0; border-style: solid; border-width: 0 10px 10px 0; border-color: transparent var(--xl-flag) transparent transparent; }
+
+/* 리본 탭처럼 생긴 전환 버튼 */
+:root[data-skin="excel"] .seg { gap: 0; padding: 0; background: transparent; border-bottom: 1px solid var(--xl-head-line); }
+:root[data-skin="excel"] .seg button { padding: 8px 10px 7px; color: var(--ink-2); font-weight: 400; }
+:root[data-skin="excel"] .seg button:is([aria-checked="true"], [aria-selected="true"]) { background: transparent; box-shadow: inset 0 -3px 0 var(--pen); color: var(--pen); font-weight: 700; }
+:root[data-skin="excel"] .input:focus { border-color: var(--pen); box-shadow: inset 0 0 0 1px var(--pen); }
+:root[data-skin="excel"] .btn.primary:hover { filter: brightness(1.08); }
+
+/* 달력: 붙어 있는 셀 범위 + 색조 */
+:root[data-skin="excel"] :is(.cal-head, .cal-grid) { gap: 0; }
+:root[data-skin="excel"] .cal-head { border: 1px solid var(--xl-head-line); border-bottom: 0; background: var(--xl-head); }
+:root[data-skin="excel"] .cal-head span + span { border-left: 1px solid var(--xl-head-line); }
+:root[data-skin="excel"] .cal-grid { border-top: 1px solid var(--xl-head-line); border-left: 1px solid var(--rule); background: var(--sheet); }
+:root[data-skin="excel"] :is(.cc, .cc.lv1, .cc.lv2, .cc.lv3, .cc.lv4, .cal-blank) { border: 0; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+:root[data-skin="excel"] .cc.today { box-shadow: inset 0 0 0 1.5px var(--ink); }
+:root[data-skin="excel"] .cc.sel { box-shadow: inset 0 0 0 2px var(--pen); }
+:root[data-skin="excel"] .cc.today.sel { box-shadow: inset 0 0 0 2px var(--pen); }
+
+/* 시트 */
+:root[data-skin="excel"] dialog.sheet { border-top: 3px solid var(--pen); }
+:root[data-skin="excel"] .grab { display: none; }
+:root[data-skin="excel"] .switch { border-radius: 999px; }
+:root[data-skin="excel"] .opt { border: 1px solid var(--rule); }
+
 @media (min-width: 600px) {
   .app { gap: 32px; }
   dialog.sheet { margin-bottom: 24px; border-radius: 22px; }
@@ -533,6 +781,12 @@ textarea.input { resize: vertical; min-height: 200px; }
 <style>:root { padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px); }</style>
 </head>
 <body>
+
+<div class="xl-chrome" aria-hidden="true">
+  <div class="xl-title"><b>캠퍼스 가계부.xlsx</b><span id="xlSave"></span></div>
+  <div class="xl-colhead"><span class="xl-corner"></span><div class="xl-cols" id="xlCols"></div></div>
+</div>
+<div class="xl-rowhead" aria-hidden="true"><div class="xl-rows" id="xlRows"></div></div>
 
 <main id="view" class="app"></main>
 
@@ -554,6 +808,7 @@ textarea.input { resize: vertical; min-height: 200px; }
       <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span>설정</span>
     </button>
   </div>
+  <div class="xl-status" aria-hidden="true"><span>준비</span><span id="xlStat"></span></div>
 </nav>
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
@@ -815,7 +1070,7 @@ let markDefinitive;
 const definitiveReady = new Promise(r => { markDefinitive = r; });
 
 function defaultSettings() {
-  return { budget: 0, catBudgets: {}, wage: MIN_WAGE, recurring: {}, since: null, exBudget: false, exCat: false };
+  return { budget: 0, catBudgets: {}, wage: MIN_WAGE, recurring: {}, since: null, exBudget: false, exCat: false, skin: 'default' };
 }
 S.settings = defaultSettings();
 
@@ -830,6 +1085,7 @@ function normSettings(d) {
   if (isYmd(d.since)) s.since = d.since;
   s.exBudget = !!d.exBudget;
   s.exCat = !!d.exCat;
+  s.skin = d.skin === 'excel' ? 'excel' : 'default';
   if (d.recurring && typeof d.recurring === 'object') {
     for (const [id, r] of Object.entries(d.recurring)) { const n = normRec(r, id); if (n) s.recurring[id] = n; }
   }
@@ -963,6 +1219,7 @@ function streakNow() {
 function refresh() {
   S.settings = normSettings(S.docs.settings);
   S.rev++;
+  if (S.mode !== 'loading') applySkin(S.settings.skin);
   render();
 }
 
@@ -1199,13 +1456,14 @@ async function connect() {
 }
 
 /* ================= 화면 상태 ================= */
-const ui = { tab: 'home', month: curYm(), listMode: 'list', fType: 'all', fCat: '', q: '', calSel: null, sType: 'out', tables: {} };
+const ui = { tab: 'home', month: curYm(), listMode: 'list', fType: 'all', fCat: '', q: '', calSel: null, sType: 'out', tables: {}, skin: 'default' };
 try {
   const saved = JSON.parse(localStorage.getItem(UI_KEY) || '{}');
   if (saved.listMode === 'cal' || saved.listMode === 'list') ui.listMode = saved.listMode;
+  if (saved.skin === 'excel') ui.skin = 'excel';
 } catch (e) { /* 무시 */ }
 function saveUi() {
-  try { localStorage.setItem(UI_KEY, JSON.stringify({ listMode: ui.listMode })); } catch (e) { /* 무시 */ }
+  try { localStorage.setItem(UI_KEY, JSON.stringify({ listMode: ui.listMode, skin: ui.skin })); } catch (e) { /* 무시 */ }
 }
 
 const ICON = {
@@ -1220,14 +1478,16 @@ const CH = {}; // 이번 화면의 차트 정의
 let heroSwept = false;
 
 /* ================= 공통 조각 ================= */
-function storePill() {
+function storeInfo() {
   const m = S.mode;
-  const [icon, text, tip] =
-    m === 'cloud' ? [ICON.cloud, '내 계정에 저장', 'Claude 계정에 나만 볼 수 있게 저장돼요'] :
+  return m === 'cloud' ? [ICON.cloud, '내 계정에 저장', 'Claude 계정에 나만 볼 수 있게 저장돼요'] :
     m === 'local' ? [ICON.phone, '이 기기에 저장', '이 브라우저에만 저장돼요'] :
     m === 'memory' ? [ICON.alert, '저장 안 됨', '이 브라우저는 저장을 막고 있어요'] :
     [ICON.cloud, '불러오는 중', ''];
-  return `<span class="store ${m}" title="${esc(tip)}">${icon}<span>${text}</span></span>`;
+}
+function storePill() {
+  const [icon, text, tip] = storeInfo();
+  return `<span class="store ${S.mode}" title="${esc(tip)}">${icon}<span>${text}</span></span>`;
 }
 function notesHtml() {
   let h = '';
@@ -1266,7 +1526,7 @@ function sum3(ym, labels = ['들어온 돈', '나간 돈', '남은 돈']) {
   const inc = sumBy(list, 'in'), out = sumBy(list, 'out'), net = inc - out;
   return `<div class="sum3">
     <div><span>${labels[0]}</span><b class="pos">+${won(inc)}</b></div>
-    <div><span>${labels[1]}</span><b>${out ? MINUS : ''}${won(out)}</b></div>
+    <div><span>${labels[1]}</span><b class="${out ? 'out' : ''}">${out ? MINUS : ''}${won(out)}</b></div>
     <div><span>${labels[2]}</span><b class="${net < 0 ? 'neg' : ''}">${net < 0 ? MINUS : ''}${won(Math.abs(net))}</b></div>
   </div>`;
 }
@@ -1460,14 +1720,18 @@ function filtersHtml() {
     </div>
   </div>`;
 }
-function listResultsHtml() {
-  const all = monthTx(ui.month);
-  let list = all;
+function filteredList() {
+  let list = monthTx(ui.month);
   if (ui.fType !== 'all') list = list.filter(t => t.type === ui.fType);
   if (ui.fCat) list = list.filter(t => t.cat === ui.fCat);
   const q = ui.q.trim().toLowerCase();
   if (q) list = list.filter(t => `${t.memo} ${catOf(t.cat, t.type).name}`.toLowerCase().includes(q));
-  const filtered = ui.fType !== 'all' || ui.fCat || q;
+  return list;
+}
+function listResultsHtml() {
+  const all = monthTx(ui.month);
+  const list = filteredList();
+  const filtered = ui.fType !== 'all' || ui.fCat || ui.q.trim();
   if (!all.length) return emptyBox(`${monthNum(ui.month)}월 기록이 아직 없어요`, '아래 <b>+</b> 버튼으로 첫 기록을 남겨 보세요.');
   if (!list.length) return emptyBox('조건에 맞는 기록이 없어요', '필터나 검색어를 바꿔 보세요.');
   const groups = [];
@@ -1518,6 +1782,8 @@ function calHtml(ym) {
       <span class="cc-top"><span class="cd">${d}</span>${free ? '<span class="cf" aria-hidden="true">✓</span>' : ''}</span>${out[d] ? `<span class="ca">${compact(out[d])}</span>` : ''}${inc[d] ? `<span class="ci"${out[d] ? '' : ' style="margin-top:auto"'}>+${compact(inc[d])}</span>` : ''}
     </button>`;
   }
+  const trail = (7 - ((first + dim) % 7)) % 7;
+  for (let i = 0; i < trail; i++) cells += '<span class="cal-blank" aria-hidden="true"></span>';
   const legendRef = budget ? `하루 예산 ${won(Math.round(ref))}원 기준` : '이달 하루 지출 중앙값 기준';
   let h = `<div class="cal">
     <div class="cal-head" aria-hidden="true">${WEEK.map((w, i) => `<span class="${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${w}</span>`).join('')}</div>
@@ -1705,6 +1971,17 @@ function viewSettings() {
   const today = todayStr(), cur = today.slice(0, 7);
   const cbCount = Object.keys(s.catBudgets).length;
   let h = `<h1 class="page-title">설정</h1>` + notesHtml();
+  const skinOpt = (v, name, desc) => `<button type="button" role="radio" class="skin-opt" data-action="set-skin" data-v="${v}" aria-checked="${s.skin === v}">
+      <span class="skin-prev prev-${v}" aria-hidden="true"><i></i><b></b></span>
+      <span class="skin-name">${name}</span><span class="skin-desc">${desc}</span>
+    </button>`;
+  h += `<section class="card" aria-labelledby="stTitle">
+    <div><h2 class="card-title" id="stTitle">테마</h2><p class="card-sub">화면 모양만 바뀌고 기록은 그대로예요. 고른 테마는 다른 기기에도 똑같이 적용돼요.</p></div>
+    <div class="skins" role="radiogroup" aria-labelledby="stTitle">
+      ${skinOpt('default', '기존', '모눈 노트와 형광펜')}
+      ${skinOpt('excel', '엑셀', '초록 제목줄과 셀 격자')}
+    </div>
+  </section>`;
   h += `<section class="card" aria-labelledby="sbTitle">
     <div><h2 class="card-title" id="sbTitle">예산</h2><p class="card-sub">한 달에 쓸 돈이에요. 오늘 쓸 수 있는 돈은 이걸로 계산해요.</p></div>
     <div class="field"><label class="mini-label" for="set-budget">월 예산</label>
@@ -1774,6 +2051,7 @@ function niceTicks(max, count = 3) {
 }
 function roundTop(x, y, w, h, r) {
   r = Math.max(0, Math.min(r, w / 2, h));
+  if (!r) return `M${x},${y + h}V${y}h${w}V${y + h}Z`;
   return `M${x},${y + h}V${y + r}a${r},${r} 0 0 1 ${r},${-r}h${w - 2 * r}a${r},${r} 0 0 1 ${r},${r}V${y + h}Z`;
 }
 const textW = (str, size) => [...String(str)].reduce((w, ch) => w + (/[\u3131-\uD79D]/.test(ch) ? size : size * 0.6), 0);
@@ -1800,7 +2078,7 @@ function drawColumns(host, spec) {
     if (!(d.v > 0)) return;
     const x = M.l + i * band + (band - bw) / 2, yy = y(d.v);
     const mute = spec.emph && !spec.emph(i) ? ' mute' : '';
-    g += `<path class="bar-m${mute}" d="${roundTop(x, yy, bw, base - yy, 4)}"/>`;
+    g += `<path class="bar-m${mute}" d="${roundTop(x, yy, bw, base - yy, ui.skin === 'excel' ? 0 : 4)}"/>`;
   });
   g += `<line class="base" x1="${M.l}" x2="${W - M.r}" y1="${base + 0.5}" y2="${base + 0.5}"/>`;
   const vlabels = (spec.labels || []).filter(i => spec.data[i] && spec.data[i].v > 0).map(i => {
@@ -1908,7 +2186,70 @@ function updateChrome() {
     else b.removeAttribute('aria-current');
   }
   $('.fab').disabled = S.mode === 'loading';
+  if (ui.skin === 'excel') {
+    $('#xlSave').textContent = '· ' + storeInfo()[1];
+    $('#xlStat').textContent = S.mode === 'loading' ? '' : xlStatus();
+  }
 }
+function xlStatus() {
+  const list = ui.tab === 'list' ? filteredList() : ui.tab === 'stats' ? monthTx(ui.month) : monthTx(curYm());
+  const net = list.reduce((s, t) => s + (t.type === 'in' ? t.amount : -t.amount), 0);
+  return `개수: ${list.length}    합계: ${net < 0 ? MINUS : ''}${won(Math.abs(net))}`;
+}
+
+/* ================= 테마 ================= */
+const XL_COL = 72, XL_ROW = 24, XL_GUTTER = 28;
+let skinShown = null, rowRaf = 0;
+function applySkin(skin) {
+  skin = skin === 'excel' ? 'excel' : 'default';
+  if (skin === skinShown) return;
+  skinShown = skin;
+  ui.skin = skin;
+  saveUi();
+  const root = document.documentElement;
+  if (skin === 'excel') {
+    root.setAttribute('data-skin', 'excel');
+    if (!document.getElementById('xlFont')) {
+      const l = document.createElement('link');
+      l.id = 'xlFont';
+      l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap';
+      document.head.appendChild(l);
+    }
+    buildXlCols();
+    syncXlRows();
+  } else {
+    root.removeAttribute('data-skin');
+  }
+  updateChrome();
+  drawCharts();
+}
+function colName(i) {
+  let s = '';
+  for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
+  return s;
+}
+function buildXlCols() {
+  const el = $('#xlCols');
+  const n = Math.ceil((window.innerWidth - XL_GUTTER) / XL_COL) + 1;
+  if (el.childElementCount !== n) el.innerHTML = Array.from({ length: n }, (_, i) => `<span>${colName(i)}</span>`).join('');
+}
+function syncXlRows() {
+  if (ui.skin !== 'excel') return;
+  const el = $('#xlRows');
+  const n = Math.ceil(window.innerHeight / XL_ROW) + 2;
+  if (el.childElementCount !== n) el.innerHTML = '<span></span>'.repeat(n);
+  const y = Math.max(0, window.scrollY);
+  const first = Math.floor(y / XL_ROW);
+  el.style.transform = `translateY(${-(y % XL_ROW)}px)`;
+  const rows = el.children;
+  for (let i = 0; i < rows.length; i++) rows[i].textContent = first + i + 1;
+}
+window.addEventListener('scroll', () => {
+  if (ui.skin !== 'excel' || rowRaf) return;
+  rowRaf = requestAnimationFrame(() => { rowRaf = 0; syncXlRows(); });
+}, { passive: true });
+window.addEventListener('resize', () => { if (ui.skin === 'excel') { buildXlCols(); syncXlRows(); } });
 view.addEventListener('focusout', () => {
   if (!pendingRender) return;
   setTimeout(() => { if (pendingRender && !isTyping()) doRender(); }, 0);
@@ -2235,7 +2576,7 @@ function parseBackup(text) {
       const s = normSettings(doc);
       const rec = {};
       for (const r of Object.values(s.recurring)) rec[r.id] = recDoc(r);
-      docs.settings = { budget: s.budget, catBudgets: s.catBudgets, wage: s.wage, recurring: rec, since: s.since, exBudget: s.exBudget, exCat: s.exCat };
+      docs.settings = { budget: s.budget, catBudgets: s.catBudgets, wage: s.wage, recurring: rec, since: s.since, exBudget: s.exBudget, exCat: s.exCat, skin: doc.skin === 'excel' || doc.skin === 'default' ? doc.skin : S.settings.skin };
     } else if (/^m-\d{4}-(0[1-9]|1[0-2])$/.test(id) && doc.tx && typeof doc.tx === 'object') {
       const tx = {};
       for (const [tid, raw] of Object.entries(doc.tx)) {
@@ -2258,6 +2599,7 @@ async function importFile(file) {
     danger: true
   });
   if (!ok) return;
+  if (!parsed.docs.settings) parsed.docs.settings = { skin: S.settings.skin };
   if (await replaceAll(parsed.docs)) toast(`백업을 불러왔어요 (${parsed.count}건)`);
   autoPost();
 }
@@ -2269,7 +2611,7 @@ async function resetAll() {
     danger: true
   });
   if (!ok) return;
-  if (await replaceAll({})) toast('모든 기록을 지웠어요');
+  if (await replaceAll(S.settings.skin !== 'default' ? { settings: { skin: S.settings.skin } } : {})) toast('모든 기록을 지웠어요');
 }
 function clearExamples() {
   const del = allTx().filter(t => t.ex);
@@ -2358,6 +2700,13 @@ document.addEventListener('click', e => {
       const v = parseAmount($('#set-wage').value);
       if (!v) { toast('시급을 넣어 주세요', { kind: 'error' }); return; }
       commit({ settings: { wage: v } }).then(ok => ok && toast('시급을 저장했어요'));
+      break;
+    }
+    case 'set-skin': {
+      const v = el.dataset.v === 'excel' ? 'excel' : 'default';
+      if (v === S.settings.skin && v === ui.skin) break;
+      applySkin(v);
+      commit({ settings: { skin: v } }).then(ok => ok && toast(v === 'excel' ? '엑셀 테마로 바꿨어요' : '기존 테마로 바꿨어요'));
       break;
     }
     case 'add-rec': openRec(null); break;
@@ -2507,6 +2856,7 @@ function tick() {
 setInterval(tick, 30000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
 
+applySkin(ui.skin);
 render();
 connect();
 })();
