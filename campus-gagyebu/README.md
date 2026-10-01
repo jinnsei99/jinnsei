@@ -2,6 +2,7 @@
 
 대학생을 위한 가계부 웹앱이에요. 빌드 과정 없이 `index.html` 파일 하나로 돌아가요.
 
+- 휴대폰 앱처럼 쓰기: https://jinnsei99.github.io/jinnsei/ (GitHub Pages, 아래 '스마트폰에서 쓰기' 참고)
 - Claude에서 바로 쓰기: https://claude.ai/artifact/3Yv4pTRocx1oRqbXAKtHg4
 - 이 폴더의 `index.html`을 브라우저로 열어도 똑같이 쓸 수 있어요.
 
@@ -39,6 +40,23 @@
 - `settings`: 월 예산, 카테고리별 예산, 시급, 고정 수입·지출 목록
 - `m-YYYY-MM`: 그달의 기록. `tx` 아래에 기록 id를 키로 저장해요.
 
-## GitHub Pages로 열기
+## 스마트폰에서 쓰기
 
-저장소 Settings → Pages에서 이 브랜치와 `/(root)`를 고르면 `https://<계정>.github.io/<저장소>/campus-gagyebu/` 주소로 열 수 있어요.
+GitHub Pages 주소(https://jinnsei99.github.io/jinnsei/)를 휴대폰 브라우저로 열고 홈 화면에 추가하면, 아이콘을 눌러 앱처럼 전체 화면으로 쓸 수 있어요.
+
+- **아이폰**: Safari로 열기 → 공유 버튼 → **홈 화면에 추가**
+- **안드로이드**: Chrome으로 열기 → 오른쪽 위 ⋮ → **홈 화면에 추가** (또는 **앱 설치**)
+
+한 번 열어 두면 인터넷이 없어도 앱이 열려요. 이 방식은 기록이 그 휴대폰에만 저장되니, 설정 > 데이터에서 가끔 백업 파일을 받아 두세요. 휴대폰에서 내보내기를 누르면 공유 창이 떠서 '파일에 저장'이나 메신저로 보낼 수 있어요.
+
+휴대폰과 컴퓨터에서 같은 기록을 보고 싶다면 Claude 링크를 쓰세요. Claude 계정에 저장돼서 어느 기기에서든 이어서 쓸 수 있어요.
+
+## 배포
+
+`.github/workflows/campus-gagyebu-pages.yml`이 `main`에 이 폴더가 바뀔 때마다 GitHub Pages로 올려요. 처음 한 번은 저장소 **Settings → Pages → Source**를 **GitHub Actions**로 바꾼 뒤, Actions 탭에서 **캠퍼스 가계부 배포**를 실행해 주세요.
+
+## 파일
+
+- `index.html`: 앱 전체 (HTML·CSS·JS)
+- `manifest.webmanifest`, `icons/`: 홈 화면 설치 정보와 아이콘
+- `sw.js`: 오프라인에서도 열리게 하는 서비스 워커. 앱 파일을 바꾸면 안의 `CACHE` 이름 숫자를 올려 주세요.

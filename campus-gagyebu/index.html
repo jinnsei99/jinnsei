@@ -6,6 +6,14 @@
 <meta name="description" content="대학생을 위한 가계부: 오늘 쓸 수 있는 돈, N빵, 무지출 챌린지, 고정지출 자동 기록, 달력과 통계">
 <meta name="theme-color" content="#F6F7F9" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0D1020" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="캠퍼스가계부">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>캠퍼스 가계부</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -120,6 +128,7 @@ body {
 }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; letter-spacing: inherit; }
 button:disabled { cursor: default; }
+button, a, label, summary { touch-action: manipulation; }
 input, select, textarea { font: inherit; color: inherit; letter-spacing: inherit; }
 :focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; border-radius: 6px; }
 .sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -2221,6 +2230,10 @@ function applySkin(skin) {
   } else {
     root.removeAttribute('data-skin');
   }
+  for (const m of document.querySelectorAll('meta[name="theme-color"]')) {
+    const dark = (m.getAttribute('media') || '').includes('dark');
+    m.setAttribute('content', skin === 'excel' ? (dark ? '#0E5C2F' : '#107C41') : (dark ? '#0D1020' : '#F6F7F9'));
+  }
   updateChrome();
   drawCharts();
 }
@@ -2540,6 +2553,15 @@ async function offerFile(filename, data, mime) {
   }
   if (!window.claude) {
     try {
+      const file = new File([data], filename, { type: mime });
+      if (navigator.canShare && navigator.canShare({ files: [file] }) && matchMedia('(pointer: coarse)').matches) {
+        await navigator.share({ files: [file], title: filename });
+        return;
+      }
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+    }
+    try {
       const url = URL.createObjectURL(new Blob([data], { type: mime }));
       const a = document.createElement('a');
       a.href = url;
@@ -2557,13 +2579,13 @@ function exportCsv(scope) {
   const cur = curYm();
   const list = scope === 'month' ? monthTx(cur) : allTx();
   if (!list.length) { toast('내보낼 기록이 없어요'); return; }
-  offerFile(scope === 'month' ? `캠퍼스가계부_${cur}.csv` : `캠퍼스가계부_전체_${todayStr()}.csv`, toCsv(list), 'text/csv');
+  offerFile(scope === 'month' ? `gagyebu_${cur}.csv` : `gagyebu_all_${todayStr()}.csv`, toCsv(list), 'text/csv');
 }
 function exportJson() {
   const docs = {};
   for (const [id, d] of Object.entries(S.docs)) docs[id] = cleanDoc(d);
   const data = JSON.stringify({ app: 'campus-gagyebu', v: 1, exportedAt: new Date().toISOString(), docs }, null, 1);
-  offerFile(`캠퍼스가계부_백업_${todayStr()}.json`, data, 'application/json');
+  offerFile(`gagyebu_backup_${todayStr()}.json`, data, 'application/json');
 }
 function parseBackup(text) {
   const d = JSON.parse(text);
@@ -2859,6 +2881,13 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) tick
 applySkin(ui.skin);
 render();
 connect();
+
+/* 휴대폰 앱으로 설치했을 때: 오프라인 캐시, 저장 공간 보호 (Claude 안에서는 쓰지 않음) */
+if (!window.claude && 'serviceWorker' in navigator && (location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname))) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+  const installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  if (installed && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+}
 })();
 </script>
 </body>
