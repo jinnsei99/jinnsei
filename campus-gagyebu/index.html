@@ -612,7 +612,7 @@ textarea.input { resize: vertical; min-height: 200px; }
 .prev-excel b { position: absolute; left: 54px; top: 41px; width: 6px; height: 6px; border: 1px solid #FFFFFF; background: #107C41; }
 
 /* ---------- 엑셀 테마 ---------- */
-.xl-chrome, .xl-rowhead, .xl-status { display: none; }
+.xl-chrome, .xl-rowhead { display: none; }
 :root[data-skin="excel"] {
   --paper: #FFFFFF; --sheet: #FFFFFF; --ink: #1B1B1B; --ink-2: #404040; --ink-3: #595959;
   --rule: #E1E1E1; --rule-2: #C8C8C8; --grid: #E1E1E1;
@@ -629,7 +629,7 @@ textarea.input { resize: vertical; min-height: 200px; }
   --xl-good-fill: #C6EFCE; --xl-good-ink: #006100; --xl-warn-fill: #FFEB9C; --xl-warn-ink: #9C5700; --xl-bad-fill: #FFC7CE; --xl-bad-ink: #9C0006;
   --font-display: "Carlito", "Calibri", "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "IBM Plex Sans KR", "Noto Sans KR", system-ui, sans-serif;
   --font-ui: "Carlito", "Calibri", "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "IBM Plex Sans KR", "Noto Sans KR", system-ui, sans-serif;
-  --xl-top: 46px; --xl-gutter: 28px; --xl-col: 72px; --xl-row: 24px;
+  --xl-top: 46px; --xl-gutter: 28px; --xl-col: 72px; --xl-row: 24px; --nav-h: 44px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -693,14 +693,9 @@ textarea.input { resize: vertical; min-height: 200px; }
   background: var(--xl-head); border-right: 1px solid var(--xl-head-line);
 }
 .xl-rows span { display: block; height: var(--xl-row); border-bottom: 1px solid var(--xl-head-line); color: var(--xl-head-ink); font-size: 10.5px; line-height: calc(var(--xl-row) - 1px); text-align: center; font-variant-numeric: tabular-nums; }
-/* 시트 탭 + 상태 표시줄 */
-#xlStat { white-space: pre; }
-:root[data-skin="excel"] .xl-status {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  height: 22px; padding-inline: 10px; background: var(--xl-bar); color: var(--xl-bar-ink); font-size: 11.5px; white-space: nowrap;
-}
+/* 시트 탭 */
 :root[data-skin="excel"] .tabbar { background: var(--xl-head); border-top: 1px solid var(--xl-head-line); }
-:root[data-skin="excel"] .tabbar-in { height: calc(var(--nav-h) - 22px); grid-template-columns: repeat(2, minmax(0, 1fr)) 60px repeat(2, minmax(0, 1fr)); align-items: stretch; }
+:root[data-skin="excel"] .tabbar-in { grid-template-columns: repeat(2, minmax(0, 1fr)) 60px repeat(2, minmax(0, 1fr)); align-items: stretch; }
 :root[data-skin="excel"] .tab { flex-direction: row; justify-content: center; padding: 0; border-right: 1px solid var(--xl-head-line); color: var(--xl-head-ink); font-size: 14px; }
 :root[data-skin="excel"] .tab .ic { display: none; }
 :root[data-skin="excel"] .tab[aria-current="page"] { background: var(--paper); color: var(--pen); box-shadow: inset 0 -3px 0 var(--pen); }
@@ -1230,7 +1225,6 @@ textarea.input { resize: vertical; min-height: 200px; }
       <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span>설정</span>
     </button>
   </div>
-  <div class="xl-status" aria-hidden="true"><span>준비</span><span id="xlStat"></span></div>
 </nav>
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
@@ -2803,15 +2797,7 @@ function updateChrome() {
     else b.removeAttribute('aria-current');
   }
   $('.fab').disabled = S.mode === 'loading';
-  if (ui.skin === 'excel') {
-    $('#xlSave').textContent = '· ' + storeInfo()[1];
-    $('#xlStat').textContent = S.mode === 'loading' ? '' : xlStatus();
-  }
-}
-function xlStatus() {
-  const list = ui.tab === 'list' && ui.listMode === 'list' ? filteredList() : periodTx(ui.tab === 'list' || ui.tab === 'stats' ? ui.month : curKey());
-  const net = list.reduce((s, t) => s + (t.type === 'in' ? t.amount : -t.amount), 0);
-  return `개수: ${list.length}    합계: ${net < 0 ? MINUS : ''}${won(Math.abs(net))}`;
+  if (ui.skin === 'excel') $('#xlSave').textContent = '· ' + storeInfo()[1];
 }
 
 /* ================= 테마 ================= */
@@ -3499,7 +3485,6 @@ document.addEventListener('input', e => {
     ui.q = el.value;
     const box = $('#listResults');
     if (box) box.innerHTML = listResultsHtml();
-    updateChrome();
   }
 });
 document.addEventListener('change', e => {
