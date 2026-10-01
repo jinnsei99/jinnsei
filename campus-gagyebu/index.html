@@ -1,0 +1,2865 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="대학생을 위한 가계부: 오늘 쓸 수 있는 돈, N빵, 무지출 챌린지, 고정지출 자동 기록, 달력과 통계">
+<meta name="theme-color" content="#F6F7F9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D1020" media="(prefers-color-scheme: dark)">
+<title>캠퍼스 가계부</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: 한 장의 모눈 노트 — 좁은 한 단에 기록을 괘선 위에 적고, 가장 중요한 숫자 하나에만 형광펜을 긋는다 */
+:root {
+  --paper: #F6F7F9;
+  --sheet: #FFFFFF;
+  --ink: #151A2D;
+  --ink-2: #4C536B;
+  --ink-3: #646B82;
+  --rule: #E2E5EC;
+  --rule-2: #CDD2DE;
+  --grid: rgba(47, 85, 212, 0.055);
+  --pen: #2F55D4;
+  --pen-ink: #FFFFFF;
+  --pen-soft: #E3E9FB;
+  --hl: #FFE45C;
+  --hl-over: #FFB8CB;
+  --note: #FFF4BF;
+  --note-ink: #4A3B00;
+  --good: #0B7A3B;
+  --warn: #A35F00;
+  --warn-mark: #E59A0B;
+  --bad: #C93636;
+  --mute-mark: #BDC4D4;
+  --heat-1: #E6EBFD;
+  --heat-2: #C4D0FA;
+  --heat-3: #8FA6F4;
+  --heat-4: #4A6CE4;
+  --heat-4-ink: #FFFFFF;
+  --toast-bg: #151A2D;
+  --toast-ink: #F6F7F9;
+  --toast-act: #FFE45C;
+  --fab-glow: rgba(47, 85, 212, 0.32);
+  --shadow: 0 1px 2px rgba(21, 26, 45, 0.06), 0 10px 30px rgba(21, 26, 45, 0.10);
+  --font-display: "Do Hyeon", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-ui: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sun: #C93636;
+  --sat: #2F55D4;
+  --bar: #2F55D4;
+  --bar-mute: #BDC4D4;
+  --databar: #2F55D4;
+  --meter: #2F55D4;
+  --meter-warn: #E59A0B;
+  --meter-bad: #C93636;
+  --neg: #151A2D;
+  --xl-bar: #107C41;
+  --xl-bar-ink: #FFFFFF;
+  --xl-head: #F3F3F3;
+  --xl-head-ink: #5F5F5F;
+  --xl-head-line: #D4D4D4;
+  --xl-flag: #E00000;
+  --xl-good-fill: #C6EFCE;
+  --xl-good-ink: #006100;
+  --xl-warn-fill: #FFEB9C;
+  --xl-warn-ink: #9C5700;
+  --xl-bad-fill: #FFC7CE;
+  --xl-bad-ink: #9C0006;
+  --nav-h: 64px;
+  --col: 560px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0D1020; --sheet: #161A2D; --ink: #EDEFF6; --ink-2: #AEB4C8; --ink-3: #8C93AA;
+    --rule: #252A41; --rule-2: #353B57; --grid: rgba(139, 162, 255, 0.06);
+    --pen: #8BA2FF; --pen-ink: #0D1020; --pen-soft: #232B55;
+    --hl: rgba(255, 214, 51, 0.36); --hl-over: rgba(255, 110, 150, 0.40);
+    --note: #2E2A12; --note-ink: #F3E7AE;
+    --good: #3CC46A; --warn: #F2B33D; --warn-mark: #F2B33D; --bad: #FF7B7B; --mute-mark: #3D4566;
+    --heat-1: #1D2547; --heat-2: #27377A; --heat-3: #3753BE; --heat-4: #6E89F5; --heat-4-ink: #0D1020;
+    --toast-bg: #EDEFF6; --toast-ink: #0D1020; --toast-act: #2F55D4; --fab-glow: rgba(0, 0, 0, 0.45);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
+    --sun: #FF7B7B; --sat: #8BA2FF; --bar: #8BA2FF; --bar-mute: #3D4566; --databar: #8BA2FF;
+    --meter: #8BA2FF; --meter-warn: #F2B33D; --meter-bad: #FF7B7B; --neg: #EDEFF6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0D1020; --sheet: #161A2D; --ink: #EDEFF6; --ink-2: #AEB4C8; --ink-3: #8C93AA;
+  --rule: #252A41; --rule-2: #353B57; --grid: rgba(139, 162, 255, 0.06);
+  --pen: #8BA2FF; --pen-ink: #0D1020; --pen-soft: #232B55;
+  --hl: rgba(255, 214, 51, 0.36); --hl-over: rgba(255, 110, 150, 0.40);
+  --note: #2E2A12; --note-ink: #F3E7AE;
+  --good: #3CC46A; --warn: #F2B33D; --warn-mark: #F2B33D; --bad: #FF7B7B; --mute-mark: #3D4566;
+  --heat-1: #1D2547; --heat-2: #27377A; --heat-3: #3753BE; --heat-4: #6E89F5; --heat-4-ink: #0D1020;
+  --toast-bg: #EDEFF6; --toast-ink: #0D1020; --toast-act: #2F55D4; --fab-glow: rgba(0, 0, 0, 0.45);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.45);
+  --sun: #FF7B7B; --sat: #8BA2FF; --bar: #8BA2FF; --bar-mute: #3D4566; --databar: #8BA2FF;
+  --meter: #8BA2FF; --meter-warn: #F2B33D; --meter-bad: #FF7B7B; --neg: #EDEFF6;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background-color: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; letter-spacing: inherit; }
+button:disabled { cursor: default; }
+input, select, textarea { font: inherit; color: inherit; letter-spacing: inherit; }
+:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; border-radius: 6px; }
+.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.ic { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+b, strong { font-weight: 700; }
+.muted { color: var(--ink-3); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- 페이지 ---------- */
+.app {
+  max-width: var(--col);
+  margin-inline: auto;
+  padding-inline: 16px;
+  padding-block: 8px calc(var(--nav-h) + 36px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.stack { display: flex; flex-direction: column; gap: 12px; }
+
+.mast { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding-top: 10px; }
+.brand { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 26px; line-height: 1.1; letter-spacing: 0; }
+.brand-date { margin: 4px 0 0; color: var(--ink-2); font-size: 13px; }
+.store { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px 4px 8px; border: 1px solid var(--rule); border-radius: 999px; background: var(--sheet); color: var(--ink-2); font-size: 12px; font-weight: 500; white-space: nowrap; }
+.store .ic { width: 15px; height: 15px; }
+.store.memory { color: var(--bad); }
+
+.page-title { margin: 10px 0 0; font-family: var(--font-display); font-weight: 400; font-size: 26px; letter-spacing: 0; }
+
+/* 예시 데이터 포스트잇 */
+.note {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border-radius: 4px 14px 14px 14px;
+  background: var(--note); color: var(--note-ink); font-size: 13.5px; line-height: 1.45;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 6px 14px rgba(0, 0, 0, 0.05);
+}
+.note p { margin: 0; }
+.note .btn { flex: none; background: var(--sheet); color: var(--ink); border-color: transparent; }
+.note.warn { background: var(--sheet); color: var(--bad); border: 1px solid var(--rule-2); box-shadow: none; }
+
+/* ---------- 오늘 쓸 수 있는 돈 ---------- */
+.hero { display: flex; flex-direction: column; gap: 4px; }
+.eyebrow { margin: 0; color: var(--ink-2); font-size: 13.5px; font-weight: 600; }
+.hero-num { margin: 4px 0 2px; font-size: clamp(40px, 12.5vw, 54px); font-weight: 700; line-height: 1.1; letter-spacing: -0.035em; }
+.hero-num .unit { margin-left: 4px; font-size: 0.42em; font-weight: 600; letter-spacing: 0; }
+.hero-num.loading { color: var(--ink-3); }
+.hero-sub { margin: 0; color: var(--ink-2); font-size: 14.5px; }
+.hero-sub b { color: var(--ink); font-weight: 600; }
+.hero-foot { margin: 10px 0 0; color: var(--ink-3); font-size: 12.5px; }
+
+.hl { position: relative; z-index: 0; white-space: nowrap; }
+.hl::before {
+  content: ""; position: absolute; z-index: -1;
+  left: -0.1em; right: -0.12em; bottom: 0.06em; height: 0.44em;
+  background: var(--hl); border-radius: 0.18em 0.4em 0.22em 0.32em;
+  transform: rotate(-1.4deg); transform-origin: left center;
+}
+.hl.over::before { background: var(--hl-over); }
+.sweep .hl::before { animation: hl-sweep 0.6s cubic-bezier(0.3, 0.7, 0.2, 1) both; }
+@keyframes hl-sweep { from { transform: rotate(-1.4deg) scaleX(0); } to { transform: rotate(-1.4deg) scaleX(1); } }
+
+.meter { margin-top: 16px; display: flex; flex-direction: column; gap: 7px; }
+.meter-track { position: relative; height: 10px; border-radius: 999px; background: var(--pen-soft); }
+.meter-fill { position: absolute; inset: 0 auto 0 0; min-width: 6px; border-radius: 999px; background: var(--meter); }
+.meter-fill.warn { background: var(--meter-warn); }
+.meter-fill.bad { background: var(--meter-bad); }
+.meter-pace { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--ink); }
+.meter-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; color: var(--ink-2); font-size: 13px; }
+.meter-row b { color: var(--ink); font-weight: 600; }
+.pace-key { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); }
+.pace-key i { display: inline-block; width: 2px; height: 12px; border-radius: 1px; background: var(--ink); }
+
+.st { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+.st i { display: inline-grid; place-items: center; width: 17px; height: 17px; border: 1.5px solid currentColor; border-radius: 50%; font-size: 10px; font-style: normal; font-weight: 700; line-height: 1; }
+.st.good { color: var(--good); }
+.st.warn { color: var(--warn); }
+.st.bad { color: var(--bad); }
+
+/* 시작하기 */
+.setup { display: flex; flex-direction: column; gap: 12px; }
+.setup-title { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1.25; letter-spacing: 0; text-wrap: balance; }
+.setup-desc { margin: 0; color: var(--ink-2); max-width: 34em; }
+
+/* ---------- 섹션 ---------- */
+.sec { display: flex; flex-direction: column; gap: 10px; }
+.sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.sec-head h2, .card-title { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 21px; line-height: 1.2; letter-spacing: 0; text-wrap: balance; }
+.sec-head .muted { font-size: 13px; }
+.link { color: var(--pen); font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+.link:hover { text-decoration: underline; }
+
+.sum3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-block: 1px solid var(--rule-2); }
+.sum3 > div { display: flex; flex-direction: column; gap: 2px; padding: 12px 0; min-width: 0; }
+.sum3 > div + div { padding-left: 14px; border-left: 1px solid var(--rule); }
+.sum3 span { color: var(--ink-2); font-size: 12.5px; }
+.sum3 b { font-size: 16.5px; font-weight: 600; letter-spacing: -0.02em; }
+.pos { color: var(--pen); }
+.neg { color: var(--bad); }
+
+/* 무지출 */
+.ns { display: flex; align-items: center; gap: 16px; }
+.ns-big { margin: 0; font-size: 38px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; }
+.ns-big small { margin-left: 2px; font-size: 16px; font-weight: 600; letter-spacing: 0; }
+.ns-text { margin: 0; color: var(--ink-2); font-size: 14px; }
+.ns-text b { color: var(--ink); }
+.dots { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 8px 4px; }
+.dots li { justify-self: center; width: 100%; max-width: 13px; aspect-ratio: 1; border-radius: 50%; }
+.dots .free { background: var(--pen); }
+.dots .spent { box-shadow: inset 0 0 0 1.5px var(--ink-3); }
+.dots .none, .dots .future { background: var(--rule); }
+.dots .today { outline: 2px solid var(--ink); outline-offset: 2px; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 0; color: var(--ink-3); font-size: 12px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.k { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+.k.free { background: var(--pen); }
+.k.spent { box-shadow: inset 0 0 0 1.5px var(--ink-3); }
+
+/* 기록 줄 */
+.txs, .rank, .ups, .recs { list-style: none; margin: 0; padding: 0; }
+.txs > li + li, .rank > li + li, .ups > li + li, .recs > li + li { border-top: 1px solid var(--rule); }
+.tx, .rec {
+  width: 100%; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  padding: 11px 0; text-align: left; border-radius: 10px;
+}
+.tx:hover, .rec:hover, .rank-btn:hover { background: linear-gradient(90deg, transparent, var(--pen-soft) 12%, var(--pen-soft) 88%, transparent); }
+.ico { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--rule); background: var(--sheet); font-size: 20px; line-height: 1; }
+.tx-main { display: flex; flex-direction: column; min-width: 0; }
+.tx-title { font-size: 15px; font-weight: 500; line-height: 1.35; }
+.tx-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; color: var(--ink-3); font-size: 12.5px; line-height: 1.4; }
+.tx-sub .dot::before { content: "·"; margin-right: 6px; }
+.tag { display: inline-block; padding: 0 6px; border-radius: 6px; background: var(--note); color: var(--note-ink); font-size: 11px; font-weight: 600; line-height: 18px; }
+.tx-amt { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.tx-amt small { margin-left: 1px; font-size: 12px; font-weight: 500; }
+.tx-amt.in { color: var(--pen); }
+.tx-amt.out, .sum3 b.out { color: var(--neg); }
+
+.day-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 14px 0 6px; border-bottom: 1px solid var(--rule-2); }
+.day-head h3 { margin: 0; color: var(--ink-2); font-size: 13.5px; font-weight: 600; }
+.day-head span { color: var(--ink-2); font-size: 13px; font-variant-numeric: tabular-nums; }
+.day-head .pos { color: var(--pen); }
+
+/* 카테고리 막대 */
+.rank-btn { width: 100%; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; column-gap: 12px; row-gap: 6px; align-items: center; padding: 10px 0; text-align: left; border-radius: 10px; }
+.rank-btn .ico { grid-row: 1 / span 2; width: 36px; height: 36px; border-radius: 10px; font-size: 18px; }
+.rank-name { font-weight: 500; min-width: 0; }
+.rank-val { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rank-val small { margin-left: 6px; color: var(--ink-3); font-size: 12px; font-weight: 500; }
+.rank-meta { grid-column: 2 / span 2; display: flex; flex-direction: column; gap: 5px; }
+.bar { position: relative; height: 6px; overflow: hidden; border-radius: 3px; background: var(--pen-soft); }
+.bar i { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--databar); }
+.bar i.warn { background: var(--meter-warn); }
+.bar i.bad { background: var(--meter-bad); }
+.rank-meta .st { font-size: 12px; }
+.rank-meta .st i { width: 15px; height: 15px; font-size: 9px; }
+
+.ups .up { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; }
+.up-date { display: flex; flex-direction: column; align-items: flex-start; font-size: 12px; color: var(--ink-3); line-height: 1.3; }
+.up-date b { color: var(--ink); font-size: 15px; font-weight: 600; }
+.dday { display: inline-block; margin-top: 2px; padding: 0 6px; border-radius: 6px; background: var(--pen-soft); color: var(--pen); font-size: 11px; font-weight: 700; line-height: 18px; }
+
+.empty { display: flex; flex-direction: column; gap: 6px; padding: 26px 18px; border: 1.5px dashed var(--rule-2); border-radius: 16px; text-align: center; color: var(--ink-2); }
+.empty p { margin: 0; }
+.empty-title { color: var(--ink); font-weight: 600; }
+
+/* ---------- 달 이동 ---------- */
+.mnav {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-inline: -16px; padding: 8px 10px; background: var(--paper); border-bottom: 1px solid var(--rule);
+}
+.mnav-mid { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mnav-title { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 23px; letter-spacing: 0; white-space: nowrap; }
+.icon-btn { display: inline-grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; color: var(--ink-2); flex: none; }
+.icon-btn:hover { background: var(--pen-soft); color: var(--ink); }
+.icon-btn:disabled { opacity: 0.35; background: none; }
+
+/* ---------- 컨트롤 ---------- */
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 3px; padding: 3px; border-radius: 12px; background: var(--rule); }
+.seg button { padding: 8px 10px; border-radius: 9px; color: var(--ink-2); font-size: 14px; font-weight: 600; }
+.seg button[aria-checked="true"], .seg button[aria-selected="true"] { background: var(--sheet); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { padding: 6px 12px; border: 1px solid var(--rule-2); border-radius: 999px; background: var(--sheet); color: var(--ink-2); font-size: 13px; font-weight: 500; white-space: nowrap; }
+.chip:hover { border-color: var(--ink-3); color: var(--ink); }
+.chip[aria-pressed="true"] { border-color: var(--pen); background: var(--pen-soft); color: var(--pen); font-weight: 600; }
+.chip.sm { padding: 3px 10px; font-size: 12.5px; }
+
+.input {
+  width: 100%; min-width: 0; min-height: 44px; padding: 9px 12px;
+  border: 1px solid var(--rule-2); border-radius: 12px; background: var(--sheet);
+  font-size: 16px; line-height: 1.4; -webkit-appearance: none; appearance: none;
+}
+.input:focus { outline: none; border-color: var(--pen); box-shadow: 0 0 0 3px var(--pen-soft); }
+.input::placeholder { color: var(--ink-3); opacity: 0.8; }
+select.input {
+  padding-right: 34px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-2) 50%), linear-gradient(135deg, var(--ink-2) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 52%, calc(100% - 13px) 52%;
+  background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+}
+input[type="date"].input { display: block; }
+input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+.money-row { display: flex; align-items: center; gap: 8px; }
+.money-row span { color: var(--ink-2); font-weight: 600; flex: none; }
+.money-row .input { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.money-row.big .input { min-height: 54px; font-size: 22px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; padding: 0 18px; border: 1px solid var(--rule-2); border-radius: 12px;
+  background: var(--sheet); color: var(--ink); font-size: 15px; font-weight: 600; white-space: nowrap;
+}
+.btn:hover { border-color: var(--ink-3); }
+.btn.primary { border-color: var(--pen); background: var(--pen); color: var(--pen-ink); }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.block { width: 100%; min-height: 52px; font-size: 16px; }
+.btn.small { min-height: 34px; padding: 0 12px; font-size: 13px; }
+.btn.danger { color: var(--bad); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn-row .btn { flex: 1 1 160px; }
+
+.filters { display: flex; flex-direction: column; gap: 10px; }
+.filter-row { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 8px; }
+.filter-note { margin: 0; color: var(--ink-2); font-size: 13px; }
+
+/* ---------- 카드 (통계·설정) ---------- */
+.card { display: flex; flex-direction: column; gap: 14px; padding: 16px; border: 1px solid var(--rule); border-radius: 18px; background: var(--sheet); }
+.card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.card-sub { margin: 4px 0 0; color: var(--ink-2); font-size: 13.5px; }
+.card-sub b { color: var(--ink); }
+.card p.desc { margin: 0; color: var(--ink-2); font-size: 13.5px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mini-label { margin: 0; padding: 0; color: var(--ink-2); font-size: 13px; font-weight: 600; }
+.row-end { display: flex; justify-content: flex-end; }
+
+.stat-hero { display: flex; flex-direction: column; gap: 2px; }
+.big-num { margin: 2px 0; font-size: clamp(34px, 10vw, 44px); font-weight: 700; line-height: 1.15; letter-spacing: -0.035em; }
+.big-num .unit { margin-left: 3px; font-size: 0.45em; font-weight: 600; letter-spacing: 0; }
+.delta { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 14px; font-weight: 600; }
+.delta.good { color: var(--good); }
+.delta.bad { color: var(--bad); }
+.delta.flat { color: var(--ink-2); }
+
+/* 차트 */
+.chart { position: relative; min-height: 120px; }
+.chart svg { display: block; overflow: visible; touch-action: pan-y; -webkit-user-select: none; user-select: none; }
+.chart svg:focus-visible { outline-offset: 4px; }
+.chart .grid { stroke: var(--rule); stroke-width: 1; }
+.chart .base { stroke: var(--rule-2); stroke-width: 1; }
+.chart .ytick, .chart .xtick { fill: var(--ink-3); font-family: var(--font-ui); font-size: 10.5px; letter-spacing: 0; }
+.chart .xtick.em { fill: var(--ink); font-weight: 700; }
+.chart .bar-m { fill: var(--bar); }
+.chart .bar-m.mute { fill: var(--bar-mute); }
+.chart .band { fill: var(--pen-soft); }
+.chart .ref { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 4 3; }
+.chart .reflabel, .chart .vlabel {
+  font-family: var(--font-ui); font-size: 11px; font-weight: 600; letter-spacing: 0;
+  paint-order: stroke; stroke: var(--sheet); stroke-width: 3.5px; stroke-linejoin: round;
+}
+.chart .reflabel { fill: var(--ink-2); }
+.chart .vlabel { fill: var(--ink); }
+.tip {
+  position: absolute; top: 0; z-index: 2; pointer-events: none;
+  display: flex; flex-direction: column; gap: 1px; padding: 6px 10px;
+  border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); box-shadow: var(--shadow);
+  font-size: 12px; color: var(--ink-2); white-space: nowrap;
+}
+.tip b { color: var(--ink); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tbl-wrap { overflow-x: auto; max-height: 320px; overflow-y: auto; border: 1px solid var(--rule); border-radius: 12px; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tbl th, .tbl td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--rule); }
+.tbl th { position: sticky; top: 0; background: var(--sheet); color: var(--ink-2); font-weight: 600; }
+.tbl .r { text-align: right; font-variant-numeric: tabular-nums; }
+.tbl tr:last-child td { border-bottom: 0; }
+
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-block: 1px solid var(--rule-2); }
+.kpis > div { display: flex; flex-direction: column; gap: 2px; padding: 12px 0; min-width: 0; }
+.kpis > div + div { padding-left: 14px; border-left: 1px solid var(--rule); }
+.kpis span { color: var(--ink-2); font-size: 12.5px; }
+.kpis b { font-size: 16.5px; font-weight: 600; letter-spacing: -0.02em; }
+
+/* ---------- 달력 ---------- */
+.cal { display: flex; flex-direction: column; gap: 4px; }
+.cal-head, .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+.cal-head span { padding: 4px 0; text-align: center; color: var(--ink-2); font-size: 12px; font-weight: 600; }
+.cal-head .sun { color: var(--sun); }
+.cal-head .sat { color: var(--sat); }
+.cc {
+  display: flex; flex-direction: column; gap: 1px; min-width: 0; min-height: 60px; padding: 5px 4px 4px;
+  border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); text-align: left; line-height: 1.2;
+}
+.cc-top { display: flex; align-items: baseline; justify-content: space-between; gap: 2px; }
+.cc .cd { font-size: 12px; font-weight: 600; }
+.cc.sun .cd { color: var(--sun); }
+.cc.sat .cd { color: var(--sat); }
+.cc .ca { margin-top: auto; font-size: 11px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+.cc .ci { font-size: 10px; font-weight: 600; text-align: right; color: var(--pen); letter-spacing: -0.03em; }
+.cc .cf { color: var(--good); font-size: 11px; font-weight: 700; }
+.cc.lv3 .cf, .cc.lv4 .cf { color: inherit; }
+.cc.lv1 { background: var(--heat-1); border-color: transparent; }
+.cc.lv2 { background: var(--heat-2); border-color: transparent; }
+.cc.lv3 { background: var(--heat-3); border-color: transparent; }
+.cc.lv4 { background: var(--heat-4); border-color: transparent; color: var(--heat-4-ink); }
+.cc.lv4 .cd, .cc.lv4 .ci { color: var(--heat-4-ink); }
+.cc.future { opacity: 0.5; }
+.cc.today { box-shadow: inset 0 0 0 2px var(--ink); }
+.cc.sel { box-shadow: inset 0 0 0 2.5px var(--pen); }
+.cc.today.sel { box-shadow: inset 0 0 0 2px var(--ink), inset 0 0 0 4px var(--sheet); }
+.cal-blank { min-height: 60px; }
+.cal-legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-top: 6px; color: var(--ink-3); font-size: 12px; }
+.ramp { display: inline-flex; align-items: center; gap: 4px; }
+.ramp i { display: inline-block; width: 16px; height: 12px; border-radius: 3px; }
+.ramp i:nth-child(2) { background: var(--heat-1); }
+.ramp i:nth-child(3) { background: var(--heat-2); }
+.ramp i:nth-child(4) { background: var(--heat-3); }
+.ramp i:nth-child(5) { background: var(--heat-4); }
+
+/* ---------- 설정 ---------- */
+details.more { border-top: 1px solid var(--rule); padding-top: 12px; }
+details.more summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; list-style: none; font-weight: 600; }
+details.more summary::-webkit-details-marker { display: none; }
+details.more summary::after { content: "펼치기"; color: var(--pen); font-size: 13px; font-weight: 600; }
+details.more[open] summary::after { content: "접기"; }
+details.more summary span { color: var(--ink-3); font-size: 13px; font-weight: 500; margin-left: auto; }
+.cb-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.cb-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 150px); align-items: center; gap: 10px; }
+.cb-row > span { font-size: 14px; }
+.cb-row .money-row .input { min-height: 40px; font-size: 16px; padding-block: 6px; }
+.store-box { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 12px; background: var(--paper); }
+.store-box .ic { color: var(--pen); margin-top: 2px; }
+.store-box p { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+.store-box b { color: var(--ink); }
+.fine { margin: 0; color: var(--ink-3); font-size: 12px; text-align: center; }
+
+/* ---------- 하단 메뉴 ---------- */
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding-bottom: env(safe-area-inset-bottom, 0px); border-top: 1px solid var(--rule); background: var(--sheet); }
+.tabbar-in { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; max-width: var(--col); height: var(--nav-h); margin-inline: auto; }
+.tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; color: var(--ink-3); font-size: 11px; font-weight: 500; }
+.tab[aria-current="page"] { color: var(--ink); font-weight: 700; }
+.tab[aria-current="page"] .ic { color: var(--pen); stroke-width: 2.1; }
+.fab {
+  justify-self: center; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%;
+  background: var(--pen); color: var(--pen-ink); transform: translateY(-14px);
+  box-shadow: 0 0 0 5px var(--sheet), 0 8px 18px var(--fab-glow);
+}
+.fab .ic { width: 28px; height: 28px; stroke-width: 2.4; }
+.fab:disabled { opacity: 0.5; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(var(--nav-h) + 20px + env(safe-area-inset-bottom, 0px)); z-index: 40;
+  display: flex; align-items: center; gap: 14px; width: max-content; max-width: min(520px, calc(100% - 32px));
+  padding: 12px 16px; border-radius: 14px; background: var(--toast-bg); color: var(--toast-ink);
+  box-shadow: var(--shadow); font-size: 14px; transform: translateX(-50%);
+}
+.toast.error { background: var(--bad); color: var(--pen-ink); }
+.toast-act { flex: none; color: var(--toast-act); font-weight: 700; }
+
+/* ---------- 바텀 시트 ---------- */
+dialog.sheet {
+  width: 100%; max-width: var(--col); max-height: 92vh; max-height: min(92dvh, 900px);
+  margin: auto auto 0; padding: 0; overflow-y: auto; overscroll-behavior: contain;
+  border: 0; border-radius: 22px 22px 0 0; background: var(--sheet); color: var(--ink);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+}
+dialog.sheet::backdrop { background: rgba(10, 12, 24, 0.45); }
+dialog.sheet[open] { animation: sheet-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes sheet-up { from { transform: translateY(30px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+.sheet-body { display: flex; flex-direction: column; gap: 16px; padding: 6px 16px 0; }
+.grab { align-self: center; width: 38px; height: 4px; margin-top: 4px; border-radius: 2px; background: var(--rule-2); }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sheet-head h2 { margin: 0; font-size: 18px; font-weight: 700; }
+.sheet-desc { margin: -6px 0 0; color: var(--ink-2); font-size: 13.5px; }
+.sheet-actions {
+  position: sticky; bottom: 0; z-index: 1; display: flex; gap: 8px;
+  margin-inline: -16px; padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  background: var(--sheet); border-top: 1px solid var(--rule);
+}
+.sheet-actions .btn { flex: 1 1 0; }
+.sheet-actions .btn.block { flex: 2 1 0; }
+.amount-line { display: flex; align-items: baseline; gap: 6px; border-bottom: 2px solid var(--rule-2); }
+.amount-line:focus-within { border-bottom-color: var(--pen); }
+.amount-input {
+  flex: 1; min-width: 0; padding: 4px 0 6px; border: 0; background: transparent; outline: none;
+  font-size: 34px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums;
+}
+.amount-input::placeholder { color: var(--rule-2); }
+.amount-unit { color: var(--ink-2); font-size: 20px; font-weight: 600; }
+.amount-box { display: flex; flex-direction: column; gap: 10px; }
+.quick { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.quick::-webkit-scrollbar { display: none; }
+.quick .chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; }
+.quick .chip b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.opt { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 14px; background: var(--paper); }
+.switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; font-size: 14.5px; }
+.switch-row span { color: var(--ink-2); }
+.switch-row b { color: var(--ink); }
+.switch { appearance: none; -webkit-appearance: none; position: relative; flex: none; width: 46px; height: 28px; margin: 0; border-radius: 999px; background: var(--rule-2); cursor: pointer; transition: background 0.15s; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--sheet); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: transform 0.15s; }
+.switch:checked { background: var(--pen); }
+.switch:checked::after { transform: translateX(18px); }
+.split { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.stepper { display: inline-flex; align-items: center; gap: 4px; padding: 2px; border: 1px solid var(--rule-2); border-radius: 12px; background: var(--sheet); }
+.stepper .icon-btn { width: 36px; height: 36px; font-size: 20px; font-weight: 600; }
+.stepper output { min-width: 1.6em; text-align: center; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stepper span { margin-right: 8px; color: var(--ink-2); font-size: 14px; }
+.split-info { margin: 0; color: var(--ink-2); font-size: 13.5px; }
+.split-info b { color: var(--ink); }
+.wage { display: grid; grid-template-columns: minmax(0, 1.3fr) auto minmax(0, 1fr) auto; align-items: center; gap: 8px; color: var(--ink-2); font-size: 14px; }
+.wage .input { text-align: right; font-variant-numeric: tabular-nums; }
+fieldset.cats { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.cat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.cat-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 66px; padding: 8px 2px;
+  border: 1.5px solid var(--rule); border-radius: 14px; background: var(--sheet); color: var(--ink-2); font-size: 12px; font-weight: 500; line-height: 1.25; text-align: center;
+}
+.cat-btn .e { font-size: 22px; line-height: 1; }
+.cat-btn:hover { border-color: var(--rule-2); }
+.cat-btn[aria-pressed="true"] { border-color: var(--pen); background: var(--pen-soft); color: var(--pen); font-weight: 700; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.err { margin: 0; color: var(--bad); font-size: 13.5px; font-weight: 600; }
+.err:empty { display: none; }
+.check-row { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink-2); cursor: pointer; }
+.check-row input { width: 20px; height: 20px; accent-color: var(--pen); }
+.mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; white-space: pre; }
+textarea.input { resize: vertical; min-height: 200px; }
+
+/* ---------- 테마 고르기 ---------- */
+.skins { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.skin-opt {
+  display: flex; flex-direction: column; gap: 4px; padding: 10px;
+  border: 1.5px solid var(--rule); border-radius: 14px; background: var(--sheet); text-align: left;
+}
+.skin-opt:hover { border-color: var(--rule-2); }
+.skin-opt[aria-checked="true"] { border-color: var(--pen); box-shadow: 0 0 0 3px var(--pen-soft); }
+.skin-name { margin-top: 4px; font-size: 15px; font-weight: 700; }
+.skin-desc { color: var(--ink-3); font-size: 12.5px; }
+/* 미리보기 그림은 각 테마의 밝은 화면을 그대로 옮긴 작은 견본이에요 */
+.skin-prev { position: relative; display: block; height: 66px; overflow: hidden; border: 1px solid var(--rule); border-radius: 8px; }
+.prev-default {
+  background-color: #F6F7F9;
+  background-image: linear-gradient(rgba(47, 85, 212, 0.13) 1px, transparent 1px), linear-gradient(90deg, rgba(47, 85, 212, 0.13) 1px, transparent 1px);
+  background-size: 10px 10px;
+}
+.prev-default i { position: absolute; left: 10px; top: 20px; width: 58%; height: 13px; border-radius: 3px 8px 4px 6px; background: #FFE45C; transform: rotate(-2deg); }
+.prev-default b { position: absolute; left: 10px; bottom: 12px; width: 40%; height: 6px; border-radius: 3px; background: #2F55D4; }
+.prev-excel {
+  background-color: #FFFFFF;
+  background-image: linear-gradient(#DADADA 1px, transparent 1px), linear-gradient(90deg, #DADADA 1px, transparent 1px);
+  background-size: 24px 11px; background-position: 9px 22px;
+}
+.prev-excel::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 13px; background: #107C41; }
+.prev-excel::after { content: ""; position: absolute; left: 0; right: 0; top: 13px; height: 9px; background: #F3F3F3; border-bottom: 1px solid #D4D4D4; }
+.prev-excel i { position: absolute; left: 32px; top: 32px; width: 26px; height: 13px; border: 2px solid #107C41; background: #FFFFFF; }
+.prev-excel b { position: absolute; left: 54px; top: 41px; width: 6px; height: 6px; border: 1px solid #FFFFFF; background: #107C41; }
+
+/* ---------- 엑셀 테마 ---------- */
+.xl-chrome, .xl-rowhead, .xl-status { display: none; }
+:root[data-skin="excel"] {
+  --paper: #FFFFFF; --sheet: #FFFFFF; --ink: #1B1B1B; --ink-2: #404040; --ink-3: #595959;
+  --rule: #E1E1E1; --rule-2: #C8C8C8; --grid: #E1E1E1;
+  --pen: #107C41; --pen-ink: #FFFFFF; --pen-soft: #E2EFDA;
+  --hl: transparent; --hl-over: #FFC7CE;
+  --note: #FFFFE1; --note-ink: #1B1B1B;
+  --good: #006100; --warn: #9C5700; --warn-mark: #FFB628; --bad: #9C0006; --mute-mark: #A5A5A5;
+  --heat-1: #63BE7B; --heat-2: #FFEB84; --heat-3: #FBAA77; --heat-4: #F8696B; --heat-4-ink: #000000;
+  --toast-bg: #323130; --toast-ink: #FFFFFF; --toast-act: #A9D08E; --fab-glow: transparent;
+  --shadow: 0 2px 6px rgba(0, 0, 0, 0.12), 0 10px 26px rgba(0, 0, 0, 0.12);
+  --sun: #C00000; --sat: #0070C0; --bar: #4472C4; --bar-mute: #A5A5A5; --databar: #638EC6;
+  --meter: #63BE7B; --meter-warn: #FFB628; --meter-bad: #FF555A; --neg: #C00000;
+  --xl-bar: #107C41; --xl-bar-ink: #FFFFFF; --xl-head: #F3F3F3; --xl-head-ink: #5F5F5F; --xl-head-line: #D4D4D4; --xl-flag: #E00000;
+  --xl-good-fill: #C6EFCE; --xl-good-ink: #006100; --xl-warn-fill: #FFEB9C; --xl-warn-ink: #9C5700; --xl-bad-fill: #FFC7CE; --xl-bad-ink: #9C0006;
+  --font-display: "Carlito", "Calibri", "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "IBM Plex Sans KR", "Noto Sans KR", system-ui, sans-serif;
+  --font-ui: "Carlito", "Calibri", "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "IBM Plex Sans KR", "Noto Sans KR", system-ui, sans-serif;
+  --xl-top: 50px; --xl-gutter: 28px; --xl-col: 72px; --xl-row: 24px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-skin="excel"]:not([data-theme="light"]) {
+    --paper: #1F1F1F; --sheet: #262626; --ink: #F2F2F2; --ink-2: #D0D0D0; --ink-3: #A6A6A6;
+    --rule: #3A3A3A; --rule-2: #4A4A4A; --grid: #333333;
+    --pen: #4CC38A; --pen-ink: #0B1F14; --pen-soft: #1D3A2A;
+    --hl: transparent; --hl-over: #5C1E24;
+    --note: #3A3A22; --note-ink: #F2F2F2;
+    --good: #7FD99A; --warn: #F5C96B; --warn-mark: #E8A33A; --bad: #FF8A8A; --mute-mark: #5E5E5E;
+    --heat-1: #2E5E3E; --heat-2: #5E5A28; --heat-3: #7A4E2A; --heat-4: #7E2F33; --heat-4-ink: #F2F2F2;
+    --toast-bg: #F2F2F2; --toast-ink: #1B1B1B; --toast-act: #107C41; --fab-glow: transparent;
+    --shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 10px 26px rgba(0, 0, 0, 0.5);
+    --sun: #FF8A8A; --sat: #7FB2FF; --bar: #6F9AE0; --bar-mute: #5E5E5E; --databar: #6F9AE0;
+    --meter: #3FAF6A; --meter-warn: #E8A33A; --meter-bad: #E5535A; --neg: #FF8A8A;
+    --xl-bar: #0E5C2F; --xl-bar-ink: #FFFFFF; --xl-head: #2B2B2B; --xl-head-ink: #BDBDBD; --xl-head-line: #3F3F3F; --xl-flag: #FF5A5A;
+    --xl-good-fill: #1E4D2B; --xl-good-ink: #B5F0C4; --xl-warn-fill: #4D3D10; --xl-warn-ink: #F8DB8A; --xl-bad-fill: #5C1E24; --xl-bad-ink: #FFC2C8;
+    color-scheme: dark;
+  }
+}
+:root[data-skin="excel"][data-theme="dark"] {
+  --paper: #1F1F1F; --sheet: #262626; --ink: #F2F2F2; --ink-2: #D0D0D0; --ink-3: #A6A6A6;
+  --rule: #3A3A3A; --rule-2: #4A4A4A; --grid: #333333;
+  --pen: #4CC38A; --pen-ink: #0B1F14; --pen-soft: #1D3A2A;
+  --hl: transparent; --hl-over: #5C1E24;
+  --note: #3A3A22; --note-ink: #F2F2F2;
+  --good: #7FD99A; --warn: #F5C96B; --warn-mark: #E8A33A; --bad: #FF8A8A; --mute-mark: #5E5E5E;
+  --heat-1: #2E5E3E; --heat-2: #5E5A28; --heat-3: #7A4E2A; --heat-4: #7E2F33; --heat-4-ink: #F2F2F2;
+  --toast-bg: #F2F2F2; --toast-ink: #1B1B1B; --toast-act: #107C41; --fab-glow: transparent;
+  --shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 10px 26px rgba(0, 0, 0, 0.5);
+  --sun: #FF8A8A; --sat: #7FB2FF; --bar: #6F9AE0; --bar-mute: #5E5E5E; --databar: #6F9AE0;
+  --meter: #3FAF6A; --meter-warn: #E8A33A; --meter-bad: #E5535A; --neg: #FF8A8A;
+  --xl-bar: #0E5C2F; --xl-bar-ink: #FFFFFF; --xl-head: #2B2B2B; --xl-head-ink: #BDBDBD; --xl-head-line: #3F3F3F; --xl-flag: #FF5A5A;
+  --xl-good-fill: #1E4D2B; --xl-good-ink: #B5F0C4; --xl-warn-fill: #4D3D10; --xl-warn-ink: #F8DB8A; --xl-bad-fill: #5C1E24; --xl-bad-ink: #FFC2C8;
+  color-scheme: dark;
+}
+
+/* 배경: 셀 격자 (A열은 행 머리글 바로 오른쪽, 1행은 열 머리글 바로 아래에서 시작) */
+:root[data-skin="excel"] body {
+  letter-spacing: 0;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: var(--xl-col) var(--xl-row);
+  background-position: var(--xl-gutter) calc(env(safe-area-inset-top, 0px) + var(--xl-top));
+}
+/* 제목 표시줄 + 열 머리글 */
+:root[data-skin="excel"] .xl-chrome {
+  display: block; position: fixed; top: 0; left: 0; right: 0; z-index: 15;
+  padding-top: env(safe-area-inset-top, 0px); background: var(--xl-bar);
+}
+.xl-title { display: flex; align-items: center; justify-content: center; gap: 6px; height: 30px; padding-inline: 12px; color: var(--xl-bar-ink); font-size: 12.5px; white-space: nowrap; overflow: hidden; }
+.xl-title b { font-weight: 700; }
+.xl-colhead { display: flex; height: 20px; background: var(--xl-head); border-bottom: 1px solid var(--xl-head-line); }
+.xl-corner { position: relative; flex: none; width: var(--xl-gutter); border-right: 1px solid var(--xl-head-line); }
+.xl-corner::after { content: ""; position: absolute; right: 3px; bottom: 3px; border-style: solid; border-width: 0 0 8px 8px; border-color: transparent transparent var(--xl-head-line) transparent; }
+.xl-cols { display: flex; min-width: 0; overflow: hidden; }
+.xl-cols span { flex: none; width: var(--xl-col); border-right: 1px solid var(--xl-head-line); color: var(--xl-head-ink); font-size: 11px; line-height: 19px; text-align: center; }
+/* 행 머리글 (스크롤에 맞춰 번호가 바뀜) */
+:root[data-skin="excel"] .xl-rowhead {
+  display: block; position: fixed; left: 0; bottom: 0; z-index: 4; overflow: hidden;
+  top: calc(env(safe-area-inset-top, 0px) + var(--xl-top)); width: var(--xl-gutter);
+  background: var(--xl-head); border-right: 1px solid var(--xl-head-line);
+}
+.xl-rows span { display: block; height: var(--xl-row); border-bottom: 1px solid var(--xl-head-line); color: var(--xl-head-ink); font-size: 10.5px; line-height: calc(var(--xl-row) - 1px); text-align: center; font-variant-numeric: tabular-nums; }
+/* 시트 탭 + 상태 표시줄 */
+#xlStat { white-space: pre; }
+:root[data-skin="excel"] .xl-status {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  height: 22px; padding-inline: 10px; background: var(--xl-bar); color: var(--xl-bar-ink); font-size: 11.5px; white-space: nowrap;
+}
+:root[data-skin="excel"] .tabbar { background: var(--xl-head); border-top: 1px solid var(--xl-head-line); }
+:root[data-skin="excel"] .tabbar-in { height: calc(var(--nav-h) - 22px); grid-template-columns: repeat(2, minmax(0, 1fr)) 60px repeat(2, minmax(0, 1fr)); align-items: stretch; }
+:root[data-skin="excel"] .tab { flex-direction: row; justify-content: center; padding: 0; border-right: 1px solid var(--xl-head-line); color: var(--xl-head-ink); font-size: 14px; }
+:root[data-skin="excel"] .tab .ic { display: none; }
+:root[data-skin="excel"] .tab[aria-current="page"] { background: var(--paper); color: var(--pen); box-shadow: inset 0 -3px 0 var(--pen); }
+:root[data-skin="excel"] .fab { align-self: center; width: 40px; height: 40px; transform: none; box-shadow: none; border-right: 0; }
+:root[data-skin="excel"] .fab .ic { width: 24px; height: 24px; }
+
+/* 레이아웃: 행 머리글만큼 비켜 앉기 */
+:root[data-skin="excel"] .app {
+  max-width: calc(var(--col) + var(--xl-gutter));
+  padding-top: calc(var(--xl-top) + 10px);
+  padding-left: calc(var(--xl-gutter) + 14px);
+  padding-right: 14px;
+}
+:root[data-skin="excel"] .mnav {
+  top: calc(env(safe-area-inset-top, 0px) + var(--xl-top));
+  margin-inline: -14px; padding: 6px 8px;
+  background: var(--sheet); border-bottom: 1px solid var(--xl-head-line);
+}
+:root[data-skin="excel"] .mnav-title { font-size: 19px; font-weight: 700; }
+:root[data-skin="excel"] :is(.sec-head h2, .card-title, .page-title, .setup-title, .brand) { font-weight: 700; letter-spacing: 0; }
+:root[data-skin="excel"] .page-title { font-size: 22px; }
+:root[data-skin="excel"] .setup-title { font-size: 26px; }
+:root[data-skin="excel"] .mast { padding-top: 4px; }
+:root[data-skin="excel"] .mast :is(.brand, .store) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+:root[data-skin="excel"] .brand-date { margin: 0; color: var(--ink); font-size: 15px; font-weight: 700; }
+
+/* 모서리는 모두 직각 */
+:root[data-skin="excel"] :is(.card, .btn, .chip, .input, .seg, .seg button, .ico, .note, .cc, .cal-blank, .cat-btn, .opt, .stepper, .empty,
+  .tbl-wrap, .tip, .store, .dday, .tag, .bar, .bar i, .meter-track, .meter-fill, .toast, .icon-btn, .tx, .rec, .rank-btn,
+  .store-box, .skin-opt, .skin-prev, .dots li, .k, .ramp i, dialog.sheet, .pace-key i) { border-radius: 0; }
+
+/* 수식 입력줄 + 선택된 셀 */
+:root[data-skin="excel"] :is(.hero, .stat-hero) .eyebrow {
+  display: flex; align-items: center; gap: 8px; padding: 3px 8px;
+  border: 1px solid var(--xl-head-line); background: var(--sheet); color: var(--ink); font-size: 13px; font-weight: 400;
+}
+:root[data-skin="excel"] :is(.hero, .stat-hero) .eyebrow::before {
+  content: "fx"; padding-right: 8px; border-right: 1px solid var(--xl-head-line);
+  color: var(--ink-3); font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 700;
+}
+:root[data-skin="excel"] :is(.hero-num, .big-num) { letter-spacing: 0; }
+:root[data-skin="excel"] .hl { display: inline-block; padding: 0 10px; border: 2px solid var(--pen); background: var(--sheet); line-height: 1.12; }
+:root[data-skin="excel"] .hl::before {
+  top: auto; left: auto; right: -5px; bottom: -5px; z-index: 1; width: 8px; height: 8px;
+  border: 1.5px solid var(--sheet); border-radius: 0; background: var(--pen); transform: none; animation: none;
+}
+:root[data-skin="excel"] .hl.over { background: var(--xl-bad-fill); color: var(--xl-bad-ink); }
+:root[data-skin="excel"] .hl.over::before { background: var(--pen); }
+
+/* 데이터 막대 · 셀 스타일(좋음/보통/나쁨) */
+:root[data-skin="excel"] .meter-track { height: 22px; border: 1px solid var(--xl-head-line); background: var(--sheet); }
+:root[data-skin="excel"] .meter-fill { inset: 2px auto 2px 2px; min-width: 3px; }
+:root[data-skin="excel"] .meter-pace { top: -4px; bottom: -4px; }
+:root[data-skin="excel"] .st { padding: 1px 8px 1px 6px; }
+:root[data-skin="excel"] .st i { width: auto; height: auto; border: 0; font-size: 12px; }
+:root[data-skin="excel"] .st.good { background: var(--xl-good-fill); color: var(--xl-good-ink); }
+:root[data-skin="excel"] .st.warn { background: var(--xl-warn-fill); color: var(--xl-warn-ink); }
+:root[data-skin="excel"] .st.bad { background: var(--xl-bad-fill); color: var(--xl-bad-ink); }
+:root[data-skin="excel"] .bar { height: 8px; background: transparent; }
+
+/* 머리글 행처럼 보이는 제목 · 표 */
+:root[data-skin="excel"] .sec-head { align-items: center; padding: 4px 8px; background: var(--xl-head); border: 1px solid var(--xl-head-line); }
+:root[data-skin="excel"] .sec-head h2 { font-size: 15px; }
+:root[data-skin="excel"] :is(.sum3, .kpis) { border: 1px solid var(--xl-head-line); background: var(--sheet); }
+:root[data-skin="excel"] :is(.sum3, .kpis) > div { padding: 0; }
+:root[data-skin="excel"] :is(.sum3, .kpis) > div + div { padding-left: 0; border-left: 1px solid var(--xl-head-line); }
+:root[data-skin="excel"] :is(.sum3, .kpis) span { padding: 3px 8px; background: var(--xl-head); border-bottom: 1px solid var(--xl-head-line); color: var(--xl-head-ink); font-size: 12px; }
+:root[data-skin="excel"] :is(.sum3, .kpis) b { padding: 6px 8px; text-align: right; font-variant-numeric: tabular-nums; }
+:root[data-skin="excel"] .day-head { margin-top: 10px; padding: 4px 8px; background: var(--xl-head); border: 1px solid var(--xl-head-line); }
+:root[data-skin="excel"] :is(.tx, .rec, .rank-btn) { padding-inline: 6px; }
+:root[data-skin="excel"] :is(.tx, .rec, .rank-btn):hover { background: var(--pen-soft); }
+:root[data-skin="excel"] .ico { border-color: var(--rule); background: var(--paper); }
+:root[data-skin="excel"] .tbl :is(th, td) { border: 1px solid var(--rule); }
+:root[data-skin="excel"] .tbl th { background: var(--xl-head); color: var(--xl-head-ink); }
+:root[data-skin="excel"] .card { border-color: var(--xl-head-line); }
+
+/* 메모 (빨간 삼각형 표시) */
+:root[data-skin="excel"] .note { position: relative; border: 1px solid var(--rule-2); box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.12); }
+:root[data-skin="excel"] .note:not(.warn)::after { content: ""; position: absolute; top: 0; right: 0; border-style: solid; border-width: 0 10px 10px 0; border-color: transparent var(--xl-flag) transparent transparent; }
+
+/* 리본 탭처럼 생긴 전환 버튼 */
+:root[data-skin="excel"] .seg { gap: 0; padding: 0; background: transparent; border-bottom: 1px solid var(--xl-head-line); }
+:root[data-skin="excel"] .seg button { padding: 8px 10px 7px; color: var(--ink-2); font-weight: 400; }
+:root[data-skin="excel"] .seg button:is([aria-checked="true"], [aria-selected="true"]) { background: transparent; box-shadow: inset 0 -3px 0 var(--pen); color: var(--pen); font-weight: 700; }
+:root[data-skin="excel"] .input:focus { border-color: var(--pen); box-shadow: inset 0 0 0 1px var(--pen); }
+:root[data-skin="excel"] .btn.primary:hover { filter: brightness(1.08); }
+
+/* 달력: 붙어 있는 셀 범위 + 색조 */
+:root[data-skin="excel"] :is(.cal-head, .cal-grid) { gap: 0; }
+:root[data-skin="excel"] .cal-head { border: 1px solid var(--xl-head-line); border-bottom: 0; background: var(--xl-head); }
+:root[data-skin="excel"] .cal-head span + span { border-left: 1px solid var(--xl-head-line); }
+:root[data-skin="excel"] .cal-grid { border-top: 1px solid var(--xl-head-line); border-left: 1px solid var(--rule); background: var(--sheet); }
+:root[data-skin="excel"] :is(.cc, .cc.lv1, .cc.lv2, .cc.lv3, .cc.lv4, .cal-blank) { border: 0; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+:root[data-skin="excel"] .cc.today { box-shadow: inset 0 0 0 1.5px var(--ink); }
+:root[data-skin="excel"] .cc.sel { box-shadow: inset 0 0 0 2px var(--pen); }
+:root[data-skin="excel"] .cc.today.sel { box-shadow: inset 0 0 0 2px var(--pen); }
+
+/* 시트 */
+:root[data-skin="excel"] dialog.sheet { border-top: 3px solid var(--pen); }
+:root[data-skin="excel"] .grab { display: none; }
+:root[data-skin="excel"] .switch { border-radius: 999px; }
+:root[data-skin="excel"] .opt { border: 1px solid var(--rule); }
+
+@media (min-width: 600px) {
+  .app { gap: 32px; }
+  dialog.sheet { margin-bottom: 24px; border-radius: 22px; }
+  .sheet-actions { padding-bottom: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sweep .hl::before, dialog.sheet[open] { animation: none; }
+  .switch, .switch::after { transition: none; }
+}
+</style>
+<style>:root { padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px); }</style>
+</head>
+<body>
+
+<div class="xl-chrome" aria-hidden="true">
+  <div class="xl-title"><b>캠퍼스 가계부.xlsx</b><span id="xlSave"></span></div>
+  <div class="xl-colhead"><span class="xl-corner"></span><div class="xl-cols" id="xlCols"></div></div>
+</div>
+<div class="xl-rowhead" aria-hidden="true"><div class="xl-rows" id="xlRows"></div></div>
+
+<main id="view" class="app"></main>
+
+<nav class="tabbar" aria-label="메뉴">
+  <div class="tabbar-in">
+    <button type="button" class="tab" data-tab="home">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z"/></svg><span>홈</span>
+    </button>
+    <button type="button" class="tab" data-tab="list">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-2.6-1.6-2.6 1.6-2.6-1.6-2.6 1.6-1.6-1V4.5a1 1 0 0 1 1-1z"/><path d="M9 8.5h6M9 12h6M9 15.5h3.5"/></svg><span>내역</span>
+    </button>
+    <button type="button" class="fab" data-action="add" aria-label="새 기록 추가" disabled>
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <button type="button" class="tab" data-tab="stats">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="M7 16.5V12M12 16.5V6.5M17 16.5V9.5"/></svg><span>통계</span>
+    </button>
+    <button type="button" class="tab" data-tab="settings">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span>설정</span>
+    </button>
+  </div>
+  <div class="xl-status" aria-hidden="true"><span>준비</span><span id="xlStat"></span></div>
+</nav>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<dialog id="txSheet" class="sheet" aria-labelledby="txTitle">
+  <form id="txForm" class="sheet-body" novalidate>
+    <div class="grab" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h2 id="txTitle">새 기록</h2>
+      <button type="button" class="icon-btn" data-close aria-label="닫기"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div id="txType" class="seg" role="radiogroup" aria-label="구분">
+      <button type="button" role="radio" data-type="out" aria-checked="true">지출</button>
+      <button type="button" role="radio" data-type="in" aria-checked="false">수입</button>
+    </div>
+    <div id="quickWrap" class="stack" hidden>
+      <p class="mini-label">자주 쓰는 기록</p>
+      <div id="quick" class="quick"></div>
+    </div>
+    <div class="amount-box">
+      <label id="amountLabel" class="mini-label" for="f-amount">쓴 돈</label>
+      <div class="amount-line">
+        <input id="f-amount" class="amount-input money-in" inputmode="numeric" autocomplete="off" placeholder="0" enterkeyhint="done">
+        <span class="amount-unit">원</span>
+      </div>
+      <div class="chips" id="addChips">
+        <button type="button" class="chip" data-add="1000">+1천</button>
+        <button type="button" class="chip" data-add="5000">+5천</button>
+        <button type="button" class="chip" data-add="10000">+1만</button>
+        <button type="button" class="chip" data-add="50000">+5만</button>
+        <button type="button" class="chip" data-add="0">지우기</button>
+      </div>
+    </div>
+    <div id="splitRow" class="opt">
+      <label class="switch-row" for="f-split"><span><b>N빵</b> · 여럿이 나눠 냈어요</span><input type="checkbox" id="f-split" class="switch"></label>
+      <div id="splitCtl" class="split" hidden>
+        <div class="stepper">
+          <button type="button" class="icon-btn" data-n="-1" aria-label="인원 줄이기">−</button>
+          <output id="splitN" aria-live="polite">2</output><span>명</span>
+          <button type="button" class="icon-btn" data-n="1" aria-label="인원 늘리기">+</button>
+        </div>
+        <p id="splitInfo" class="split-info"></p>
+      </div>
+    </div>
+    <div id="wageRow" class="opt" hidden>
+      <p class="mini-label">시급으로 계산하기</p>
+      <div class="wage">
+        <label class="sr" for="f-wage">시급</label>
+        <input id="f-wage" class="input money-in" inputmode="numeric" autocomplete="off">
+        <span>원 ×</span>
+        <label class="sr" for="f-hours">일한 시간</label>
+        <input id="f-hours" class="input" inputmode="decimal" autocomplete="off" placeholder="0">
+        <span>시간</span>
+      </div>
+      <p id="wageInfo" class="split-info"></p>
+    </div>
+    <fieldset class="cats">
+      <legend class="mini-label">카테고리</legend>
+      <div id="catGrid" class="cat-grid"></div>
+    </fieldset>
+    <div class="two">
+      <div class="field">
+        <label class="mini-label" for="f-date">날짜</label>
+        <input type="date" id="f-date" class="input">
+        <div class="chips">
+          <button type="button" class="chip sm" data-date-q="0">오늘</button>
+          <button type="button" class="chip sm" data-date-q="-1">어제</button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="mini-label" for="f-memo">메모</label>
+        <input id="f-memo" class="input" list="memoList" maxlength="40" placeholder="예: 학식 점심" autocomplete="off" enterkeyhint="done">
+      </div>
+    </div>
+    <datalist id="memoList"></datalist>
+    <p id="txErr" class="err" role="alert"></p>
+    <div class="sheet-actions">
+      <button type="button" id="txDelete" class="btn danger" hidden>삭제</button>
+      <button type="submit" id="txSave" class="btn primary block">저장하기</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="recSheet" class="sheet" aria-labelledby="recTitle">
+  <form id="recForm" class="sheet-body" novalidate>
+    <div class="grab" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h2 id="recTitle">고정 수입·지출</h2>
+      <button type="button" class="icon-btn" data-close aria-label="닫기"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <p class="sheet-desc">매달 같은 날 나가거나 들어오는 돈을 등록하면, 그날이 되면 알아서 적어 둬요.</p>
+    <div id="recType" class="seg" role="radiogroup" aria-label="구분">
+      <button type="button" role="radio" data-rtype="out" aria-checked="true">지출</button>
+      <button type="button" role="radio" data-rtype="in" aria-checked="false">수입</button>
+    </div>
+    <div class="field">
+      <label class="mini-label" for="r-name">이름</label>
+      <input id="r-name" class="input" maxlength="20" placeholder="예: 휴대폰 요금" autocomplete="off">
+    </div>
+    <div class="field">
+      <label class="mini-label" for="r-amount">금액</label>
+      <div class="money-row"><input id="r-amount" class="input money-in" inputmode="numeric" placeholder="0" autocomplete="off"><span>원</span></div>
+    </div>
+    <div class="two">
+      <div class="field">
+        <label class="mini-label" for="r-cat">카테고리</label>
+        <select id="r-cat" class="input"></select>
+      </div>
+      <div class="field">
+        <label class="mini-label" for="r-day">매달 며칠</label>
+        <select id="r-day" class="input"></select>
+      </div>
+    </div>
+    <label id="r-now-row" class="check-row" for="r-now" hidden><input type="checkbox" id="r-now" checked><span id="r-now-text">이번 달 것도 지금 적어 두기</span></label>
+    <p id="recErr" class="err" role="alert"></p>
+    <div class="sheet-actions">
+      <button type="button" id="recDelete" class="btn danger" hidden>삭제</button>
+      <button type="submit" id="recSave" class="btn primary block">등록하기</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="confirmSheet" class="sheet" aria-labelledby="cfTitle">
+  <div class="sheet-body">
+    <div class="grab" aria-hidden="true"></div>
+    <h2 id="cfTitle" class="sheet-head"></h2>
+    <p id="cfBody" class="sheet-desc"></p>
+    <div class="sheet-actions">
+      <button type="button" class="btn" data-cf="0">취소</button>
+      <button type="button" class="btn primary" data-cf="1" id="cfOk">확인</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="copySheet" class="sheet" aria-labelledby="cpTitle">
+  <div class="sheet-body">
+    <div class="grab" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <h2 id="cpTitle">내용 복사하기</h2>
+      <button type="button" class="icon-btn" data-close aria-label="닫기"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <p class="sheet-desc">여기서는 파일을 바로 저장할 수 없어요. 아래 내용을 복사해서 메모장이나 엑셀에 붙여 넣으세요.</p>
+    <label class="sr" for="cpText">내보낼 내용</label>
+    <textarea id="cpText" class="input mono" rows="10" readonly></textarea>
+    <div class="sheet-actions">
+      <button type="button" id="cpBtn" class="btn primary block">전체 복사</button>
+    </div>
+  </div>
+</dialog>
+
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+<script>
+(() => {
+'use strict';
+
+/* ================= 카테고리 · 상수 ================= */
+const CATS = {
+  out: [
+    { id: 'food', name: '식비', emoji: '🍚' },
+    { id: 'delivery', name: '배달', emoji: '🛵' },
+    { id: 'cafe', name: '카페·간식', emoji: '☕' },
+    { id: 'drink', name: '술·모임', emoji: '🍻' },
+    { id: 'transport', name: '교통', emoji: '🚌' },
+    { id: 'study', name: '교재·학업', emoji: '📚' },
+    { id: 'shopping', name: '쇼핑·생활', emoji: '🛍️' },
+    { id: 'fun', name: '문화·여가', emoji: '🎬' },
+    { id: 'housing', name: '주거·통신', emoji: '🏠' },
+    { id: 'sub', name: '구독', emoji: '📺' },
+    { id: 'gift', name: '선물·경조사', emoji: '🎁' },
+    { id: 'etc', name: '기타', emoji: '🧾' }
+  ],
+  in: [
+    { id: 'allowance', name: '용돈', emoji: '💌' },
+    { id: 'parttime', name: '알바', emoji: '💼' },
+    { id: 'scholarship', name: '장학금', emoji: '🎓' },
+    { id: 'resale', name: '중고거래', emoji: '🥕' },
+    { id: 'etcin', name: '기타 수입', emoji: '💰' }
+  ]
+};
+const CAT = {};
+for (const type of ['out', 'in']) for (const c of CATS[type]) CAT[c.id] = { ...c, type };
+const fallbackCat = type => (type === 'in' ? 'etcin' : 'etc');
+const catOf = (id, type) => (CAT[id] && (!type || CAT[id].type === type) ? CAT[id] : CAT[fallbackCat(type)]);
+
+const MIN_WAGE = 10320; // 2026년 최저시급
+const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
+const LS_KEY = 'campus-gagyebu:v1';
+const UI_KEY = 'campus-gagyebu:ui';
+const MINUS = '−';
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+/* ================= 날짜 ================= */
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseYmd = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const isYmd = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && ymd(parseYmd(s)) === s;
+const isYm = s => typeof s === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(s);
+const daysIn = ym => { const [y, m] = ym.split('-').map(Number); return new Date(y, m, 0).getDate(); };
+const addMonths = (ym, k) => { const [y, m] = ym.split('-').map(Number); const d = new Date(y, m - 1 + k, 1); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; };
+const addDays = (s, k) => { const d = parseYmd(s); d.setDate(d.getDate() + k); return ymd(d); };
+const daysBetween = (a, b) => Math.round((parseYmd(b) - parseYmd(a)) / 86400000);
+const todayStr = () => ymd(new Date());
+const curYm = () => todayStr().slice(0, 7);
+const monthNum = ym => +ym.slice(5, 7);
+const dayNum = s => +s.slice(8, 10);
+const monthDoc = ym => 'm-' + ym;
+const fmtMonth = ym => `${ym.slice(0, 4)}년 ${monthNum(ym)}월`;
+const fmtMD = s => `${monthNum(s)}월 ${dayNum(s)}일`;
+const wd = s => WEEK[parseYmd(s).getDay()];
+const dueDate = (ym, day) => `${ym}-${pad(Math.min(day, daysIn(ym)))}`;
+
+/* ================= 돈 ================= */
+const won = n => Math.round(n).toLocaleString('ko-KR');
+const trim1 = x => String(Math.round(x * 10) / 10);
+function compact(n) {
+  const a = Math.abs(Math.round(n));
+  const s = n < 0 ? MINUS : '';
+  if (a >= 1e8) return s + trim1(a / 1e8) + '억';
+  if (a >= 1e6) return s + Math.round(a / 1e4).toLocaleString('ko-KR') + '만';
+  if (a >= 1e4) return s + trim1(a / 1e4) + '만';
+  return s + a.toLocaleString('ko-KR');
+}
+function tickLabel(v) {
+  if (!v) return '0';
+  if (v >= 1e4) return compact(v);
+  if (v >= 1000 && v % 1000 === 0) return v / 1000 + '천';
+  return won(v);
+}
+const parseAmount = s => {
+  const d = String(s ?? '').replace(/[^\d]/g, '').replace(/^0+(?=\d)/, '');
+  return d ? Math.min(Number(d.slice(0, 10)), 9999999999) : 0;
+};
+function formatMoneyInput(el) {
+  const digits = el.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, 10);
+  el.value = digits ? Number(digits).toLocaleString('ko-KR') : '';
+}
+
+/* ================= 상태 ================= */
+const S = {
+  mode: 'loading', // loading | cloud | local | memory
+  note: '',
+  docs: {}, // 문서 id → 원본 데이터 (settings, m-YYYY-MM)
+  exists: new Set(),
+  settings: null,
+  rev: 0,
+  definitive: false,
+  col: null,
+  unsub: null,
+  downloads: null,
+  syncError: false,
+  readOnly: false
+};
+let markDefinitive;
+const definitiveReady = new Promise(r => { markDefinitive = r; });
+
+function defaultSettings() {
+  return { budget: 0, catBudgets: {}, wage: MIN_WAGE, recurring: {}, since: null, exBudget: false, exCat: false, skin: 'default' };
+}
+S.settings = defaultSettings();
+
+function normSettings(d) {
+  const s = defaultSettings();
+  if (!d || typeof d !== 'object') return s;
+  if (Number.isFinite(d.budget) && d.budget > 0) s.budget = Math.round(d.budget);
+  if (d.catBudgets && typeof d.catBudgets === 'object') {
+    for (const [k, v] of Object.entries(d.catBudgets)) if (CAT[k] && CAT[k].type === 'out' && Number.isFinite(v) && v > 0) s.catBudgets[k] = Math.round(v);
+  }
+  if (Number.isFinite(d.wage) && d.wage > 0) s.wage = Math.round(d.wage);
+  if (isYmd(d.since)) s.since = d.since;
+  s.exBudget = !!d.exBudget;
+  s.exCat = !!d.exCat;
+  s.skin = d.skin === 'excel' ? 'excel' : 'default';
+  if (d.recurring && typeof d.recurring === 'object') {
+    for (const [id, r] of Object.entries(d.recurring)) { const n = normRec(r, id); if (n) s.recurring[id] = n; }
+  }
+  return s;
+}
+function normRec(r, id) {
+  if (!r || typeof r !== 'object') return null;
+  const type = r.type === 'in' ? 'in' : 'out';
+  const amount = Math.round(Number(r.amount));
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  const day = Math.min(31, Math.max(1, Math.round(Number(r.day)) || 1));
+  const cat = CAT[r.cat] && CAT[r.cat].type === type ? r.cat : fallbackCat(type);
+  const name = String(r.name || '').trim().slice(0, 20) || catOf(cat, type).name;
+  return { id, type, name, cat, amount, day, last: isYm(r.last) ? r.last : null, on: r.on !== false, ex: !!r.ex, created: Number(r.created) || 0 };
+}
+function normTx(t, id) {
+  if (!t || typeof t !== 'object' || !isYmd(t.date)) return null;
+  const type = t.type === 'in' ? 'in' : 'out';
+  const amount = Math.round(Number(t.amount));
+  if (!Number.isFinite(amount) || amount < 0) return null;
+  const cat = CAT[t.cat] && CAT[t.cat].type === type ? t.cat : fallbackCat(type);
+  const sp = t.split;
+  const split = sp && Number(sp.n) >= 2 && Number(sp.total) > 0 ? { total: Math.round(sp.total), n: Math.round(sp.n) } : null;
+  return { id, type, amount, cat, date: t.date, memo: String(t.memo || '').slice(0, 60), split, rid: t.rid ? String(t.rid) : null, ex: !!t.ex, created: Number(t.created) || 0 };
+}
+const txDoc = t => ({ type: t.type, amount: t.amount, cat: t.cat, date: t.date, memo: t.memo || '', split: t.split || null, rid: t.rid || null, ex: !!t.ex, created: t.created || Date.now() });
+const recDoc = r => ({ name: r.name, type: r.type, cat: r.cat, amount: r.amount, day: r.day, last: r.last || null, on: r.on !== false, ex: !!r.ex, created: r.created || Date.now() });
+
+/* ================= 계산 (rev 단위 캐시) ================= */
+const memo = new Map();
+let memoRev = -1;
+function cached(key, fn) {
+  if (memoRev !== S.rev) { memo.clear(); memoRev = S.rev; }
+  if (!memo.has(key)) memo.set(key, fn());
+  return memo.get(key);
+}
+const cmpTx = (a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.created - a.created);
+function allTx() {
+  return cached('all', () => {
+    const byId = new Map();
+    for (const [docId, doc] of Object.entries(S.docs)) {
+      if (!docId.startsWith('m-') || !doc || !doc.tx || typeof doc.tx !== 'object') continue;
+      for (const [id, raw] of Object.entries(doc.tx)) {
+        const t = normTx(raw, id);
+        if (!t) continue;
+        if (!byId.has(id) || monthDoc(t.date.slice(0, 7)) === docId) byId.set(id, t);
+      }
+    }
+    return [...byId.values()].sort(cmpTx);
+  });
+}
+const monthTx = ym => cached('m:' + ym, () => allTx().filter(t => t.date.startsWith(ym)));
+const sumBy = (list, type) => list.reduce((s, t) => (t.type === type ? s + t.amount : s), 0);
+function catSums(list, type) {
+  const o = {};
+  for (const t of list) if (t.type === type) o[t.cat] = (o[t.cat] || 0) + t.amount;
+  return o;
+}
+const hasExamples = () => cached('hasEx', () =>
+  allTx().some(t => t.ex) || Object.values(S.settings.recurring).some(r => r.ex) || S.settings.exBudget || S.settings.exCat);
+function startDate() {
+  return cached('start', () => {
+    let first = S.settings.since || null;
+    for (const t of allTx()) if (!first || t.date < first) first = t.date;
+    return first;
+  });
+}
+const spendDates = () => cached('spendDates', () => {
+  const s = new Set();
+  for (const t of allTx()) if (t.type === 'out' && !t.rid) s.add(t.date);
+  return s;
+});
+
+function upcomingRecurring(ym, today) {
+  const out = [];
+  for (const r of Object.values(S.settings.recurring)) {
+    if (!r.on || (r.last && r.last >= ym)) continue;
+    const date = dueDate(ym, r.day);
+    if (date > today) out.push({ ...r, date });
+  }
+  return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+}
+
+function budgetInfo() {
+  const today = todayStr(), ym = today.slice(0, 7), dim = daysIn(ym), day = dayNum(today);
+  let spentBefore = 0, spentToday = 0, spentFuture = 0;
+  for (const t of monthTx(ym)) {
+    if (t.type !== 'out') continue;
+    if (t.date < today) spentBefore += t.amount;
+    else if (t.date === today) spentToday += t.amount;
+    else spentFuture += t.amount;
+  }
+  const upcoming = upcomingRecurring(ym, today).filter(r => r.type === 'out');
+  const upcomingFixed = upcoming.reduce((s, r) => s + r.amount, 0);
+  const budget = S.settings.budget;
+  const remainingDays = dim - day + 1;
+  const pool = budget - spentBefore - spentFuture - upcomingFixed;
+  const daily = Math.max(0, Math.floor(pool / remainingDays));
+  const spent = spentBefore + spentToday + spentFuture;
+  return {
+    today, ym, dim, day, budget, spentBefore, spentToday, spentFuture, upcoming, upcomingFixed,
+    remainingDays, daily, todayLeft: daily - spentToday, spent, left: budget - spent, pace: day / dim
+  };
+}
+
+function noSpend(ym) {
+  const today = todayStr(), cur = today.slice(0, 7), dim = daysIn(ym);
+  const last = ym < cur ? dim : ym === cur ? dayNum(today) : 0;
+  const first = startDate();
+  const spend = spendDates();
+  const days = [];
+  let count = 0;
+  for (let d = 1; d <= dim; d++) {
+    const ds = `${ym}-${pad(d)}`;
+    const st = d > last ? 'future' : !first || ds < first ? 'none' : spend.has(ds) ? 'spent' : 'free';
+    if (st === 'free') count++;
+    days.push(st);
+  }
+  return { days, count, last };
+}
+function streakNow() {
+  const first = startDate();
+  if (!first) return 0;
+  const spend = spendDates();
+  let d = todayStr(), n = 0;
+  while (d >= first && !spend.has(d) && n < 1000) { n++; d = addDays(d, -1); }
+  return n;
+}
+
+/* ================= 저장소 ================= */
+function refresh() {
+  S.settings = normSettings(S.docs.settings);
+  S.rev++;
+  if (S.mode !== 'loading') applySkin(S.settings.skin);
+  render();
+}
+
+function mergeDeep(base, patch) {
+  const out = base && typeof base === 'object' && !Array.isArray(base) ? { ...base } : {};
+  for (const [k, v] of Object.entries(patch)) {
+    const cur = out[k];
+    if (v && typeof v === 'object' && !Array.isArray(v) && cur && typeof cur === 'object' && !Array.isArray(cur)) out[k] = mergeDeep(cur, v);
+    else out[k] = v;
+  }
+  return out;
+}
+function cleanDoc(d) {
+  const out = { ...d };
+  for (const key of ['tx', 'recurring', 'catBudgets']) {
+    if (out[key] && typeof out[key] === 'object') out[key] = Object.fromEntries(Object.entries(out[key]).filter(([, v]) => v !== null && v !== undefined));
+  }
+  return out;
+}
+
+const chains = {};
+function queue(key, fn) {
+  const p = (chains[key] || Promise.resolve()).catch(() => {}).then(fn);
+  chains[key] = p;
+  return p;
+}
+async function retryOnce(fn) {
+  try { return await fn(); } catch (e) {
+    if (e && e.code === 'unavailable') { await sleep(400 + Math.random() * 800); return fn(); }
+    throw e;
+  }
+}
+function writeDoc(id, patch) {
+  return queue(id, async () => {
+    await definitiveReady;
+    const ref = S.col.doc(id);
+    if (S.exists.has(id)) {
+      await retryOnce(() => ref.update(patch));
+    } else {
+      await retryOnce(() => ref.set(cleanDoc(S.docs[id] || patch)));
+      S.exists.add(id);
+    }
+  });
+}
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return {};
+    const d = JSON.parse(raw);
+    return d && typeof d === 'object' && d.docs && typeof d.docs === 'object' ? d.docs : {};
+  } catch (e) { return null; }
+}
+function saveLocal() {
+  if (S.mode !== 'local') return;
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ v: 1, docs: S.docs, savedAt: Date.now() })); }
+  catch (e) { toast('이 브라우저에 저장하지 못했어요. 설정에서 백업 파일을 받아 두세요.', { kind: 'error' }); }
+}
+
+async function persist(ids, patches) {
+  if (S.mode === 'local') return saveLocal();
+  if (S.mode !== 'cloud') return;
+  await Promise.all(ids.map(id => writeDoc(id, patches[id])));
+}
+
+function onWriteError(e) {
+  const code = e && e.code;
+  if (code === 'quota_exceeded') {
+    toast('저장 공간이 가득 찼어요. 백업 파일을 받은 뒤 오래된 기록을 지워 주세요.', { kind: 'error' });
+  } else if (code === 'invalid_argument' && S.mode === 'cloud' && !S.wroteOnce) {
+    fallToLocal('readonly');
+    toast('이 링크에서는 계정에 저장할 수 없어서 이 기기에 저장할게요.');
+  } else if (code === 'revoked' || code === 'not_granted' || code === 'capability_disabled' || code === 'capability_removed') {
+    S.readOnly = true;
+    render();
+  } else {
+    toast('저장하지 못했어요. 잠시 뒤에 다시 시도해 주세요.', { kind: 'error' });
+  }
+}
+
+/* 변경 하나를 적용하고 저장한다. ch: { put, del, settings, rec, recLast } */
+async function commit(ch) {
+  if (S.mode === 'loading') return false;
+  if (S.readOnly) { toast('지금은 저장할 수 없어요. 페이지를 새로 열어 주세요.', { kind: 'error' }); return false; }
+  const patches = {};
+  const txPatch = (docId, id, val) => { ((patches[docId] ||= {}).tx ||= {})[id] = val; };
+  for (const t of ch.del || []) txPatch(monthDoc(t.date.slice(0, 7)), t.id, null);
+  for (const t of ch.put || []) {
+    if (t.prevDate && t.prevDate.slice(0, 7) !== t.date.slice(0, 7)) txPatch(monthDoc(t.prevDate.slice(0, 7)), t.id, null);
+    txPatch(monthDoc(t.date.slice(0, 7)), t.id, txDoc(t));
+  }
+  if (ch.settings || ch.rec || ch.recLast) {
+    const p = { ...(ch.settings || {}) };
+    if (ch.rec || ch.recLast) {
+      p.recurring = {};
+      for (const [id, r] of Object.entries(ch.rec || {})) p.recurring[id] = r ? recDoc(r) : null;
+      for (const [id, m] of Object.entries(ch.recLast || {})) if (p.recurring[id] !== null) p.recurring[id] = { ...(p.recurring[id] || {}), last: m };
+    }
+    patches.settings = p;
+  }
+  const ids = Object.keys(patches);
+  if (!ids.length) return true;
+  for (const id of ids) S.docs[id] = mergeDeep(S.docs[id], patches[id]);
+  refresh();
+  try {
+    await persist(ids, patches);
+    S.wroteOnce = true;
+    return true;
+  } catch (e) {
+    onWriteError(e);
+    return false;
+  }
+}
+
+/* 문서 전체를 바꾼다 (백업 불러오기, 모두 지우기) */
+async function replaceAll(newDocs) {
+  const old = Object.keys(S.docs);
+  S.docs = newDocs;
+  refresh();
+  if (S.mode === 'local') { saveLocal(); return true; }
+  if (S.mode !== 'cloud') return true;
+  try {
+    await definitiveReady;
+    const jobs = [];
+    for (const id of old) if (!(id in newDocs)) jobs.push(queue(id, async () => { await retryOnce(() => S.col.doc(id).delete()); S.exists.delete(id); }));
+    for (const [id, d] of Object.entries(newDocs)) jobs.push(queue(id, async () => { await retryOnce(() => S.col.doc(id).set(d)); S.exists.add(id); }));
+    await Promise.all(jobs);
+    return true;
+  } catch (e) {
+    onWriteError(e);
+    return false;
+  }
+}
+
+/* 고정 수입·지출 자동 기록 */
+let autoBusy = false;
+async function autoPost() {
+  if (autoBusy || S.readOnly || !S.definitive || S.mode === 'loading') return;
+  const today = todayStr(), cur = today.slice(0, 7);
+  const put = [], recLast = {};
+  for (const r of Object.values(S.settings.recurring)) {
+    if (!r.on) continue;
+    let m = r.last ? addMonths(r.last, 1) : cur;
+    for (let guard = 0; m <= cur && guard < 24; guard++) {
+      const date = dueDate(m, r.day);
+      if (date > today) break;
+      put.push({ id: `r-${r.id}-${m}`, type: r.type, amount: r.amount, cat: r.cat, date, memo: r.name, split: null, rid: r.id, ex: r.ex, created: Date.now() });
+      recLast[r.id] = m;
+      m = addMonths(m, 1);
+    }
+  }
+  if (!put.length) return;
+  autoBusy = true;
+  try {
+    const ok = await commit({ put, recLast });
+    if (ok) toast(`고정 수입·지출 ${put.length}건을 자동으로 적었어요`);
+  } finally {
+    autoBusy = false;
+  }
+}
+
+/* 연결: Claude 계정 저장소 → 안 되면 이 기기 */
+function startLocal(reason) {
+  S.note = reason;
+  const docs = loadLocal();
+  if (docs === null) { S.mode = 'memory'; S.docs = {}; }
+  else { S.mode = 'local'; S.docs = docs; }
+  S.definitive = true;
+  markDefinitive();
+  refresh();
+  autoPost();
+}
+function fallToLocal(reason) {
+  if (S.unsub) { try { S.unsub(); } catch (e) { /* 무시 */ } S.unsub = null; }
+  const current = S.docs;
+  S.note = reason;
+  const docs = loadLocal();
+  if (docs === null) { S.mode = 'memory'; S.docs = current; refresh(); return; }
+  for (const [id, d] of Object.entries(current)) docs[id] = mergeDeep(docs[id], d);
+  S.mode = 'local';
+  S.docs = docs;
+  saveLocal();
+  refresh();
+}
+function onSnap(snap) {
+  const docs = {}, ex = new Set();
+  for (const d of snap.docs) {
+    if (!d.exists) continue;
+    docs[d.id] = d.data();
+    ex.add(d.id);
+  }
+  S.docs = docs;
+  S.exists = ex;
+  S.syncError = false;
+  if (S.mode === 'loading') S.mode = 'cloud';
+  if (!snap.metadata || !snap.metadata.fromCache) {
+    if (!S.definitive) { S.definitive = true; markDefinitive(); }
+  }
+  refresh();
+  if (S.definitive) autoPost();
+}
+let resubscribed = false;
+function subscribe() {
+  S.unsub = S.col.onSnapshot(onSnap, err => {
+    if (err && err.code === 'unavailable' && !resubscribed) {
+      resubscribed = true;
+      setTimeout(subscribe, 1500);
+      return;
+    }
+    S.syncError = true;
+    if (err && err.code === 'revoked') S.readOnly = true;
+    render();
+  });
+}
+async function connect() {
+  const c = window.claude;
+  if (!c || typeof c.use !== 'function') return startLocal('standalone');
+  let db = null, user = null;
+  try { [db, user] = await Promise.all([c.use('db'), c.use('user')]); } catch (e) { /* 아래에서 처리 */ }
+  c.use('downloads').then(d => { S.downloads = d; }, () => {});
+  if (!db || !user) return startLocal('nodb');
+  let uid = null;
+  try { uid = await user.id(); } catch (e) { /* 무시 */ }
+  if (!uid) return startLocal('signedout');
+  let canWrite = null;
+  try { canWrite = await user.can('data.write'); } catch (e) { /* 무시 */ }
+  if (canWrite === false) return startLocal('readonly');
+  try {
+    S.col = db.collection('data/users/' + uid);
+    subscribe();
+  } catch (e) {
+    startLocal('nodb');
+  }
+}
+
+/* ================= 화면 상태 ================= */
+const ui = { tab: 'home', month: curYm(), listMode: 'list', fType: 'all', fCat: '', q: '', calSel: null, sType: 'out', tables: {}, skin: 'default' };
+try {
+  const saved = JSON.parse(localStorage.getItem(UI_KEY) || '{}');
+  if (saved.listMode === 'cal' || saved.listMode === 'list') ui.listMode = saved.listMode;
+  if (saved.skin === 'excel') ui.skin = 'excel';
+} catch (e) { /* 무시 */ }
+function saveUi() {
+  try { localStorage.setItem(UI_KEY, JSON.stringify({ listMode: ui.listMode, skin: ui.skin })); } catch (e) { /* 무시 */ }
+}
+
+const ICON = {
+  cloud: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 18.5h9.5a4 4 0 0 0 .6-7.96A5.5 5.5 0 0 0 7 9.6a4.45 4.45 0 0 0 .5 8.9z"/></svg>',
+  phone: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2.2"/><path d="M11 17.5h2"/></svg>',
+  alert: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 3 20h18z"/><path d="M12 10v4.5M12 17.4v.1"/></svg>',
+  left: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6-6 6 6 6"/></svg>',
+  right: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg>'
+};
+
+const CH = {}; // 이번 화면의 차트 정의
+let heroSwept = false;
+
+/* ================= 공통 조각 ================= */
+function storeInfo() {
+  const m = S.mode;
+  return m === 'cloud' ? [ICON.cloud, '내 계정에 저장', 'Claude 계정에 나만 볼 수 있게 저장돼요'] :
+    m === 'local' ? [ICON.phone, '이 기기에 저장', '이 브라우저에만 저장돼요'] :
+    m === 'memory' ? [ICON.alert, '저장 안 됨', '이 브라우저는 저장을 막고 있어요'] :
+    [ICON.cloud, '불러오는 중', ''];
+}
+function storePill() {
+  const [icon, text, tip] = storeInfo();
+  return `<span class="store ${S.mode}" title="${esc(tip)}">${icon}<span>${text}</span></span>`;
+}
+function notesHtml() {
+  let h = '';
+  if (S.mode !== 'loading' && hasExamples()) {
+    h += `<div class="note" role="note"><p><b>예시 데이터</b>가 들어 있어요. 둘러본 뒤 지우고 내 가계부를 시작하세요.</p><button type="button" class="btn small" data-action="clear-examples">예시 지우기</button></div>`;
+  }
+  if (S.syncError) h += `<div class="note warn" role="alert"><p>저장소 연결이 끊겼어요. 페이지를 새로 열어 주세요.</p></div>`;
+  if (S.mode === 'memory') h += `<div class="note warn" role="alert"><p>이 브라우저는 저장을 막고 있어요. 창을 닫으면 기록이 사라져요.</p></div>`;
+  return h;
+}
+function signedWon(n, type) {
+  return `${type === 'in' ? '+' : MINUS}${won(n)}`;
+}
+function txRow(t, opt = {}) {
+  const c = catOf(t.cat, t.type);
+  const title = t.memo || c.name;
+  const sub = [];
+  if (opt.date) sub.push(`<span>${fmtMD(t.date)}</span>`);
+  sub.push(`<span${sub.length ? ' class="dot"' : ''}>${esc(c.name)}</span>`);
+  if (t.split) sub.push(`<span class="dot">N빵 ${t.split.n}명 (총 ${won(t.split.total)}원)</span>`);
+  if (t.rid) sub.push('<span class="dot">고정</span>');
+  if (t.ex) sub.push('<span class="tag">예시</span>');
+  return `<li><button type="button" class="tx" data-action="edit-tx" data-id="${esc(t.id)}">
+    <span class="ico" aria-hidden="true">${c.emoji}</span>
+    <span class="tx-main"><span class="tx-title">${esc(title)}</span><span class="tx-sub">${sub.join('')}</span></span>
+    <span class="tx-amt ${t.type}">${signedWon(t.amount, t.type)}<small>원</small></span>
+  </button></li>`;
+}
+function dayTitle(s) {
+  const t = todayStr();
+  const rel = s === t ? '오늘 · ' : s === addDays(t, -1) ? '어제 · ' : '';
+  return `${rel}${dayNum(s)}일 ${wd(s)}요일`;
+}
+function sum3(ym, labels = ['들어온 돈', '나간 돈', '남은 돈']) {
+  const list = monthTx(ym);
+  const inc = sumBy(list, 'in'), out = sumBy(list, 'out'), net = inc - out;
+  return `<div class="sum3">
+    <div><span>${labels[0]}</span><b class="pos">+${won(inc)}</b></div>
+    <div><span>${labels[1]}</span><b class="${out ? 'out' : ''}">${out ? MINUS : ''}${won(out)}</b></div>
+    <div><span>${labels[2]}</span><b class="${net < 0 ? 'neg' : ''}">${net < 0 ? MINUS : ''}${won(Math.abs(net))}</b></div>
+  </div>`;
+}
+function monthNav() {
+  const cur = curYm();
+  return `<div class="mnav">
+    <button type="button" class="icon-btn" data-action="month-prev" aria-label="이전 달">${ICON.left}</button>
+    <div class="mnav-mid"><h1 class="mnav-title">${fmtMonth(ui.month)}</h1>${ui.month !== cur ? '<button type="button" class="chip sm" data-action="month-now">이번 달로</button>' : ''}</div>
+    <button type="button" class="icon-btn" data-action="month-next" aria-label="다음 달">${ICON.right}</button>
+  </div>`;
+}
+function emptyBox(title, body) {
+  return `<div class="empty"><p class="empty-title">${title}</p>${body ? `<p>${body}</p>` : ''}</div>`;
+}
+
+/* ================= 홈 ================= */
+function viewHome() {
+  const t = todayStr(), d = parseYmd(t);
+  let h = `<header class="mast"><div><h1 class="brand">캠퍼스 가계부</h1><p class="brand-date">${d.getMonth() + 1}월 ${d.getDate()}일 ${WEEK[d.getDay()]}요일</p></div>${storePill()}</header>`;
+  h += notesHtml();
+  if (S.mode === 'loading') {
+    return h + `<section class="hero"><p class="eyebrow">오늘 쓸 수 있는 돈</p><p class="hero-num loading">—</p><p class="hero-sub">가계부를 펼치는 중이에요…</p></section>`;
+  }
+  const b = budgetInfo();
+  h += S.settings.budget > 0 ? heroHtml(b) : setupHtml();
+  h += `<section class="sec"><div class="sec-head"><h2>${monthNum(b.ym)}월 살림</h2><button type="button" class="link" data-action="goto-stats">통계 보기</button></div>${sum3(b.ym)}</section>`;
+  h += noSpendHtml(b.ym);
+  h += catHomeHtml(b);
+  h += upcomingHtml(b);
+  h += recentHtml();
+  return h;
+}
+
+function heroHtml(b) {
+  const monthOver = b.left < 0;
+  const num = monthOver ? b.left : b.todayLeft;
+  const neg = num < 0;
+  const label = monthOver ? '이번 달 예산을 넘었어요' : '오늘 쓸 수 있는 돈';
+  let sub;
+  if (monthOver) sub = `월 예산 ${won(b.budget)}원보다 <b>${won(-b.left)}원</b> 더 썼어요`;
+  else if (!b.spentToday) sub = `남은 ${b.remainingDays}일 동안 하루 <b>${won(b.daily)}원</b>씩 쓸 수 있어요`;
+  else if (neg) sub = `하루 예산 ${won(b.daily)}원보다 <b>${won(-b.todayLeft)}원</b> 더 썼어요`;
+  else sub = `하루 예산 ${won(b.daily)}원 중 <b>${won(b.spentToday)}원</b> 썼어요`;
+  const pct = b.budget ? b.spent / b.budget : 0;
+  const plan = Math.round(b.budget * b.pace);
+  let st;
+  if (b.spent > b.budget) st = ['bad', '✕', `예산을 ${won(b.spent - b.budget)}원 넘었어요`];
+  else if (b.spent > plan) st = ['warn', '!', `계획보다 ${won(b.spent - plan)}원 빨리 쓰고 있어요`];
+  else st = ['good', '✓', plan > b.spent ? `계획보다 ${won(plan - b.spent)}원 아꼈어요` : '계획대로 쓰고 있어요'];
+  const notes = [];
+  if (b.upcomingFixed) notes.push(`곧 나갈 고정지출 ${won(b.upcomingFixed)}원(${b.upcoming.length}건)`);
+  if (b.spentFuture) notes.push(`미리 적어 둔 지출 ${won(b.spentFuture)}원`);
+  const sweep = heroSwept ? '' : ' sweep';
+  heroSwept = true;
+  return `<section class="hero${sweep}" aria-labelledby="heroLabel">
+    <p class="eyebrow" id="heroLabel">${label}</p>
+    <p class="hero-num"><span class="hl${neg ? ' over' : ''}">${neg ? MINUS : ''}${won(Math.abs(num))}</span><span class="unit">원</span></p>
+    <p class="hero-sub">${sub}</p>
+    <div class="meter">
+      <div class="meter-track" role="img" aria-label="월 예산 ${won(b.budget)}원 중 ${won(b.spent)}원 사용. 오늘까지 계획 ${won(plan)}원">
+        <span class="meter-fill ${st[0]}" style="width:${Math.min(100, pct * 100).toFixed(2)}%"></span>
+        <span class="meter-pace" style="left:${(b.pace * 100).toFixed(2)}%"></span>
+      </div>
+      <div class="meter-row"><span>${monthNum(b.ym)}월 <b>${won(b.spent)}</b> / ${won(b.budget)}원</span><span>${Math.round(pct * 100)}%</span></div>
+      <div class="meter-row"><span class="st ${st[0]}"><i aria-hidden="true">${st[1]}</i>${st[2]}</span><span class="pace-key"><i aria-hidden="true"></i>오늘까지 계획 ${won(plan)}원</span></div>
+    </div>
+    ${notes.length ? `<p class="hero-foot">${notes.join(', ')}은 미리 빼고 계산했어요.</p>` : ''}
+  </section>`;
+}
+
+function setupHtml() {
+  return `<section class="setup" aria-labelledby="setupTitle">
+    <p class="eyebrow">시작하기</p>
+    <h2 id="setupTitle" class="setup-title">한 달에 <span class="hl">얼마로</span> 살아 볼까요?</h2>
+    <p class="setup-desc">용돈과 알바비 가운데 이번 달에 쓸 돈을 정해 주세요. 매일 <b>오늘 쓸 수 있는 돈</b>을 계산해 드려요.</p>
+    <div class="money-row big"><label class="sr" for="ob-budget">한 달 예산</label><input id="ob-budget" class="input money-in" inputmode="numeric" placeholder="500,000" autocomplete="off" enterkeyhint="done"><span>원</span></div>
+    <div class="chips">${[300000, 500000, 700000, 1000000].map(v => `<button type="button" class="chip" data-action="ob-preset" data-v="${v}">${compact(v)}원</button>`).join('')}</div>
+    <p id="obErr" class="err" role="alert"></p>
+    <button type="button" class="btn primary block" data-action="save-onboard">이 예산으로 시작하기</button>
+  </section>`;
+}
+
+function noSpendHtml(ym) {
+  const ns = noSpend(ym);
+  const today = todayStr();
+  const streak = streakNow();
+  const todaySpent = spendDates().has(today);
+  let text;
+  if (!startDate()) text = '지출을 기록하면 무지출 날을 세어 드려요';
+  else if (streak > 0) text = `<b>${streak}일째</b> 무지출 이어가는 중`;
+  else if (todaySpent) text = '오늘은 지출이 있었어요. 내일 다시 도전!';
+  else text = '고정지출 말고 한 푼도 안 쓴 날을 세요';
+  const dots = ns.days.map((st, i) => {
+    const ds = `${ym}-${pad(i + 1)}`;
+    const label = `${i + 1}일 ${st === 'free' ? '무지출' : st === 'spent' ? '지출 있음' : ''}`.trim();
+    return `<li class="${st}${ds === today ? ' today' : ''}" title="${label}"></li>`;
+  }).join('');
+  return `<section class="sec" aria-labelledby="nsTitle">
+    <div class="sec-head"><h2 id="nsTitle">무지출 챌린지</h2><span class="muted">${monthNum(ym)}월</span></div>
+    <div class="ns"><p class="ns-big">${ns.count}<small>일</small></p><p class="ns-text">${text}</p></div>
+    <ol class="dots" aria-label="${monthNum(ym)}월 날짜별 무지출 기록: 무지출 ${ns.count}일">${dots}</ol>
+    <p class="legend"><span><i class="k free"></i>무지출</span><span><i class="k spent"></i>쓴 날</span><span>고정지출 자동 기록은 빼고 세요</span></p>
+  </section>`;
+}
+
+function catHomeHtml(b) {
+  const caps = S.settings.catBudgets;
+  const spent = catSums(monthTx(b.ym), 'out');
+  const keys = Object.keys(caps);
+  if (keys.length) {
+    const rows = keys.map(k => ({ k, s: spent[k] || 0, cap: caps[k] })).sort((x, y) => y.s / y.cap - x.s / x.cap);
+    return `<section class="sec" aria-labelledby="cbTitle">
+      <div class="sec-head"><h2 id="cbTitle">카테고리 예산</h2><button type="button" class="link" data-action="goto-settings">바꾸기</button></div>
+      <ul class="rank">${rows.map(r => {
+        const c = CAT[r.k], ratio = r.s / r.cap;
+        let st = '';
+        let cls = '';
+        if (ratio > 1) { cls = 'bad'; st = `<span class="st bad"><i aria-hidden="true">✕</i>${won(r.s - r.cap)}원 넘었어요</span>`; }
+        else if (ratio >= 0.8) { cls = 'warn'; st = `<span class="st warn"><i aria-hidden="true">!</i>${won(r.cap - r.s)}원 남았어요</span>`; }
+        return `<li><button type="button" class="rank-btn" data-action="goto-cat" data-cat="${r.k}" data-month="${b.ym}">
+          <span class="ico" aria-hidden="true">${c.emoji}</span>
+          <span class="rank-name">${esc(c.name)}</span>
+          <span class="rank-val">${won(r.s)}<small>/ ${won(r.cap)}원</small></span>
+          <span class="rank-meta"><span class="bar"><i class="${cls}" style="width:${Math.min(100, ratio * 100).toFixed(1)}%"></i></span>${st}</span>
+        </button></li>`;
+      }).join('')}</ul>
+    </section>`;
+  }
+  const rows = Object.entries(spent).sort((x, y) => y[1] - x[1]).slice(0, 3);
+  if (!rows.length) return '';
+  const max = rows[0][1], total = sumBy(monthTx(b.ym), 'out');
+  return `<section class="sec" aria-labelledby="topTitle">
+    <div class="sec-head"><h2 id="topTitle">많이 쓴 곳</h2><button type="button" class="link" data-action="goto-settings">카테고리 예산 정하기</button></div>
+    <ul class="rank">${rows.map(([k, v]) => `<li><button type="button" class="rank-btn" data-action="goto-cat" data-cat="${k}" data-month="${b.ym}">
+      <span class="ico" aria-hidden="true">${CAT[k].emoji}</span>
+      <span class="rank-name">${esc(CAT[k].name)}</span>
+      <span class="rank-val">${won(v)}원<small>${Math.round((v / total) * 100)}%</small></span>
+      <span class="rank-meta"><span class="bar"><i style="width:${((v / max) * 100).toFixed(1)}%"></i></span></span>
+    </button></li>`).join('')}</ul>
+  </section>`;
+}
+
+function upcomingHtml(b) {
+  const ups = upcomingRecurring(b.ym, b.today);
+  if (!ups.length) return '';
+  return `<section class="sec" aria-labelledby="upTitle">
+    <div class="sec-head"><h2 id="upTitle">곧 나갈 돈·들어올 돈</h2><button type="button" class="link" data-action="goto-settings">고정 항목 관리</button></div>
+    <ul class="ups">${ups.map(r => {
+      const c = catOf(r.cat, r.type);
+      return `<li class="up">
+        <span class="up-date"><b>${dayNum(r.date)}일</b>${wd(r.date)}요일<span class="dday">D-${daysBetween(b.today, r.date)}</span></span>
+        <span class="tx-main"><span class="tx-title">${esc(r.name)}</span><span class="tx-sub"><span>${c.emoji} ${esc(c.name)}</span>${r.ex ? '<span class="tag">예시</span>' : ''}</span></span>
+        <span class="tx-amt ${r.type}">${signedWon(r.amount, r.type)}<small>원</small></span>
+      </li>`;
+    }).join('')}</ul>
+  </section>`;
+}
+
+function recentHtml() {
+  const list = allTx().slice(0, 5);
+  return `<section class="sec" aria-labelledby="recentTitle">
+    <div class="sec-head"><h2 id="recentTitle">최근 기록</h2>${list.length ? '<button type="button" class="link" data-action="goto-list">전체 보기</button>' : ''}</div>
+    ${list.length ? `<ul class="txs">${list.map(t => txRow(t, { date: true })).join('')}</ul>` : emptyBox('아직 기록이 없어요', '아래 <b>+</b> 버튼을 눌러 오늘 쓴 돈부터 적어 보세요.')}
+  </section>`;
+}
+
+/* ================= 내역 ================= */
+function viewList() {
+  let h = monthNav() + notesHtml();
+  h += `<div class="stack">${sum3(ui.month, ['수입', '지출', '합계'])}
+    <div class="seg" role="tablist" aria-label="보기 방식">
+      <button type="button" role="tab" aria-selected="${ui.listMode === 'list'}" data-action="list-mode" data-mode="list">목록</button>
+      <button type="button" role="tab" aria-selected="${ui.listMode === 'cal'}" data-action="list-mode" data-mode="cal">달력</button>
+    </div></div>`;
+  if (ui.listMode === 'cal') return h + calHtml(ui.month);
+  return h + `<div class="stack">${filtersHtml()}<div id="listResults">${listResultsHtml()}</div></div>`;
+}
+function filtersHtml() {
+  const opt = (c, sel) => `<option value="${c.id}"${sel === c.id ? ' selected' : ''}>${c.emoji} ${esc(c.name)}</option>`;
+  return `<div class="filters">
+    <div class="chips" role="group" aria-label="구분">${[['all', '전체'], ['out', '지출'], ['in', '수입']].map(([v, l]) =>
+      `<button type="button" class="chip" data-action="flt-type" data-v="${v}" aria-pressed="${ui.fType === v}">${l}</button>`).join('')}</div>
+    <div class="filter-row">
+      <label class="sr" for="flt-cat">카테고리</label>
+      <select id="flt-cat" class="input"><option value="">모든 카테고리</option>
+        <optgroup label="지출">${CATS.out.map(c => opt(c, ui.fCat)).join('')}</optgroup>
+        <optgroup label="수입">${CATS.in.map(c => opt(c, ui.fCat)).join('')}</optgroup>
+      </select>
+      <label class="sr" for="flt-q">메모 검색</label>
+      <input id="flt-q" class="input" type="search" placeholder="메모 검색" value="${esc(ui.q)}" autocomplete="off" enterkeyhint="search">
+    </div>
+  </div>`;
+}
+function filteredList() {
+  let list = monthTx(ui.month);
+  if (ui.fType !== 'all') list = list.filter(t => t.type === ui.fType);
+  if (ui.fCat) list = list.filter(t => t.cat === ui.fCat);
+  const q = ui.q.trim().toLowerCase();
+  if (q) list = list.filter(t => `${t.memo} ${catOf(t.cat, t.type).name}`.toLowerCase().includes(q));
+  return list;
+}
+function listResultsHtml() {
+  const all = monthTx(ui.month);
+  const list = filteredList();
+  const filtered = ui.fType !== 'all' || ui.fCat || ui.q.trim();
+  if (!all.length) return emptyBox(`${monthNum(ui.month)}월 기록이 아직 없어요`, '아래 <b>+</b> 버튼으로 첫 기록을 남겨 보세요.');
+  if (!list.length) return emptyBox('조건에 맞는 기록이 없어요', '필터나 검색어를 바꿔 보세요.');
+  const groups = [];
+  let g = null;
+  for (const t of list) {
+    if (!g || g.date !== t.date) { g = { date: t.date, items: [], out: 0, in: 0 }; groups.push(g); }
+    g.items.push(t);
+    g[t.type] += t.amount;
+  }
+  let h = '';
+  if (filtered) {
+    const o = sumBy(list, 'out'), i = sumBy(list, 'in');
+    h += `<p class="filter-note">${list.length}건${o ? ` · 지출 ${won(o)}원` : ''}${i ? ` · 수입 ${won(i)}원` : ''}</p>`;
+  }
+  h += groups.map(gr => `<section aria-label="${dayTitle(gr.date)}">
+    <header class="day-head"><h3>${dayTitle(gr.date)}</h3><span>${gr.in ? `<span class="pos">+${won(gr.in)}</span>` : ''}${gr.in && gr.out ? ' ' : ''}${gr.out ? `${MINUS}${won(gr.out)}` : ''}</span></header>
+    <ul class="txs">${gr.items.map(t => txRow(t)).join('')}</ul>
+  </section>`).join('');
+  return h;
+}
+
+function heatLevel(v, ref) {
+  if (!(v > 0)) return 0;
+  const r = v / ref;
+  return r <= 0.5 ? 1 : r <= 1 ? 2 : r <= 2 ? 3 : 4;
+}
+function calHtml(ym) {
+  const dim = daysIn(ym), first = parseYmd(ym + '-01').getDay(), today = todayStr();
+  const out = Array(dim + 1).fill(0), inc = Array(dim + 1).fill(0);
+  for (const t of monthTx(ym)) (t.type === 'out' ? out : inc)[dayNum(t.date)] += t.amount;
+  const budget = S.settings.budget;
+  let ref = budget ? budget / dim : 0;
+  if (!ref) {
+    const nz = out.filter(v => v > 0).sort((a, b) => a - b);
+    ref = nz.length ? nz[Math.floor(nz.length / 2)] : 1;
+  }
+  const ns = noSpend(ym);
+  const sel = ui.calSel && ui.calSel.startsWith(ym) ? ui.calSel : today.startsWith(ym) ? today : null;
+  let cells = '';
+  for (let i = 0; i < first; i++) cells += '<span class="cal-blank" aria-hidden="true"></span>';
+  for (let d = 1; d <= dim; d++) {
+    const ds = `${ym}-${pad(d)}`, dw = (first + d - 1) % 7;
+    const free = ns.days[d - 1] === 'free';
+    const lv = heatLevel(out[d], ref);
+    const cls = ['cc', lv ? 'lv' + lv : '', dw === 0 ? 'sun' : dw === 6 ? 'sat' : '', ds === today ? 'today' : '', ds === sel ? 'sel' : '', ds > today ? 'future' : ''].filter(Boolean).join(' ');
+    const label = `${monthNum(ym)}월 ${d}일 ${WEEK[dw]}요일${out[d] ? `, 지출 ${won(out[d])}원` : ''}${inc[d] ? `, 수입 ${won(inc[d])}원` : ''}${free ? ', 무지출' : ''}`;
+    cells += `<button type="button" class="${cls}" data-action="cal-pick" data-date="${ds}" aria-label="${label}" aria-pressed="${ds === sel}">
+      <span class="cc-top"><span class="cd">${d}</span>${free ? '<span class="cf" aria-hidden="true">✓</span>' : ''}</span>${out[d] ? `<span class="ca">${compact(out[d])}</span>` : ''}${inc[d] ? `<span class="ci"${out[d] ? '' : ' style="margin-top:auto"'}>+${compact(inc[d])}</span>` : ''}
+    </button>`;
+  }
+  const trail = (7 - ((first + dim) % 7)) % 7;
+  for (let i = 0; i < trail; i++) cells += '<span class="cal-blank" aria-hidden="true"></span>';
+  const legendRef = budget ? `하루 예산 ${won(Math.round(ref))}원 기준` : '이달 하루 지출 중앙값 기준';
+  let h = `<div class="cal">
+    <div class="cal-head" aria-hidden="true">${WEEK.map((w, i) => `<span class="${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${w}</span>`).join('')}</div>
+    <div class="cal-grid">${cells}</div>
+    <div class="cal-legend"><span class="ramp" aria-hidden="true"><span>적게</span><i></i><i></i><i></i><i></i><span>많이</span></span><span>${legendRef} · <b class="st good" style="font-size:12px">✓</b> 무지출</span></div>
+  </div>`;
+  if (sel) {
+    const list = monthTx(ym).filter(t => t.date === sel);
+    h += `<section class="sec" aria-labelledby="selTitle">
+      <div class="sec-head"><h2 id="selTitle">${dayTitle(sel)}</h2><button type="button" class="link" data-action="cal-add" data-date="${sel}">+ 이날 기록하기</button></div>
+      ${list.length ? `<ul class="txs">${list.map(t => txRow(t)).join('')}</ul>` : emptyBox('이날은 기록이 없어요', sel <= today ? '고정지출 말고 쓴 돈이 없다면 무지출 날이에요.' : '')}
+    </section>`;
+  } else {
+    h += `<p class="filter-note">날짜를 누르면 그날 기록을 볼 수 있어요.</p>`;
+  }
+  return h;
+}
+
+/* ================= 통계 ================= */
+function viewStats() {
+  const ym = ui.month, today = todayStr(), cur = today.slice(0, 7);
+  const isCur = ym === cur, isFuture = ym > cur;
+  const list = monthTx(ym);
+  const out = sumBy(list, 'out'), inc = sumBy(list, 'in');
+  const elapsed = isFuture ? 0 : isCur ? dayNum(today) : daysIn(ym);
+  const pym = addMonths(ym, -1);
+  let prevOut, cmpLabel;
+  if (isCur) {
+    const cutoff = dueDate(pym, dayNum(today));
+    prevOut = sumBy(monthTx(pym).filter(t => t.date <= cutoff), 'out');
+    cmpLabel = '지난달 이맘때';
+  } else {
+    prevOut = sumBy(monthTx(pym), 'out');
+    cmpLabel = '지난달';
+  }
+  const diff = out - prevOut;
+  let delta = '';
+  if (!monthTx(pym).length) {
+    if (out) delta = '<p class="delta flat">지난달 기록이 없어서 아직 비교할 수 없어요</p>';
+  } else if (out || prevOut) {
+    if (diff < 0) delta = `<p class="delta good"><span aria-hidden="true">▼</span>${cmpLabel}보다 ${won(-diff)}원 덜 썼어요</p>`;
+    else if (diff > 0) delta = `<p class="delta bad"><span aria-hidden="true">▲</span>${cmpLabel}보다 ${won(diff)}원 더 썼어요</p>`;
+    else delta = `<p class="delta flat">${cmpLabel}와 똑같이 썼어요</p>`;
+  }
+  const ns = noSpend(ym);
+  let h = monthNav() + notesHtml();
+  h += `<section class="stat-hero" aria-labelledby="shTitle">
+    <p class="eyebrow" id="shTitle">${monthNum(ym)}월에 쓴 돈</p>
+    <p class="big-num">${won(out)}<span class="unit">원</span></p>${delta}
+  </section>`;
+  h += `<div class="kpis">
+    <div><span>하루 평균</span><b>${elapsed ? won(Math.round(out / elapsed)) : 0}원</b></div>
+    <div><span>들어온 돈</span><b>${won(inc)}원</b></div>
+    <div><span>무지출</span><b>${ns.count}일</b></div>
+  </div>`;
+  h += catCard(ym, list);
+  if (isFuture) return h;
+  h += chartCard('daily', '날마다 쓴 돈', dailySub(ym), dailySpec(ym));
+  const wk = weekSpec(ym);
+  h += chartCard('week', '요일별 평균', wk.sub, wk);
+  h += chartCard('months', '최근 6개월', '고른 달을 진하게 표시했어요', monthsSpec(ym));
+  return h;
+}
+function catCard(ym, list) {
+  const type = ui.sType;
+  const sums = Object.entries(catSums(list, type)).sort((a, b) => b[1] - a[1]);
+  const total = sums.reduce((s, [, v]) => s + v, 0);
+  const max = sums.length ? sums[0][1] : 0;
+  const seg = `<div class="seg" role="radiogroup" aria-label="구분" style="min-width:132px">
+    <button type="button" role="radio" aria-checked="${type === 'out'}" data-action="stats-type" data-v="out">지출</button>
+    <button type="button" role="radio" aria-checked="${type === 'in'}" data-action="stats-type" data-v="in">수입</button></div>`;
+  const body = sums.length ? `<ol class="rank">${sums.map(([k, v]) => {
+    const c = catOf(k, type);
+    return `<li><button type="button" class="rank-btn" data-action="goto-cat" data-cat="${k}" data-month="${ym}">
+      <span class="ico" aria-hidden="true">${c.emoji}</span>
+      <span class="rank-name">${esc(c.name)}</span>
+      <span class="rank-val">${won(v)}원<small>${Math.round((v / total) * 100)}%</small></span>
+      <span class="rank-meta"><span class="bar"><i style="width:${((v / max) * 100).toFixed(1)}%"></i></span></span>
+    </button></li>`;
+  }).join('')}</ol>` : emptyBox(type === 'out' ? '이달 지출 기록이 없어요' : '이달 수입 기록이 없어요', '');
+  return `<section class="card" aria-labelledby="ccTitle">
+    <div class="card-head"><div><h2 class="card-title" id="ccTitle">${type === 'out' ? '어디에 썼나' : '어디서 들어왔나'}</h2><p class="card-sub">누르면 그 카테고리 내역으로 가요</p></div>${seg}</div>
+    ${body}
+  </section>`;
+}
+function chartCard(id, title, sub, spec) {
+  CH[id] = spec;
+  const tbl = !!ui.tables[id];
+  return `<section class="card" aria-labelledby="ct-${id}">
+    <div class="card-head"><div><h2 class="card-title" id="ct-${id}">${title}</h2>${sub ? `<p class="card-sub">${sub}</p>` : ''}</div>
+      <button type="button" class="chip sm" data-action="toggle-table" data-id="${id}" aria-pressed="${tbl}">${tbl ? '그래프로' : '표로 보기'}</button></div>
+    ${tbl ? chartTable(spec) : `<div class="chart" data-chart="${id}"></div>`}
+  </section>`;
+}
+function chartTable(spec) {
+  const rows = spec.data.filter(d => spec.tableAll || d.v > 0);
+  if (!rows.length) return emptyBox('표시할 기록이 없어요', '');
+  return `<div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">${spec.tcols[0]}</th><th scope="col" class="r">${spec.tcols[1]}</th></tr></thead>
+    <tbody>${rows.map(d => `<tr><td>${esc(d.tipL)}</td><td class="r">${won(d.v)}원</td></tr>`).join('')}</tbody></table></div>`;
+}
+function dailySub(ym) {
+  const b = S.settings.budget;
+  if (!b) return '점선 없이 그날 쓴 돈만 보여요. 예산을 정하면 하루 예산선이 생겨요.';
+  const dim = daysIn(ym), ref = Math.round(b / dim);
+  const daily = Array(dim).fill(0);
+  for (const t of monthTx(ym)) if (t.type === 'out') daily[dayNum(t.date) - 1] += t.amount;
+  const over = daily.filter(v => v > ref).length;
+  return `점선은 하루 예산 ${won(ref)}원이에요. 이 선을 넘긴 날은 모두 <b>${over}일</b>이에요.`;
+}
+function dailySpec(ym) {
+  const dim = daysIn(ym), arr = Array(dim).fill(0);
+  for (const t of monthTx(ym)) if (t.type === 'out') arr[dayNum(t.date) - 1] += t.amount;
+  const marks = new Set([1, 5, 10, 15, 20, 25, dim]);
+  if (dim - 25 < 3) marks.delete(25);
+  let mx = 0;
+  arr.forEach((v, i) => { if (v > arr[mx]) mx = i; });
+  const b = S.settings.budget, ref = b ? Math.round(b / dim) : 0;
+  return {
+    aria: `${monthNum(ym)}월 날짜별 지출 막대그래프. 가장 많이 쓴 날은 ${mx + 1}일 ${won(arr[mx])}원`,
+    data: arr.map((v, i) => ({ v, xl: marks.has(i + 1) ? String(i + 1) : '', tipL: `${monthNum(ym)}월 ${i + 1}일 (${wd(`${ym}-${pad(i + 1)}`)})`, tipV: `${won(v)}원` })),
+    labels: arr[mx] > 0 ? [mx] : [],
+    ref: ref ? { v: ref, label: `하루 예산 ${compact(ref)}` } : null,
+    tcols: ['날짜', '지출']
+  };
+}
+function weekSpec(ym) {
+  const today = todayStr(), cur = today.slice(0, 7);
+  const end = ym === cur ? today : `${ym}-${pad(daysIn(ym))}`;
+  const first = startDate();
+  let from = addDays(end, -55);
+  if (first && first > from) from = first;
+  const sums = Array(7).fill(0), cnt = Array(7).fill(0);
+  if (first && from <= end) {
+    for (let d = from; d <= end; d = addDays(d, 1)) cnt[parseYmd(d).getDay()]++;
+    for (const t of allTx()) if (t.type === 'out' && !t.rid && t.date >= from && t.date <= end) sums[parseYmd(t.date).getDay()] += t.amount;
+  }
+  const order = [1, 2, 3, 4, 5, 6, 0];
+  const data = order.map(k => {
+    const v = cnt[k] ? Math.round(sums[k] / cnt[k]) : 0;
+    return { v, k, xl: WEEK[k], tipL: `${WEEK[k]}요일 평균`, tipV: `${won(v)}원` };
+  });
+  const days = cnt.reduce((a, b) => a + b, 0);
+  let mx = 0;
+  data.forEach((d, i) => { if (d.v > data[mx].v) mx = i; });
+  let sub;
+  if (days < 7 || !data[mx].v) sub = '기록이 일주일 넘게 쌓이면 어느 요일에 많이 쓰는지 알려 드려요.';
+  else sub = `최근 ${Math.min(8, Math.ceil(days / 7))}주 기준, <b>${WEEK[data[mx].k]}요일</b>에 평균 ${won(data[mx].v)}원으로 가장 많이 써요. 고정지출은 뺐어요.`;
+  return {
+    sub,
+    aria: `요일별 평균 지출 막대그래프. ${WEEK[data[mx].k]}요일이 가장 많아요`,
+    data,
+    emph: i => i === mx,
+    emphX: mx,
+    labels: data[mx].v ? [mx] : [],
+    tcols: ['요일', '평균 지출'],
+    tableAll: true
+  };
+}
+function monthsSpec(ym) {
+  const months = Array.from({ length: 6 }, (_, i) => addMonths(ym, i - 5));
+  const data = months.map(m => {
+    const v = sumBy(monthTx(m), 'out');
+    return { v, xl: `${monthNum(m)}월`, tipL: `${fmtMonth(m)} 지출`, tipV: `${won(v)}원` };
+  });
+  let mx = 0;
+  data.forEach((d, i) => { if (d.v > data[mx].v) mx = i; });
+  const labels = [5];
+  if (mx !== 5 && data[mx].v > 0) labels.push(mx);
+  const b = S.settings.budget;
+  return {
+    aria: `최근 6개월 월별 지출 막대그래프. ${fmtMonth(ym)} ${won(data[5].v)}원`,
+    data,
+    emph: i => i === 5,
+    emphX: 5,
+    labels,
+    ref: b ? { v: b, label: `월 예산 ${compact(b)}` } : null,
+    tcols: ['달', '지출'],
+    tableAll: true
+  };
+}
+
+/* ================= 설정 ================= */
+function viewSettings() {
+  const s = S.settings;
+  const today = todayStr(), cur = today.slice(0, 7);
+  const cbCount = Object.keys(s.catBudgets).length;
+  let h = `<h1 class="page-title">설정</h1>` + notesHtml();
+  const skinOpt = (v, name, desc) => `<button type="button" role="radio" class="skin-opt" data-action="set-skin" data-v="${v}" aria-checked="${s.skin === v}">
+      <span class="skin-prev prev-${v}" aria-hidden="true"><i></i><b></b></span>
+      <span class="skin-name">${name}</span><span class="skin-desc">${desc}</span>
+    </button>`;
+  h += `<section class="card" aria-labelledby="stTitle">
+    <div><h2 class="card-title" id="stTitle">테마</h2><p class="card-sub">화면 모양만 바뀌고 기록은 그대로예요. 고른 테마는 다른 기기에도 똑같이 적용돼요.</p></div>
+    <div class="skins" role="radiogroup" aria-labelledby="stTitle">
+      ${skinOpt('default', '기존', '모눈 노트와 형광펜')}
+      ${skinOpt('excel', '엑셀', '초록 제목줄과 셀 격자')}
+    </div>
+  </section>`;
+  h += `<section class="card" aria-labelledby="sbTitle">
+    <div><h2 class="card-title" id="sbTitle">예산</h2><p class="card-sub">한 달에 쓸 돈이에요. 오늘 쓸 수 있는 돈은 이걸로 계산해요.</p></div>
+    <div class="field"><label class="mini-label" for="set-budget">월 예산</label>
+      <div class="money-row"><input id="set-budget" class="input money-in" inputmode="numeric" autocomplete="off" placeholder="0" value="${s.budget ? won(s.budget) : ''}"><span>원</span></div></div>
+    <div class="row-end"><button type="button" class="btn primary" data-action="save-budget">예산 저장</button></div>
+    <details class="more"${cbCount ? ' open' : ''}>
+      <summary>카테고리별 예산<span>${cbCount ? `${cbCount}개 정함` : '선택'}</span></summary>
+      <div class="cb-list">${CATS.out.map(c => `<label class="cb-row" for="cb-${c.id}"><span>${c.emoji} ${esc(c.name)}</span>
+        <span class="money-row"><input id="cb-${c.id}" class="input money-in" inputmode="numeric" autocomplete="off" placeholder="없음" value="${s.catBudgets[c.id] ? won(s.catBudgets[c.id]) : ''}"><span>원</span></span></label>`).join('')}</div>
+      <div class="row-end" style="margin-top:12px"><button type="button" class="btn" data-action="save-cats">카테고리 예산 저장</button></div>
+    </details>
+  </section>`;
+  const recs = Object.values(s.recurring).sort((a, b) => a.day - b.day || (a.name < b.name ? -1 : 1));
+  h += `<section class="card" aria-labelledby="srTitle">
+    <div><h2 class="card-title" id="srTitle">고정 수입·지출</h2><p class="card-sub">용돈, 휴대폰 요금, 구독료처럼 매달 같은 날 오가는 돈이에요. 그날이 되면 자동으로 적어 둬요.</p></div>
+    ${recs.length ? `<ul class="recs">${recs.map(r => {
+      const c = catOf(r.cat, r.type);
+      const nm = r.last && r.last >= cur ? addMonths(cur, 1) : cur;
+      const next = dueDate(nm, r.day);
+      return `<li><button type="button" class="rec" data-action="edit-rec" data-id="${esc(r.id)}">
+        <span class="ico" aria-hidden="true">${c.emoji}</span>
+        <span class="tx-main"><span class="tx-title">${esc(r.name)}</span><span class="tx-sub"><span>매달 ${r.day >= 31 ? '말일' : r.day + '일'}</span><span class="dot">다음 ${fmtMD(next)}</span>${r.ex ? '<span class="tag">예시</span>' : ''}</span></span>
+        <span class="tx-amt ${r.type}">${signedWon(r.amount, r.type)}<small>원</small></span>
+      </button></li>`;
+    }).join('')}</ul>` : emptyBox('등록한 항목이 없어요', '용돈 들어오는 날이나 구독료 나가는 날을 등록해 보세요.')}
+    <button type="button" class="btn" data-action="add-rec">+ 고정 항목 추가</button>
+  </section>`;
+  h += `<section class="card" aria-labelledby="swTitle">
+    <div><h2 class="card-title" id="swTitle">알바 시급</h2><p class="card-sub">알바 수입을 적을 때 시급 × 시간으로 계산해 드려요. 2026년 최저시급은 ${won(MIN_WAGE)}원이에요.</p></div>
+    <div class="field"><label class="mini-label" for="set-wage">내 시급</label>
+      <div class="money-row"><input id="set-wage" class="input money-in" inputmode="numeric" autocomplete="off" value="${won(s.wage)}"><span>원</span></div></div>
+    <div class="row-end"><button type="button" class="btn" data-action="save-wage">시급 저장</button></div>
+  </section>`;
+  const storeText = S.mode === 'cloud'
+    ? '<b>내 Claude 계정</b>에 나만 볼 수 있게 저장돼요. 휴대폰과 컴퓨터에서 이어서 쓸 수 있고, 이 링크를 누군가 열어도 내 기록은 보이지 않아요.'
+    : S.mode === 'local'
+      ? '<b>이 브라우저에만</b> 저장돼요. 브라우저 데이터를 지우면 기록도 사라지니 가끔 백업 파일을 받아 두세요.'
+      : '이 브라우저는 저장을 막고 있어요. 창을 닫기 전에 백업 파일을 받아 두세요.';
+  h += `<section class="card" aria-labelledby="sdTitle">
+    <div><h2 class="card-title" id="sdTitle">데이터</h2></div>
+    <div class="store-box">${S.mode === 'cloud' ? ICON.cloud : S.mode === 'local' ? ICON.phone : ICON.alert}<p>${storeText}</p></div>
+    <div class="btn-row">
+      <button type="button" class="btn" data-action="export-csv" data-scope="month">${monthNum(cur)}월 엑셀(CSV)</button>
+      <button type="button" class="btn" data-action="export-csv" data-scope="all">전체 엑셀(CSV)</button>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn" data-action="export-json">백업 파일 받기</button>
+      <button type="button" class="btn" data-action="import-json">백업 불러오기</button>
+    </div>
+    ${hasExamples() ? '<button type="button" class="btn" data-action="clear-examples">예시 데이터 지우기</button>' : ''}
+    <button type="button" class="btn danger" data-action="reset-all">모든 기록 지우기</button>
+  </section>`;
+  h += `<p class="fine">캠퍼스 가계부 · 기록 ${allTx().length}건 · 금액은 모두 원 단위예요</p>`;
+  return h;
+}
+
+/* ================= 차트 ================= */
+function niceTicks(max, count = 3) {
+  const raw = max / count;
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const f = raw / p;
+  const step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+  const top = Math.ceil(max / step) * step;
+  const out = [];
+  for (let v = 0; v <= top + step / 2; v += step) out.push(Math.round(v));
+  return out;
+}
+function roundTop(x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h));
+  if (!r) return `M${x},${y + h}V${y}h${w}V${y + h}Z`;
+  return `M${x},${y + h}V${y + r}a${r},${r} 0 0 1 ${r},${-r}h${w - 2 * r}a${r},${r} 0 0 1 ${r},${r}V${y + h}Z`;
+}
+const textW = (str, size) => [...String(str)].reduce((w, ch) => w + (/[\u3131-\uD79D]/.test(ch) ? size : size * 0.6), 0);
+function drawColumns(host, spec) {
+  const W = Math.max(240, Math.floor(host.clientWidth));
+  const H = spec.h || 180;
+  const M = { t: 24, r: 6, b: 24, l: 38 };
+  const iw = W - M.l - M.r, ih = H - M.t - M.b;
+  const maxV = Math.max(1, ...spec.data.map(d => d.v), spec.ref ? spec.ref.v : 0);
+  const ticks = niceTicks(maxV, 3);
+  const top = ticks[ticks.length - 1];
+  const y = v => M.t + ih - (v / top) * ih;
+  const n = spec.data.length, band = iw / n;
+  const bw = Math.max(2, Math.min(24, band - 2, band * 0.62 + (n > 12 ? band * 0.2 : 0)));
+  const base = M.t + ih;
+  let g = '';
+  for (const t of ticks) {
+    const yy = Math.round(y(t)) + 0.5;
+    if (t) g += `<line class="grid" x1="${M.l}" x2="${W - M.r}" y1="${yy}" y2="${yy}"/>`;
+    g += `<text class="ytick" x="${M.l - 7}" y="${yy + 3.5}" text-anchor="end">${tickLabel(t)}</text>`;
+  }
+  g += `<rect class="band" x="0" y="${M.t - 6}" width="${band}" height="${ih + 6}" rx="6" visibility="hidden"/>`;
+  spec.data.forEach((d, i) => {
+    if (!(d.v > 0)) return;
+    const x = M.l + i * band + (band - bw) / 2, yy = y(d.v);
+    const mute = spec.emph && !spec.emph(i) ? ' mute' : '';
+    g += `<path class="bar-m${mute}" d="${roundTop(x, yy, bw, base - yy, ui.skin === 'excel' ? 0 : 4)}"/>`;
+  });
+  g += `<line class="base" x1="${M.l}" x2="${W - M.r}" y1="${base + 0.5}" y2="${base + 0.5}"/>`;
+  const vlabels = (spec.labels || []).filter(i => spec.data[i] && spec.data[i].v > 0).map(i => {
+    const d = spec.data[i], txt = compact(d.v), w = textW(txt, 11);
+    const cx = Math.min(Math.max(M.l + i * band + band / 2, M.l + w / 2), W - M.r - w / 2);
+    return { i, txt, cx, y: y(d.v) - 7, x0: cx - w / 2, x1: cx + w / 2 };
+  });
+  if (spec.ref && spec.ref.v > 0) {
+    const yy = Math.round(y(spec.ref.v)) + 0.5;
+    const ly = yy - 6, lw = textW(spec.ref.label, 11) + 4;
+    g += `<line class="ref" x1="${M.l}" x2="${W - M.r}" y1="${yy}" y2="${yy}"/>`;
+    const sides = [
+      { anchor: 'end', x: W - M.r, x0: W - M.r - lw, x1: W - M.r },
+      { anchor: 'start', x: M.l + 4, x0: M.l + 4, x1: M.l + 4 + lw }
+    ];
+    const score = sd => {
+      let c = 0;
+      spec.data.forEach((d, i) => {
+        const bx0 = M.l + i * band, bx1 = bx0 + band;
+        if (bx1 >= sd.x0 && bx0 <= sd.x1 && d.v > 0 && y(d.v) < ly + 2) c += 1;
+      });
+      for (const v of vlabels) if (v.x1 >= sd.x0 && v.x0 <= sd.x1 && Math.abs(v.y - ly) < 13) c += 10;
+      return c;
+    };
+    const side = score(sides[0]) <= score(sides[1]) ? sides[0] : sides[1];
+    g += `<text class="reflabel" x="${side.x}" y="${ly}" text-anchor="${side.anchor}">${esc(spec.ref.label)}</text>`;
+  }
+  spec.data.forEach((d, i) => {
+    if (!d.xl) return;
+    g += `<text class="xtick${spec.emphX === i ? ' em' : ''}" x="${M.l + i * band + band / 2}" y="${H - 6}" text-anchor="middle">${esc(d.xl)}</text>`;
+  });
+  for (const v of vlabels) g += `<text class="vlabel" x="${v.cx}" y="${v.y}" text-anchor="middle">${v.txt}</text>`;
+  host.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(spec.aria)}" tabindex="0">${g}</svg><div class="tip" hidden></div>`;
+  wireTip(host, spec, { M, band, n, W });
+}
+function wireTip(host, spec, geo) {
+  const svg = host.querySelector('svg'), tip = host.querySelector('.tip'), bandEl = svg.querySelector('.band');
+  let cur = -1;
+  const hide = () => { cur = -1; tip.hidden = true; bandEl.setAttribute('visibility', 'hidden'); };
+  const show = i => {
+    if (!(i >= 0 && i < geo.n)) return hide();
+    cur = i;
+    const d = spec.data[i];
+    bandEl.setAttribute('x', geo.M.l + i * geo.band);
+    bandEl.setAttribute('width', geo.band);
+    bandEl.setAttribute('visibility', 'visible');
+    tip.innerHTML = `<b>${esc(d.tipV)}</b><span>${esc(d.tipL)}</span>`;
+    tip.hidden = false;
+    const cx = geo.M.l + i * geo.band + geo.band / 2;
+    const tw = tip.offsetWidth;
+    tip.style.left = Math.min(Math.max(cx - tw / 2, 0), geo.W - tw) + 'px';
+  };
+  const idxAt = e => {
+    const r = svg.getBoundingClientRect();
+    return Math.floor((e.clientX - r.left - geo.M.l) / geo.band);
+  };
+  svg.addEventListener('pointermove', e => show(idxAt(e)));
+  svg.addEventListener('pointerdown', e => show(idxAt(e)));
+  svg.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hide(); });
+  svg.addEventListener('blur', hide);
+  svg.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const step = e.key === 'ArrowRight' ? 1 : -1;
+      const nx = cur < 0 ? (step > 0 ? 0 : geo.n - 1) : cur + step;
+      show(Math.max(0, Math.min(geo.n - 1, nx)));
+    } else if (e.key === 'Escape') hide();
+  });
+}
+function drawCharts() {
+  for (const host of $$('[data-chart]', view)) {
+    const spec = CH[host.dataset.chart];
+    if (spec) drawColumns(host, spec);
+  }
+}
+document.addEventListener('pointerdown', e => {
+  if (e.target.closest && e.target.closest('.chart')) return;
+  for (const t of $$('.chart .tip')) t.hidden = true;
+  for (const b of $$('.chart .band')) b.setAttribute('visibility', 'hidden');
+});
+
+/* ================= 그리기 ================= */
+const view = $('#view');
+let renderQueued = false, pendingRender = false;
+function render() {
+  if (renderQueued) return;
+  renderQueued = true;
+  Promise.resolve().then(() => { renderQueued = false; doRender(); });
+}
+function isTyping() {
+  const ae = document.activeElement;
+  return !!(ae && view.contains(ae) && ae.matches('input, select, textarea'));
+}
+function doRender() {
+  if (isTyping()) { pendingRender = true; updateChrome(); return; }
+  pendingRender = false;
+  for (const k of Object.keys(CH)) delete CH[k];
+  view.innerHTML = ui.tab === 'list' ? viewList() : ui.tab === 'stats' ? viewStats() : ui.tab === 'settings' ? viewSettings() : viewHome();
+  updateChrome();
+  drawCharts();
+}
+function updateChrome() {
+  for (const b of $$('.tab')) {
+    if (b.dataset.tab === ui.tab) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  }
+  $('.fab').disabled = S.mode === 'loading';
+  if (ui.skin === 'excel') {
+    $('#xlSave').textContent = '· ' + storeInfo()[1];
+    $('#xlStat').textContent = S.mode === 'loading' ? '' : xlStatus();
+  }
+}
+function xlStatus() {
+  const list = ui.tab === 'list' ? filteredList() : ui.tab === 'stats' ? monthTx(ui.month) : monthTx(curYm());
+  const net = list.reduce((s, t) => s + (t.type === 'in' ? t.amount : -t.amount), 0);
+  return `개수: ${list.length}    합계: ${net < 0 ? MINUS : ''}${won(Math.abs(net))}`;
+}
+
+/* ================= 테마 ================= */
+const XL_COL = 72, XL_ROW = 24, XL_GUTTER = 28;
+let skinShown = null, rowRaf = 0;
+function applySkin(skin) {
+  skin = skin === 'excel' ? 'excel' : 'default';
+  if (skin === skinShown) return;
+  skinShown = skin;
+  ui.skin = skin;
+  saveUi();
+  const root = document.documentElement;
+  if (skin === 'excel') {
+    root.setAttribute('data-skin', 'excel');
+    if (!document.getElementById('xlFont')) {
+      const l = document.createElement('link');
+      l.id = 'xlFont';
+      l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Carlito:wght@400;700&display=swap';
+      document.head.appendChild(l);
+    }
+    buildXlCols();
+    syncXlRows();
+  } else {
+    root.removeAttribute('data-skin');
+  }
+  updateChrome();
+  drawCharts();
+}
+function colName(i) {
+  let s = '';
+  for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
+  return s;
+}
+function buildXlCols() {
+  const el = $('#xlCols');
+  const n = Math.ceil((window.innerWidth - XL_GUTTER) / XL_COL) + 1;
+  if (el.childElementCount !== n) el.innerHTML = Array.from({ length: n }, (_, i) => `<span>${colName(i)}</span>`).join('');
+}
+function syncXlRows() {
+  if (ui.skin !== 'excel') return;
+  const el = $('#xlRows');
+  const n = Math.ceil(window.innerHeight / XL_ROW) + 2;
+  if (el.childElementCount !== n) el.innerHTML = '<span></span>'.repeat(n);
+  const y = Math.max(0, window.scrollY);
+  const first = Math.floor(y / XL_ROW);
+  el.style.transform = `translateY(${-(y % XL_ROW)}px)`;
+  const rows = el.children;
+  for (let i = 0; i < rows.length; i++) rows[i].textContent = first + i + 1;
+}
+window.addEventListener('scroll', () => {
+  if (ui.skin !== 'excel' || rowRaf) return;
+  rowRaf = requestAnimationFrame(() => { rowRaf = 0; syncXlRows(); });
+}, { passive: true });
+window.addEventListener('resize', () => { if (ui.skin === 'excel') { buildXlCols(); syncXlRows(); } });
+view.addEventListener('focusout', () => {
+  if (!pendingRender) return;
+  setTimeout(() => { if (pendingRender && !isTyping()) doRender(); }, 0);
+});
+let lastW = 0;
+if ('ResizeObserver' in window) {
+  new ResizeObserver(() => {
+    const w = view.clientWidth;
+    if (Math.abs(w - lastW) > 2) { lastW = w; drawCharts(); }
+  }).observe(view);
+}
+function go(tab) {
+  ui.tab = tab;
+  render();
+  window.scrollTo(0, 0);
+}
+function blurTyping() {
+  const ae = document.activeElement;
+  if (ae && view.contains(ae) && ae.matches('input, select, textarea')) ae.blur();
+}
+
+/* ================= 알림 ================= */
+let toastTimer = 0;
+function toast(msg, opt = {}) {
+  const el = $('#toast');
+  el.textContent = '';
+  const span = document.createElement('span');
+  span.textContent = msg;
+  el.appendChild(span);
+  if (opt.action) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'toast-act';
+    b.textContent = opt.action;
+    b.addEventListener('click', () => { el.hidden = true; opt.onAction(); });
+    el.appendChild(b);
+  }
+  el.classList.toggle('error', opt.kind === 'error');
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, opt.action ? 6000 : 3400);
+}
+
+/* ================= 기록 시트 ================= */
+const txSheet = $('#txSheet');
+const T = { type: 'out', cat: null, edit: null, split: false, n: 2, picks: [] };
+function openTx({ tx = null, date = null } = {}) {
+  T.edit = tx;
+  T.type = tx ? tx.type : 'out';
+  T.cat = tx ? tx.cat : null;
+  T.split = !!(tx && tx.split);
+  T.n = tx && tx.split ? tx.split.n : 2;
+  $('#txTitle').textContent = tx ? '기록 고치기' : '새 기록';
+  $('#f-amount').value = tx ? won(tx.split ? tx.split.total : tx.amount) : '';
+  $('#f-date').value = tx ? tx.date : date || todayStr();
+  $('#f-memo').value = tx ? tx.memo : '';
+  $('#f-hours').value = '';
+  $('#f-wage').value = won(S.settings.wage);
+  $('#txDelete').hidden = !tx;
+  $('#txSave').textContent = tx ? '고친 내용 저장' : '저장하기';
+  $('#txErr').textContent = '';
+  syncTx();
+  updateWage();
+  txSheet.showModal();
+  txSheet.scrollTop = 0;
+  if (!tx) $('#f-amount').focus({ preventScroll: true });
+}
+function syncTx() {
+  for (const b of $$('#txType [data-type]')) b.setAttribute('aria-checked', String(b.dataset.type === T.type));
+  $('#catGrid').innerHTML = CATS[T.type].map(c =>
+    `<button type="button" class="cat-btn" data-cat="${c.id}" aria-pressed="${c.id === T.cat}"><span class="e" aria-hidden="true">${c.emoji}</span><span>${esc(c.name)}</span></button>`).join('');
+  $('#splitRow').hidden = T.type !== 'out';
+  $('#f-split').checked = T.split;
+  $('#splitCtl').hidden = !T.split;
+  $('#splitN').textContent = T.n;
+  $('#wageRow').hidden = !(T.type === 'in' && T.cat === 'parttime');
+  $('#amountLabel').textContent = T.type === 'in' ? '들어온 돈' : T.split ? '모두 함께 낸 돈' : '쓴 돈';
+  updateSplitInfo();
+  renderPicks();
+  renderMemoList();
+}
+function updateSplitInfo() {
+  const total = parseAmount($('#f-amount').value);
+  $('#splitInfo').innerHTML = total
+    ? `${won(total)}원 ÷ ${T.n}명 = 내 몫 <b>${won(Math.ceil(total / T.n))}원</b>`
+    : '모두 함께 낸 돈을 넣으면 내 몫만 적어 둬요.';
+}
+function updateWage() {
+  const wage = parseAmount($('#f-wage').value);
+  const hours = parseFloat(String($('#f-hours').value).replace(',', '.'));
+  if (wage && hours > 0) {
+    const pay = Math.round(wage * hours);
+    $('#f-amount').value = won(pay);
+    $('#wageInfo').innerHTML = `${won(wage)}원 × ${hours}시간 = <b>${won(pay)}원</b>`;
+  } else {
+    $('#wageInfo').textContent = '일한 시간을 넣으면 금액을 채워 드려요.';
+  }
+}
+function quickPicks(type) {
+  const since = addDays(todayStr(), -90);
+  const m = new Map();
+  for (const t of allTx()) {
+    if (t.type !== type || t.rid || t.split || t.date < since) continue;
+    const memoText = t.memo.trim();
+    if (!memoText) continue;
+    const k = `${t.cat}|${memoText}|${t.amount}`;
+    const e = m.get(k) || { cat: t.cat, memo: memoText, amount: t.amount, n: 0, last: '' };
+    e.n++;
+    if (t.date > e.last) e.last = t.date;
+    m.set(k, e);
+  }
+  return [...m.values()].filter(e => e.n >= 2).sort((a, b) => b.n - a.n || (a.last < b.last ? 1 : -1)).slice(0, 8);
+}
+function renderPicks() {
+  T.picks = T.edit ? [] : quickPicks(T.type);
+  $('#quickWrap').hidden = !T.picks.length;
+  $('#quick').innerHTML = T.picks.map((p, i) =>
+    `<button type="button" class="chip" data-qp="${i}"><span aria-hidden="true">${CAT[p.cat].emoji}</span>${esc(p.memo)} <b>${won(p.amount)}</b></button>`).join('');
+}
+function renderMemoList() {
+  const counts = new Map();
+  for (const t of allTx()) {
+    if (t.type !== T.type || !t.memo || (T.cat && t.cat !== T.cat)) continue;
+    counts.set(t.memo, (counts.get(t.memo) || 0) + 1);
+  }
+  $('#memoList').innerHTML = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([v]) => `<option value="${esc(v)}"></option>`).join('');
+}
+function submitTx(e) {
+  e.preventDefault();
+  const err = $('#txErr');
+  const raw = parseAmount($('#f-amount').value);
+  const date = $('#f-date').value;
+  const memoText = $('#f-memo').value.trim().slice(0, 40);
+  if (!raw) { err.textContent = '금액을 넣어 주세요.'; $('#f-amount').focus(); return; }
+  if (!T.cat) { err.textContent = '카테고리를 골라 주세요.'; const b = $('#catGrid .cat-btn'); if (b) b.focus(); return; }
+  if (!isYmd(date)) { err.textContent = '날짜를 다시 골라 주세요.'; $('#f-date').focus(); return; }
+  let amount = raw, split = null;
+  if (T.type === 'out' && T.split) { split = { total: raw, n: T.n }; amount = Math.ceil(raw / T.n); }
+  const prev = T.edit;
+  const tx = {
+    id: prev ? prev.id : newId('t'), type: T.type, amount, cat: T.cat, date, memo: memoText, split,
+    rid: prev ? prev.rid : null, ex: prev ? prev.ex : false, created: prev ? prev.created : Date.now(), prevDate: prev ? prev.date : null
+  };
+  const ch = { put: [tx] };
+  const wage = parseAmount($('#f-wage').value);
+  if (T.type === 'in' && T.cat === 'parttime' && parseFloat($('#f-hours').value) > 0 && wage && wage !== S.settings.wage) ch.settings = { wage };
+  txSheet.close();
+  commit(ch).then(ok => {
+    if (!ok) return;
+    toast(prev ? '고쳤어요' : date === todayStr() ? '기록했어요' : `${fmtMD(date)}에 기록했어요`);
+  });
+}
+function deleteTx() {
+  const t = T.edit;
+  if (!t) return;
+  txSheet.close();
+  commit({ del: [t] }).then(ok => {
+    if (ok) toast('삭제했어요', { action: '되돌리기', onAction: () => commit({ put: [{ ...t, prevDate: null }] }) });
+  });
+}
+
+/* ================= 고정 항목 시트 ================= */
+const recSheet = $('#recSheet');
+const R = { type: 'out', edit: null };
+function fillRecCats() {
+  const sel = $('#r-cat'), keep = sel.value;
+  sel.innerHTML = CATS[R.type].map(c => `<option value="${c.id}">${c.emoji} ${esc(c.name)}</option>`).join('');
+  if (CAT[keep] && CAT[keep].type === R.type) sel.value = keep;
+}
+function openRec(r = null) {
+  R.edit = r;
+  R.type = r ? r.type : 'out';
+  for (const b of $$('#recType [data-rtype]')) b.setAttribute('aria-checked', String(b.dataset.rtype === R.type));
+  fillRecCats();
+  $('#r-cat').value = r ? r.cat : R.type === 'in' ? 'allowance' : 'housing';
+  $('#r-name').value = r ? r.name : '';
+  $('#r-amount').value = r ? won(r.amount) : '';
+  $('#r-day').value = String(r ? r.day : Math.min(28, dayNum(todayStr())));
+  $('#recTitle').textContent = r ? '고정 항목 고치기' : '고정 항목 추가';
+  $('#recDelete').hidden = !r;
+  $('#recSave').textContent = r ? '고친 내용 저장' : '등록하기';
+  $('#recErr').textContent = '';
+  $('#r-now').checked = true;
+  syncRecNow();
+  recSheet.showModal();
+  recSheet.scrollTop = 0;
+}
+function syncRecNow() {
+  const today = todayStr(), cur = today.slice(0, 7);
+  const day = Number($('#r-day').value);
+  const due = dueDate(cur, day);
+  const editingDone = R.edit && R.edit.last && R.edit.last >= cur;
+  const show = !R.edit && due <= today;
+  $('#r-now-row').hidden = !show;
+  $('#r-now-text').textContent = `이번 달 ${fmtMD(due)} 것도 지금 적어 두기`;
+  return { cur, due, editingDone };
+}
+function submitRec(e) {
+  e.preventDefault();
+  const err = $('#recErr');
+  const name = $('#r-name').value.trim().slice(0, 20);
+  const amount = parseAmount($('#r-amount').value);
+  const day = Number($('#r-day').value);
+  const cat = $('#r-cat').value;
+  if (!name) { err.textContent = '이름을 넣어 주세요.'; $('#r-name').focus(); return; }
+  if (!amount) { err.textContent = '금액을 넣어 주세요.'; $('#r-amount').focus(); return; }
+  const today = todayStr(), cur = today.slice(0, 7), due = dueDate(cur, day);
+  let last;
+  if (R.edit) last = R.edit.last;
+  else if (due <= today) last = $('#r-now').checked ? addMonths(cur, -1) : cur;
+  else last = addMonths(cur, -1);
+  const r = {
+    id: R.edit ? R.edit.id : newId('r'), name, type: R.type, cat: CAT[cat] && CAT[cat].type === R.type ? cat : fallbackCat(R.type),
+    amount, day, last, on: true, ex: R.edit ? R.edit.ex : false, created: R.edit ? R.edit.created : Date.now()
+  };
+  recSheet.close();
+  commit({ rec: { [r.id]: r } }).then(ok => {
+    if (!ok) return;
+    toast(R.edit ? '고정 항목을 고쳤어요' : '고정 항목을 등록했어요');
+    autoPost();
+  });
+}
+function deleteRec() {
+  const r = R.edit;
+  if (!r) return;
+  recSheet.close();
+  commit({ rec: { [r.id]: null } }).then(ok => {
+    if (ok) toast('고정 항목을 지웠어요. 이미 적힌 기록은 그대로 둬요.', { action: '되돌리기', onAction: () => commit({ rec: { [r.id]: r } }) });
+  });
+}
+
+/* ================= 확인 · 복사 시트 ================= */
+const cfSheet = $('#confirmSheet');
+let cfResolve = null;
+function confirmBox({ title, body, ok = '확인', danger = false }) {
+  $('#cfTitle').textContent = title;
+  $('#cfBody').textContent = body;
+  const okBtn = $('#cfOk');
+  okBtn.textContent = ok;
+  okBtn.style.background = danger ? 'var(--bad)' : '';
+  okBtn.style.borderColor = danger ? 'var(--bad)' : '';
+  cfSheet.returnValue = '0';
+  cfSheet.showModal();
+  return new Promise(res => { cfResolve = res; });
+}
+cfSheet.addEventListener('close', () => { if (cfResolve) { cfResolve(cfSheet.returnValue === '1'); cfResolve = null; } });
+cfSheet.addEventListener('click', e => {
+  const b = e.target.closest('[data-cf]');
+  if (b) cfSheet.close(b.dataset.cf);
+});
+cfSheet.addEventListener('cancel', () => { cfSheet.returnValue = '0'; });
+
+function showCopy(text) {
+  $('#cpText').value = text;
+  $('#copySheet').showModal();
+}
+$('#cpBtn').addEventListener('click', () => {
+  const ta = $('#cpText');
+  const fallback = () => { ta.focus(); ta.select(); toast('선택했어요. 길게 눌러 복사하세요.'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(() => toast('복사했어요'), fallback);
+  } else fallback();
+});
+
+/* ================= 내보내기 · 불러오기 ================= */
+const csvCell = v => {
+  let s = String(v ?? '');
+  if (/^[=+\-@]/.test(s)) s = "'" + s;
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+function toCsv(list) {
+  const head = ['날짜', '구분', '카테고리', '금액', '메모', 'N빵 총액', 'N빵 인원', '고정'];
+  const rows = [...list].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.created - b.created)).map(t => [
+    t.date, t.type === 'in' ? '수입' : '지출', catOf(t.cat, t.type).name, t.amount, t.memo,
+    t.split ? t.split.total : '', t.split ? t.split.n : '', t.rid ? '예' : ''
+  ]);
+  return '﻿' + [head, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
+}
+async function offerFile(filename, data, mime) {
+  if (S.downloads) {
+    try {
+      await S.downloads.save({ filename, data });
+      toast('파일을 저장했어요');
+      return;
+    } catch (e) {
+      if (e && (e.code === 'declined' || e.code === 'rate_limited')) return;
+    }
+  }
+  if (!window.claude) {
+    try {
+      const url = URL.createObjectURL(new Blob([data], { type: mime }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      return;
+    } catch (e) { /* 아래 복사로 */ }
+  }
+  showCopy(data);
+}
+function exportCsv(scope) {
+  const cur = curYm();
+  const list = scope === 'month' ? monthTx(cur) : allTx();
+  if (!list.length) { toast('내보낼 기록이 없어요'); return; }
+  offerFile(scope === 'month' ? `캠퍼스가계부_${cur}.csv` : `캠퍼스가계부_전체_${todayStr()}.csv`, toCsv(list), 'text/csv');
+}
+function exportJson() {
+  const docs = {};
+  for (const [id, d] of Object.entries(S.docs)) docs[id] = cleanDoc(d);
+  const data = JSON.stringify({ app: 'campus-gagyebu', v: 1, exportedAt: new Date().toISOString(), docs }, null, 1);
+  offerFile(`캠퍼스가계부_백업_${todayStr()}.json`, data, 'application/json');
+}
+function parseBackup(text) {
+  const d = JSON.parse(text);
+  if (!d || typeof d !== 'object' || !d.docs || typeof d.docs !== 'object') throw new Error('shape');
+  const docs = {};
+  let count = 0;
+  for (const [id, doc] of Object.entries(d.docs)) {
+    if (!doc || typeof doc !== 'object') continue;
+    if (id === 'settings') {
+      const s = normSettings(doc);
+      const rec = {};
+      for (const r of Object.values(s.recurring)) rec[r.id] = recDoc(r);
+      docs.settings = { budget: s.budget, catBudgets: s.catBudgets, wage: s.wage, recurring: rec, since: s.since, exBudget: s.exBudget, exCat: s.exCat, skin: doc.skin === 'excel' || doc.skin === 'default' ? doc.skin : S.settings.skin };
+    } else if (/^m-\d{4}-(0[1-9]|1[0-2])$/.test(id) && doc.tx && typeof doc.tx === 'object') {
+      const tx = {};
+      for (const [tid, raw] of Object.entries(doc.tx)) {
+        const t = normTx(raw, tid);
+        if (t && monthDoc(t.date.slice(0, 7)) === id) { tx[tid] = txDoc(t); count++; }
+      }
+      docs[id] = { tx };
+    }
+  }
+  return { docs, count };
+}
+async function importFile(file) {
+  let parsed;
+  try { parsed = parseBackup(await file.text()); }
+  catch (e) { toast('캠퍼스 가계부 백업 파일이 아니에요. 파일을 다시 골라 주세요.', { kind: 'error' }); return; }
+  const ok = await confirmBox({
+    title: '백업으로 바꿀까요?',
+    body: `백업 파일의 기록 ${parsed.count}건과 설정으로 지금 가계부를 바꿔요. 지금 있는 기록 ${allTx().length}건은 사라져요.`,
+    ok: '바꾸기',
+    danger: true
+  });
+  if (!ok) return;
+  if (!parsed.docs.settings) parsed.docs.settings = { skin: S.settings.skin };
+  if (await replaceAll(parsed.docs)) toast(`백업을 불러왔어요 (${parsed.count}건)`);
+  autoPost();
+}
+async function resetAll() {
+  const ok = await confirmBox({
+    title: '모든 기록을 지울까요?',
+    body: `기록 ${allTx().length}건과 예산, 고정 항목이 모두 사라지고 되돌릴 수 없어요. 필요하면 먼저 백업 파일을 받아 두세요.`,
+    ok: '모두 지우기',
+    danger: true
+  });
+  if (!ok) return;
+  if (await replaceAll(S.settings.skin !== 'default' ? { settings: { skin: S.settings.skin } } : {})) toast('모든 기록을 지웠어요');
+}
+function clearExamples() {
+  const del = allTx().filter(t => t.ex);
+  const rec = {};
+  for (const r of Object.values(S.settings.recurring)) if (r.ex) rec[r.id] = null;
+  const st = {};
+  if (S.settings.exBudget) { st.budget = 0; st.exBudget = false; }
+  if (S.settings.exCat) {
+    st.catBudgets = Object.fromEntries(Object.keys(S.settings.catBudgets).map(k => [k, null]));
+    st.exCat = false;
+  }
+  let since = todayStr();
+  for (const t of allTx()) if (!t.ex && t.date < since) since = t.date;
+  st.since = since;
+  const ch = { del, settings: st };
+  if (Object.keys(rec).length) ch.rec = rec;
+  commit(ch).then(ok => { if (ok) toast('예시를 지웠어요. 이제 내 가계부를 시작해 볼까요?'); });
+  go('home');
+}
+
+/* ================= 이벤트 ================= */
+function findTx(id) { return allTx().find(t => t.id === id) || null; }
+
+document.addEventListener('click', e => {
+  const tabBtn = e.target.closest('[data-tab]');
+  if (tabBtn) { blurTyping(); go(tabBtn.dataset.tab); return; }
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const a = el.dataset.action;
+  if (a !== 'ob-preset') blurTyping();
+  switch (a) {
+    case 'add': {
+      const date = ui.tab === 'list' && ui.listMode === 'cal' && ui.calSel && ui.calSel.startsWith(ui.month) ? ui.calSel : null;
+      openTx({ date });
+      break;
+    }
+    case 'edit-tx': { const t = findTx(el.dataset.id); if (t) openTx({ tx: t }); break; }
+    case 'cal-add': openTx({ date: el.dataset.date }); break;
+    case 'cal-pick': ui.calSel = el.dataset.date; render(); break;
+    case 'month-prev': ui.month = addMonths(ui.month, -1); ui.calSel = null; render(); break;
+    case 'month-next': ui.month = addMonths(ui.month, 1); ui.calSel = null; render(); break;
+    case 'month-now': ui.month = curYm(); ui.calSel = null; render(); break;
+    case 'list-mode': ui.listMode = el.dataset.mode; saveUi(); render(); break;
+    case 'flt-type': ui.fType = el.dataset.v; render(); break;
+    case 'stats-type': ui.sType = el.dataset.v; render(); break;
+    case 'toggle-table': ui.tables[el.dataset.id] = !ui.tables[el.dataset.id]; render(); break;
+    case 'goto-list': ui.month = curYm(); ui.listMode = 'list'; ui.fType = 'all'; ui.fCat = ''; ui.q = ''; saveUi(); go('list'); break;
+    case 'goto-stats': ui.month = curYm(); go('stats'); break;
+    case 'goto-settings': go('settings'); break;
+    case 'goto-cat': {
+      const c = CAT[el.dataset.cat];
+      ui.month = el.dataset.month || ui.month;
+      ui.listMode = 'list';
+      ui.fCat = c ? c.id : '';
+      ui.fType = c ? c.type : 'all';
+      ui.q = '';
+      saveUi();
+      go('list');
+      break;
+    }
+    case 'ob-preset': { const inp = $('#ob-budget'); if (inp) inp.value = won(Number(el.dataset.v)); break; }
+    case 'save-onboard': {
+      const v = parseAmount($('#ob-budget') && $('#ob-budget').value);
+      if (!v) { const err = $('#obErr'); if (err) err.textContent = '한 달 예산을 넣어 주세요.'; return; }
+      commit({ settings: { budget: v, exBudget: false, since: S.settings.since || todayStr() } }).then(ok => ok && toast('예산을 정했어요. 오늘 쓴 돈부터 적어 볼까요?'));
+      break;
+    }
+    case 'save-budget': {
+      const v = parseAmount($('#set-budget').value);
+      commit({ settings: { budget: v, exBudget: false, since: S.settings.since || todayStr() } }).then(ok => ok && toast(v ? '월 예산을 저장했어요' : '월 예산을 지웠어요'));
+      break;
+    }
+    case 'save-cats': {
+      const patch = {};
+      for (const c of CATS.out) {
+        const inp = $('#cb-' + c.id);
+        if (!inp) continue;
+        const v = parseAmount(inp.value);
+        if (v) patch[c.id] = v;
+        else if (S.settings.catBudgets[c.id]) patch[c.id] = null;
+      }
+      commit({ settings: { catBudgets: patch, exCat: false } }).then(ok => ok && toast('카테고리 예산을 저장했어요'));
+      break;
+    }
+    case 'save-wage': {
+      const v = parseAmount($('#set-wage').value);
+      if (!v) { toast('시급을 넣어 주세요', { kind: 'error' }); return; }
+      commit({ settings: { wage: v } }).then(ok => ok && toast('시급을 저장했어요'));
+      break;
+    }
+    case 'set-skin': {
+      const v = el.dataset.v === 'excel' ? 'excel' : 'default';
+      if (v === S.settings.skin && v === ui.skin) break;
+      applySkin(v);
+      commit({ settings: { skin: v } }).then(ok => ok && toast(v === 'excel' ? '엑셀 테마로 바꿨어요' : '기존 테마로 바꿨어요'));
+      break;
+    }
+    case 'add-rec': openRec(null); break;
+    case 'edit-rec': { const r = S.settings.recurring[el.dataset.id]; if (r) openRec(r); break; }
+    case 'export-csv': exportCsv(el.dataset.scope); break;
+    case 'export-json': exportJson(); break;
+    case 'import-json': $('#importFile').click(); break;
+    case 'clear-examples': clearExamples(); break;
+    case 'reset-all': resetAll(); break;
+  }
+});
+
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el.classList && el.classList.contains('money-in')) formatMoneyInput(el);
+  if (el.id === 'flt-q') {
+    ui.q = el.value;
+    const box = $('#listResults');
+    if (box) box.innerHTML = listResultsHtml();
+  }
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.id === 'flt-cat') {
+    ui.fCat = el.value;
+    if (el.value && CAT[el.value]) ui.fType = CAT[el.value].type;
+    el.blur();
+    pendingRender = false;
+    doRender();
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const id = e.target && e.target.id;
+  if (id === 'ob-budget') { e.preventDefault(); $('[data-action="save-onboard"]').click(); }
+  else if (id === 'set-budget') { e.preventDefault(); $('[data-action="save-budget"]').click(); }
+  else if (id === 'flt-q') { e.preventDefault(); e.target.blur(); }
+});
+$('#importFile').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (f) importFile(f);
+});
+
+/* 기록 시트 */
+const txForm = $('#txForm');
+txForm.addEventListener('submit', submitTx);
+txForm.addEventListener('click', e => {
+  const typeBtn = e.target.closest('[data-type]');
+  if (typeBtn) {
+    if (T.type !== typeBtn.dataset.type) {
+      T.type = typeBtn.dataset.type;
+      if (T.cat && CAT[T.cat].type !== T.type) T.cat = null;
+      T.split = false;
+      $('#txErr').textContent = '';
+      syncTx();
+    }
+    return;
+  }
+  const catBtn = e.target.closest('[data-cat]');
+  if (catBtn) {
+    T.cat = catBtn.dataset.cat;
+    $('#txErr').textContent = '';
+    syncTx();
+    const again = $(`#catGrid [data-cat="${T.cat}"]`);
+    if (again) again.focus({ preventScroll: true });
+    if (T.type === 'in' && T.cat === 'parttime') updateWage();
+    return;
+  }
+  const add = e.target.closest('[data-add]');
+  if (add) {
+    const inc = Number(add.dataset.add);
+    const v = inc ? parseAmount($('#f-amount').value) + inc : 0;
+    $('#f-amount').value = v ? won(v) : '';
+    updateSplitInfo();
+    return;
+  }
+  const nBtn = e.target.closest('[data-n]');
+  if (nBtn) {
+    T.n = Math.max(2, Math.min(30, T.n + Number(nBtn.dataset.n)));
+    $('#splitN').textContent = T.n;
+    updateSplitInfo();
+    return;
+  }
+  const dq = e.target.closest('[data-date-q]');
+  if (dq) { $('#f-date').value = addDays(todayStr(), Number(dq.dataset.dateQ)); return; }
+  const qp = e.target.closest('[data-qp]');
+  if (qp) {
+    const p = T.picks[Number(qp.dataset.qp)];
+    if (!p) return;
+    T.cat = p.cat;
+    T.split = false;
+    $('#f-amount').value = won(p.amount);
+    $('#f-memo').value = p.memo;
+    $('#txErr').textContent = '';
+    syncTx();
+    $('#txSave').focus({ preventScroll: true });
+  }
+});
+$('#f-split').addEventListener('change', e => {
+  T.split = e.target.checked;
+  $('#splitCtl').hidden = !T.split;
+  $('#amountLabel').textContent = T.split ? '모두 함께 낸 돈' : '쓴 돈';
+  updateSplitInfo();
+});
+$('#f-amount').addEventListener('input', updateSplitInfo);
+$('#f-amount').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
+$('#f-hours').addEventListener('input', updateWage);
+$('#f-wage').addEventListener('input', updateWage);
+$('#txDelete').addEventListener('click', deleteTx);
+
+/* 고정 항목 시트 */
+const recForm = $('#recForm');
+recForm.addEventListener('submit', submitRec);
+recForm.addEventListener('click', e => {
+  const tb = e.target.closest('[data-rtype]');
+  if (!tb || R.type === tb.dataset.rtype) return;
+  R.type = tb.dataset.rtype;
+  for (const b of $$('#recType [data-rtype]')) b.setAttribute('aria-checked', String(b.dataset.rtype === R.type));
+  fillRecCats();
+  $('#r-cat').value = R.type === 'in' ? 'allowance' : 'housing';
+});
+$('#r-day').innerHTML = Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}">${i + 1 === 31 ? '31일 (말일)' : `${i + 1}일`}</option>`).join('');
+$('#r-day').addEventListener('change', syncRecNow);
+$('#recDelete').addEventListener('click', deleteRec);
+
+/* 시트 공통: 닫기 버튼, 바깥 누르면 닫기 */
+for (const d of $$('dialog.sheet')) {
+  d.addEventListener('click', e => {
+    if (e.target === d) d.close();
+    else if (e.target.closest('[data-close]')) d.close();
+  });
+}
+
+/* ================= 시작 ================= */
+let lastToday = todayStr();
+function tick() {
+  const t = todayStr();
+  if (t === lastToday) return;
+  const prevYm = lastToday.slice(0, 7);
+  lastToday = t;
+  if (ui.month === prevYm) ui.month = t.slice(0, 7);
+  S.rev++;
+  render();
+  autoPost();
+}
+setInterval(tick, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+
+applySkin(ui.skin);
+render();
+connect();
+})();
+</script>
+</body>
+</html>
