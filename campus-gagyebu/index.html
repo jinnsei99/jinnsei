@@ -2919,6 +2919,15 @@ document.addEventListener('pointerdown', e => {
 const view = $('#view');
 let renderQueued = false, pendingRender = false;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+// 손가락으로 쓰는 기기(휴대폰·태블릿)에서는 입력칸에 저절로 커서를 두지 않는다. 키패드는 칸을 눌렀을 때만 올라온다
+const touchFirst = matchMedia('(pointer: coarse)');
+const autoFocus = (el, opt) => { if (el && !touchFirst.matches) el.focus(opt); };
+// 비었거나 잘못된 칸을 짚어 준다. 손가락 기기에서는 키패드를 띄우는 대신 그 칸이 보이게만 한다
+function pointTo(el) {
+  if (!el) return;
+  if (touchFirst.matches) el.scrollIntoView({ block: 'nearest' });
+  else el.focus();
+}
 let viewEnter = false; // 탭을 바꿔서 새 화면이 들어오는 중
 function render() {
   if (renderQueued) return;
@@ -3096,7 +3105,7 @@ function openTx({ tx = null, date = null } = {}) {
   updateWage();
   txSheet.showModal();
   txSheet.scrollTop = 0;
-  if (!tx) $('#f-amount').focus({ preventScroll: true });
+  if (!tx) autoFocus($('#f-amount'), { preventScroll: true });
 }
 function syncTx() {
   for (const b of $$('#txType [data-type]')) b.setAttribute('aria-checked', String(b.dataset.type === T.type));
@@ -3182,9 +3191,9 @@ function readTx() {
   const raw = parseAmount($('#f-amount').value);
   const date = $('#f-date').value;
   const memoText = $('#f-memo').value.trim().slice(0, 40);
-  if (!raw) { err.textContent = '금액을 넣어 주세요.'; $('#f-amount').focus(); return null; }
+  if (!raw) { err.textContent = '금액을 넣어 주세요.'; pointTo($('#f-amount')); return null; }
   if (!T.cat) { err.textContent = '카테고리를 골라 주세요.'; const b = $('#catGrid .cat-btn'); if (b) b.focus(); return null; }
-  if (!isYmd(date)) { err.textContent = '날짜를 다시 골라 주세요.'; $('#f-date').focus(); return null; }
+  if (!isYmd(date)) { err.textContent = '날짜를 다시 골라 주세요.'; pointTo($('#f-date')); return null; }
   let amount = raw, split = null;
   if (T.type === 'out' && T.refund) amount = -raw; // 환불은 지출에서 빼는 음수 금액
   else if (T.type === 'out' && T.split) { split = { total: raw, n: T.n }; amount = Math.ceil(raw / T.n); }
@@ -3234,7 +3243,7 @@ function saveAndMore() {
   syncTx();
   updateWage();
   txSheet.scrollTop = 0;
-  $('#f-amount').focus({ preventScroll: true });
+  autoFocus($('#f-amount'), { preventScroll: true });
 }
 function deleteTx() {
   const t = T.edit;
@@ -3290,8 +3299,8 @@ function submitRec(e) {
   const amount = parseAmount($('#r-amount').value);
   const day = Number($('#r-day').value);
   const cat = $('#r-cat').value;
-  if (!name) { err.textContent = '이름을 넣어 주세요.'; $('#r-name').focus(); return; }
-  if (!amount) { err.textContent = '금액을 넣어 주세요.'; $('#r-amount').focus(); return; }
+  if (!name) { err.textContent = '이름을 넣어 주세요.'; pointTo($('#r-name')); return; }
+  if (!amount) { err.textContent = '금액을 넣어 주세요.'; pointTo($('#r-amount')); return; }
   const today = todayStr(), cur = today.slice(0, 7), due = dueDate(cur, day);
   const prev = R.edit;
   const on = prev ? $('#r-on').checked : true;
@@ -3331,7 +3340,7 @@ const moneyField = (id, label, value) => `<div class="field"><label class="mini-
   <div class="money-row big"><input id="${id}" class="input money-in" inputmode="numeric" autocomplete="off" placeholder="0" value="${value ? won(value) : ''}" enterkeyhint="done"><span>원</span></div></div>`;
 function setErr(msg, el) {
   $('#setErr').textContent = msg;
-  if (el) el.focus();
+  pointTo(el);
 }
 // 줄마다 여는 편집 창: 제목 · 설명 · 내용 · 저장(있으면)
 const SET = {
@@ -3437,7 +3446,7 @@ function openSet(kind) {
   renderSet();
   setSheet.showModal();
   setSheet.scrollTop = 0;
-  if (SET[kind].focus) { const inp = $('#setBody input'); if (inp) inp.focus({ preventScroll: true }); }
+  if (SET[kind].focus) autoFocus($('#setBody input'), { preventScroll: true });
 }
 $('#setForm').addEventListener('submit', e => {
   e.preventDefault();
@@ -3718,7 +3727,7 @@ document.addEventListener('click', e => {
       const settings = { budget: v, exBudget: false, since: S.settings.since || todayStr(), startDay: sd, periodBudget: null };
       if ($('#ob-partial').checked) {
         const left = $('#ob-left');
-        if (!left.value.trim()) { if (err) err.textContent = '지금 남은 돈을 넣어 주세요.'; left.focus(); return; }
+        if (!left.value.trim()) { if (err) err.textContent = '지금 남은 돈을 넣어 주세요.'; pointTo(left); return; }
         settings.periodBudget = makePeriodBudget(parseAmount(left.value), sd);
       }
       ui.monthFollows = true;
@@ -3798,7 +3807,7 @@ document.addEventListener('change', e => {
     doRender();
   } else if (el.id === 'ob-partial') {
     $('#ob-partial-box').hidden = !el.checked;
-    if (el.checked) $('#ob-left').focus();
+    if (el.checked) autoFocus($('#ob-left'));
   }
 });
 document.addEventListener('keydown', e => {
