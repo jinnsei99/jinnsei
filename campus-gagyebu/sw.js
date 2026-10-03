@@ -1,6 +1,6 @@
 // 캠퍼스 가계부 서비스 워커: 한 번 열어 두면 인터넷이 없어도 앱이 열리게 한다.
 // 앱 파일이 바뀌면 CACHE 이름의 숫자를 올린다.
-const CACHE = 'campus-gagyebu-v6';
+const CACHE = 'campus-gagyebu-v7';
 const CORE = [
   './',
   './index.html',
