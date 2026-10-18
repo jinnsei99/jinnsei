@@ -42,6 +42,7 @@ function kbUp(e) {
 }
 function releaseAll() {
   for (const [code] of held) kbUp({ code });
+  if (U.padsView) U.padsView.releaseAll();
   U.engine && U.engine.allLiveOff();
 }
 function kbStatus() {
@@ -63,6 +64,8 @@ function onKeyDown(e) {
   if (U.isTyping(e)) return;
   if (document.querySelector('.dlg-back')) return;
   const mod = U.modKey(e);
+  // 패드 글자 키가 먼저 (패드 화면, 또는 건반을 켠 루프 패드 트랙)
+  if (!mod && !e.altKey && U.padsView.keyDown(e)) { e.preventDefault(); return; }
   if (ui.keyboard && !mod && !e.altKey && kbDown(e)) { e.preventDefault(); return; }
   const k = e.key;
   const ctx = ui.focus || (ui.view === 'arrange' ? 'arrange' : 'session');
@@ -107,6 +110,7 @@ function onKeyDown(e) {
     case 'KeyB': done(); U.setDraw(!ui.draw); return;
     case 'KeyA': done(); U.setAutoMode(!ui.auto); return;
     case 'KeyM': done(); U.setKeyboard(!ui.keyboard); return;
+    case 'KeyP': done(); U.setView(ui.view === 'pads' ? ui.prevView || 'session' : 'pads'); return;
     case 'Digit0': if (roll) { done(); U.clipView.muteSel(); } return;
   }
   if (k.startsWith('Arrow')) {
@@ -117,6 +121,7 @@ function onKeyDown(e) {
   }
 }
 function onKeyUp(e) {
+  if (U.padsView.keyUp(e)) { e.preventDefault(); return; }
   if (ui.keyboard && kbUp(e)) e.preventDefault();
 }
 function duplicate(ctx, roll) {

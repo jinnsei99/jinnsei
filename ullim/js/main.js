@@ -26,7 +26,8 @@ function buildLayout() {
   els.browser = h('aside', { class: 'browser', 'aria-label': '브라우저' });
   els.session = h('section', { class: 'view v-session', 'aria-label': '세션 뷰' });
   els.arrange = h('section', { class: 'view v-arrange', 'aria-label': '어레인지먼트 뷰' });
-  els.views = h('div', { class: 'views' }, els.session, els.arrange);
+  els.pads = h('section', { class: 'view v-pads', 'aria-label': '패드 화면' });
+  els.views = h('div', { class: 'views' }, els.session, els.arrange, els.pads);
   els.main = h('div', { class: 'main' }, els.browser, els.views);
   els.split = h('div', { class: 'split-h', role: 'separator', 'aria-label': '아래 칸 높이 조절' });
   info(els.split, '높이 조절', '끌어서 아래 클립·장치 칸의 높이를 바꿔요.');
@@ -69,7 +70,7 @@ function bindSplit() {
 /* 좁은 화면: 한 번에 한 칸 */
 function buildPanes() {
   U.clear(els.panes);
-  const items = [['session', '세션', 'session'], ['arrange', '어레인지', 'arrange'], ['detail', '편집', 'detail'], ['browser', '브라우저', 'browser']];
+  const items = [['session', '세션', 'session'], ['arrange', '어레인지', 'arrange'], ['pads', '패드', 'pads'], ['detail', '편집', 'detail'], ['browser', '브라우저', 'browser']];
   for (const [id, label, ic] of items) {
     const b = h('button', { type: 'button', class: 'pane-b', 'aria-pressed': paneOn(id) ? 'true' : 'false' }, icon(ic), h('span', { text: label }));
     b.addEventListener('click', () => setPane(id));
@@ -81,19 +82,21 @@ function paneOn(id) {
   return ui.pane === id;
 }
 function setPane(id) {
-  if (id === 'session' || id === 'arrange') { ui.pane = 'main'; U.setView(id); }
+  if (id === 'session' || id === 'arrange' || id === 'pads') { ui.pane = 'main'; U.setView(id); }
   else ui.pane = id;
   document.body.dataset.pane = ui.pane;
   buildPanes();
   U.inval('arrange-draw', 'detail');
 }
 U.setView = function (v) {
+  if (ui.view === 'pads' && v !== 'pads') U.padsView.releaseAll();
+  if (v === 'pads' && ui.view !== 'pads') ui.prevView = ui.view;
   ui.view = v;
   U.setPref('view', v);
   document.body.dataset.view = v;
   if (ui.pane !== 'main' && ui.narrow) { ui.pane = 'main'; document.body.dataset.pane = 'main'; }
   if (ui.narrow) buildPanes();
-  U.inval('status', 'arrange', 'session');
+  U.inval('status', 'arrange', 'session', 'pads', 'transport');
 };
 
 /* ================= 아래 칸 (클립 / 장치) ================= */
@@ -138,14 +141,16 @@ function renderStatus() {
   right.append(h('span', { class: 'st-sr', text: Math.round(ctx.sampleRate / 100) / 10 + ' kHz' }));
   const vs = btn({ icon: 'session', cls: 'ghost sm' + (ui.view === 'session' ? ' on' : ''), title: '세션 뷰 (Tab)', info: ['세션 뷰', '클립을 칸에 담아 자유롭게 띄우는 화면이에요. Tab으로 바꿔요.'], onclick: () => U.setView('session') });
   const va = btn({ icon: 'arrange', cls: 'ghost sm' + (ui.view === 'arrange' ? ' on' : ''), title: '어레인지먼트 뷰 (Tab)', info: ['어레인지먼트 뷰', '시간 순서대로 곡을 배치하는 화면이에요. Tab으로 바꿔요.'], onclick: () => U.setView('arrange') });
+  const vp = btn({ icon: 'pads', cls: 'ghost sm' + (ui.view === 'pads' ? ' on' : ''), title: '패드 화면 (P)', info: ['패드 화면', '루프 패드·드럼 머신의 패드 16개를 크게 띄우고 글자 키로 쳐요.'], onclick: () => U.setView('pads') });
   const vb = btn({ icon: 'browser', cls: 'ghost sm' + (ui.browserOpen ? ' on' : ''), title: '브라우저 보이기 (' + U.MOD + '+Alt+B)', onclick: () => U.toggleBrowser() });
   const vd = btn({ icon: 'detail', cls: 'ghost sm' + (ui.detailOpen ? ' on' : ''), title: '아래 칸 보이기', onclick: () => U.toggleDetail() });
-  right.append(h('span', { class: 'st-views' }, vb, vs, va, vd));
+  right.append(h('span', { class: 'st-views' }, vb, vs, va, vp, vd));
   els.status.append(left, right);
 }
 
 /* ================= 정보 창 기본 글 ================= */
 function infoDefault() {
+  if (ui.view === 'pads') return ['패드 화면', '패드를 누르거나 패드에 적힌 글자 키로 쳐요. 키 지정을 켜면 패드마다 글자를 바꿀 수 있어요. Shift를 누른 채 치면 노트 리피트, Tab은 세션 뷰로 돌아가요.'];
   if (ui.keyboard) return ['컴퓨터 건반 켜짐', 'A·S·D·F·G·H·J·K가 흰 건반, W·E·T·Y·U가 검은 건반이에요. Z/X로 옥타브, C/V로 세기를 바꿔요.'];
   return ui.view === 'session'
     ? ['세션 뷰', '클립의 ▶를 누르면 다음 마디에 맞춰 재생돼요. 오른쪽 열의 ▶는 씬(가로 한 줄)을 한꺼번에 띄워요. 마우스를 올리면 여기에 설명이 나와요.']
@@ -368,7 +373,7 @@ function helpDialog() {
   const M = U.MOD;
   const rows = [
     ['Space', '재생 / 정지'], ['Shift+Space', '멈춘 곳에서 이어서 재생'], ['Tab', '세션 ↔ 어레인지먼트'], ['Shift+Tab', '클립 ↔ 장치 칸'],
-    ['F9', '어레인지먼트 녹음'], ['M', '컴퓨터 건반 켜기/끄기'], ['A ~ K, W E T Y U', '건반 (켜졌을 때)'], ['Z / X', '옥타브 내리기 / 올리기'], ['C / V', '세기 내리기 / 올리기'],
+    ['F9', '어레인지먼트 녹음'], ['P', '패드 화면'], ['패드에 적힌 글자', '패드 치기 (패드 화면, 또는 건반을 켠 루프 패드 트랙)'], ['Shift+패드 글자', '누르는 동안 노트 리피트'], ['M', '컴퓨터 건반 켜기/끄기'], ['A ~ K, W E T Y U', '건반 (켜졌을 때)'], ['Z / X', '옥타브 내리기 / 올리기'], ['C / V', '세기 내리기 / 올리기'],
     ['B', '그리기 모드'], ['A', '자동화 모드 (건반이 꺼졌을 때)'], [M + '+Z', '되돌리기'], [M + '+Shift+Z', '다시 실행'], [M + '+D', '복제'], [M + '+E', '클립 나누기'],
     [M + '+L', '선택 구간을 루프로'], [M + '+U', '퀀타이즈'], [M + '+A', '모두 고르기'], [M + '+C / X / V', '음표 복사 / 잘라내기 / 붙여넣기'], ['Delete', '지우기'],
     ['↑ ↓ ← →', '음표 옮기기 (Shift: 옥타브) · 세션에서 칸 이동'], ['Enter', '고른 클립 띄우기'], ['0', '음표 켜기/끄기'], [M + '+1 / 2', '격자 좁히기 / 넓히기'],
@@ -382,6 +387,7 @@ function helpDialog() {
       h('li', { text: '클립을 누르면 아래에 피아노 롤이 열려요. 빈 곳을 두 번 눌러 음을 넣고, 끌어서 옮겨요.' }),
       h('li', { text: '트랙 이름을 누르고 아래 칸을 "장치"로 바꾸면 악기와 이펙트의 노브를 돌릴 수 있어요.' }),
       h('li', { text: '왼쪽 브라우저에서 사운드·드럼·샘플을 트랙이나 빈 칸에 끌어다 놓아요.' }),
+      h('li', { text: 'P를 누르면 패드 화면이에요. 로봇 보컬 찹 패드를 Z·X·C·V, A·S·D·F … 글자 키로 두드려 보세요. "키 지정"을 켜면 패드마다 원하는 글자를 줄 수 있어요.' }),
       h('li', { text: 'Tab으로 어레인지먼트 뷰로 가서 클립을 시간 순서로 배치하고, 메뉴의 "오디오 내보내기"로 WAV를 받아요.' })));
   U.dialog({ title: '도움말', body: h('div', { class: 'help' }, guide, h('h3', { text: '단축키' }), tbl), width: '560px', actions: [{ label: '닫기', primary: true }] });
 }
@@ -465,7 +471,7 @@ function wire() {
       if (inf.rec) U.inval('session');
       return;
     }
-    U.inval('transport', 'session', 'arrange', 'detail', 'status');
+    U.inval('transport', 'session', 'arrange', 'detail', 'status', 'pads');
     if (!inf.load) autosave();
   });
   U.on('project', inf => {
@@ -525,6 +531,7 @@ function boot() {
   U.browserView.build(els.browser);
   U.sessionView.build(els.session);
   U.arrangeView.build(els.arrange);
+  U.padsView.build(els.pads);
   U.bindInfo(els.info, infoDefault);
   U.input.init();
   bindFileDrop();

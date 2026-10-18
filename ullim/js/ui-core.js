@@ -5,7 +5,7 @@ const { h, clamp } = U;
 
 /* ================= 화면 상태 ================= */
 const ui = U.ui = {
-  view: U.pref('view', 'session'),   // 'session' | 'arrange'
+  view: U.pref('view', 'session'),   // 'session' | 'arrange' | 'pads'
   detail: 'clip',                    // 'clip' | 'device'
   detailOpen: U.pref('detailOpen', true),
   browserOpen: U.pref('browserOpen', true),
@@ -133,6 +133,7 @@ const ICONS = {
   download: '<path d="M8 2.5v8M4.8 7.3L8 10.5l3.2-3.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 10.5v2.5h11v-2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   scale: '<path d="M2 12.5h3v-3h3v-3h3v-3h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>',
   undo: '<path d="M5.5 3L2.5 6l3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h6.5a3.5 3.5 0 0 1 0 7H6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  pads: '<rect x="1.5" y="1.5" width="5.6" height="5.6" rx="1.2"/><rect x="8.9" y="1.5" width="5.6" height="5.6" rx="1.2" opacity=".55"/><rect x="1.5" y="8.9" width="5.6" height="5.6" rx="1.2" opacity=".55"/><rect x="8.9" y="8.9" width="5.6" height="5.6" rx="1.2"/>',
   capture: '<path d="M2 3.5h5M2 6.5h3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M11 2v7.5M8.3 7L11 9.7 13.7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 11.5v2h11v-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'
 };
 function icon(name, cls) {

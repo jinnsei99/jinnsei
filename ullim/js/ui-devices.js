@@ -1,4 +1,4 @@
-/* 울림 — 장치 뷰: 트랙의 장치 체인, 노브, 그래프(엔벌로프·필터·EQ·압축·스펙트럼), 드럼 패드, 샘플러 파형 */
+/* 울림 — 장치 뷰: 트랙의 장치 체인, 노브, 그래프(엔벌로프·필터·EQ·압축·스펙트럼), 드럼 패드, 루프 패드, 샘플러 파형 */
 (function (U) {
 'use strict';
 const { h, ui, info, clamp, icon, btn } = U;
@@ -32,11 +32,12 @@ function render(el) {
 function dropGap(t, i, last) {
   const el = h('div', { class: 'drop-gap' + (last ? ' last' : '') });
   U.dropTarget(el, {
-    accept: d => ['device', 'sound', 'kit', 'devmove'].includes(d.type),
+    accept: d => ['device', 'sound', 'kit', 'loopkit', 'devmove'].includes(d.type),
     drop: d => {
       if (d.type === 'devmove') A.moveDevice(d.track, d.id, i, t.id);
       else if (d.type === 'sound') A.loadSound(t.id, d.item);
       else if (d.type === 'kit') A.loadKit(t.id, d.item);
+      else if (d.type === 'loopkit') A.loadLoopKit(t.id, d.item);
       else A.addDevice(t.id, d.kind, { at: i, preset: d.preset, presetName: d.presetName });
     }
   });
@@ -306,6 +307,7 @@ const VIS = {
     return { el: cv, frame, draw: frame };
   },
   pads(t, d) { return padsVisual(t, d); },
+  looppads(t, d) { return U.padsUI.compact(t, d); },
   sample(t, d) { return sampleVisual(t, d); }
 };
 function analogResp(d, freqs) {
@@ -478,8 +480,9 @@ function padsVisual(t, d) {
       for (let col = 0; col < 4; col++) {
         const i = row * 4 + col;
         const pd = d.data.pads[i];
+        const k = U.padsUI.keyOf(d, i);
         const b = h('button', { type: 'button', class: 'pad' + (d.data.sel === i ? ' sel' : '') + (pd && pd.mute ? ' muted' : '') },
-          h('span', { class: 'pad-n', text: pd ? pd.name : '' }), h('span', { class: 'pad-k', text: U.noteName(36 + i) }));
+          h('span', { class: 'pad-n', text: pd ? pd.name : '' }), h('span', { class: 'pad-k', text: (k ? U.keyLabel(k) + ' · ' : '') + U.noteName(36 + i) }));
         info(b, (pd ? pd.name : '빈 패드') + ' · ' + U.noteName(36 + i), '누르면 소리를 들어 보고 아래에서 설정을 바꿔요. 샘플을 끌어다 놓으면 이 패드 소리가 돼요.');
         b.addEventListener('pointerdown', e => {
           e.preventDefault();

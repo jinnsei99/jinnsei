@@ -566,7 +566,8 @@ class LoopPad extends Instrument {
     if (!pd || !pn || !pn.buffer) return null;
     const rg = this.region(pd, pn.buffer);
     if (!rg) return null;
-    if (pd.mode === 'toggle') {
+    const mode = this.forceMode || pd.mode;
+    if (mode === 'toggle') {
       const cur = this.voices.find(vo => vo.pad === i && vo.mode === 'toggle' && vo.t0 <= t + 1e-4 && vo.t1 > t + 1e-4);
       if (cur) { cur.t1 = t; this.release(cur, t, true); return null; }
     }
@@ -584,8 +585,8 @@ class LoopPad extends Instrument {
     amp.gain.setValueAtTime(0, t);
     amp.gain.linearRampToValueAtTime(g, t + 0.003);
     const rate = Math.pow(2, (pd.tune || 0) / 12);
-    const loop = pd.mode === 'loop' || pd.mode === 'toggle';
-    const vo = { amp, srcs: [], nodes: [amp], pad: i, choke: pd.choke || 0, mode: pd.mode, end: Infinity, cutAt };
+    const loop = mode === 'loop' || mode === 'toggle';
+    const vo = { amp, srcs: [], nodes: [amp], pad: i, choke: pd.choke || 0, mode, end: Infinity, cutAt };
     if (pd.sync) {
       const n = U.clamp(Math.round((+pd.beats || 4) * 4), 1, 256);
       vo.stream = { buf: rg.buf, s: rg.s, slen: rg.len / n, n, rate, loop, next: t, k: 0, until: Infinity };
@@ -666,6 +667,13 @@ class LoopPad extends Instrument {
   silence(vo, t) {
     super.silence(vo, t);
     if (vo.stream) vo.stream.until = Math.min(vo.stream.until, t + 0.03);
+  }
+  /* 화면에서 구간을 고칠 때 방식과 상관없이 한 번만 (길면 2.5초까지) 들려준다 */
+  preview(i, vel, t) {
+    this.forceMode = 'oneshot';
+    let vo = null;
+    try { vo = this.playNote(36 + i, vel, t, 0.5); } finally { this.forceMode = null; }
+    if (vo && vo.end > t + 2.5) this.kill(vo, t + 2.5);
   }
   /* 트랜스포트를 멈추면 되풀이하던 패드도 멈춘다 */
   stopped(t) { for (const vo of this.voices) if ((vo.mode === 'loop' || vo.mode === 'toggle') && vo.end > t) this.kill(vo, t); }

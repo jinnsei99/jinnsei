@@ -30,8 +30,9 @@ function get(ref, sr) {
   } else p = Promise.reject(new Error('알 수 없는 오디오: ' + ref));
   p = p.then(buf => {
     done.set(k, buf);
-    const m = meta.get(ref) || {};
-    if (m.duration == null) meta.set(ref, Object.assign(m, { duration: buf.duration }));
+    const m = meta.get(ref) || info(ref);
+    if (m.duration == null) m.duration = buf.duration;
+    meta.set(ref, m);
     U.emit('media', ref);
     return buf;
   });

@@ -143,6 +143,16 @@ A.loadKit = function (trackId, kit) {
   commit(kit.name + ' 불러오기');
   return t;
 };
+A.loadLoopKit = function (trackId, kit) {
+  let t = T(trackId);
+  if (!t || t.type !== 'midi') t = A.addTrack('midi');
+  removeInstrument(t);
+  t.devices.splice(insertIndex(t, 'looppad'), 0, U.loopKitDevice(kit));
+  if (!t.name || /MIDI$/.test(U.trackLabel(pr(), t))) t.name = kit.name;
+  U.ui.track = t.id;
+  commit(kit.name + ' 불러오기');
+  return t;
+};
 A.removeDevice = function (trackId, devId) {
   const t = T(trackId);
   if (!t) return;

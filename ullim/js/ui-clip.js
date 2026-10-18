@@ -43,9 +43,10 @@ function openClip() {
   if (cur.clip.type === 'audio' && (R.tab === 'notes' || R.tab === 'tools')) R.tab = 'audio';
   R.needFit = true;
 }
+/* 패드 악기(드럼 머신·루프 패드)면 건반 대신 패드 이름을 보여 준다 */
 function isDrums() {
   const inst = cur && U.instrumentOf(cur.track);
-  return !!(inst && inst.kind === 'drums');
+  return !!(inst && (inst.kind === 'drums' || inst.kind === 'looppad'));
 }
 function clip() { return cur && cur.clip; }
 function changed(label, live) {
@@ -451,11 +452,18 @@ function drawKeys() {
     const pressed = audition && audition.p === p;
     if (drums) {
       const pad = inst.data && inst.data.pads[p - 36];
+      const key = pad && U.padsUI.keyOf(inst, p - 36);
       g.fillStyle = pressed ? c.accent : pad ? c.panel2 : c.panel;
       g.fillRect(0, y, KEYS_W, R.rowH - 1);
       g.fillStyle = pad ? c.fg : c.fg3;
       g.font = '10px ' + c.font;
-      if (R.rowH >= 9) g.fillText(pad ? pad.name : U.noteName(p), 4, y + R.rowH / 2);
+      if (R.rowH >= 9) g.fillText(pad ? (pad.name || '패드 ' + (p - 35)) : U.noteName(p), 4, y + R.rowH / 2);
+      if (key && R.rowH >= 9) {
+        g.fillStyle = c.fg3;
+        g.textAlign = 'right';
+        g.fillText(U.keyLabel(key), KEYS_W - 4, y + R.rowH / 2);
+        g.textAlign = 'left';
+      }
       continue;
     }
     g.fillStyle = pressed ? c.accent : black ? c.keyBlack : c.key;

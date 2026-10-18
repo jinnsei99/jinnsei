@@ -486,11 +486,13 @@ class Engine {
   }
 
   /* ---------- 건반 연주 ---------- */
-  liveOn(trackId, p, v, audition) {
+  /* repeat: true면 노트 리피트를 켠 것처럼, 없으면 노트 리피트 설정을 따른다 */
+  liveOn(trackId, p, v, audition, repeat) {
     const n = this.nodes.get(trackId);
     if (!n || n.track.type !== 'midi') return;
     if (this.ctx.state !== 'running') this.ctx.resume();
-    if (!audition && this.repeat.on && n.inst && n.inst.isPads) { this.startRepeat(n, p, v); return; }
+    const rep = repeat != null ? repeat : this.repeat.on;
+    if (!audition && rep && n.inst && n.inst.isPads) { this.startRepeat(n, p, v); return; }
     const t = this.ctx.currentTime;
     let notes = [{ p, v, b: 0, d: 0 }];
     const voices = [];

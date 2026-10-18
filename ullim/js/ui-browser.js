@@ -1,4 +1,4 @@
-/* 울림 — 브라우저: 사운드·드럼·악기·이펙트·클립·샘플·내 오디오·프로젝트 */
+/* 울림 — 브라우저: 사운드·드럼·루프 패드·악기·이펙트·클립·샘플·내 오디오·프로젝트 */
 (function (U) {
 'use strict';
 const { h, ui, info, icon, btn } = U;
@@ -8,6 +8,7 @@ const pr = () => U.project;
 const CATS = [
   { id: 'sounds', name: '사운드', icon: 'sound', info: '바로 쓸 수 있게 다듬은 악기 소리예요. 두 번 누르면 고른 트랙에 넣어요.' },
   { id: 'drums', name: '드럼', icon: 'drum', info: '드럼 키트예요. 패드 16개에 소리가 담겨 있어요.' },
+  { id: 'pads', name: '루프 패드', icon: 'pads', info: '보컬 찹·드럼 찹·루프를 패드 16개에 나눠 담은 키트예요. 두 번 누르면 고른 트랙에 넣고, 패드 화면(P)에서 글자 키로 두드려요.' },
   { id: 'inst', name: '악기', icon: 'synth', info: '기본값 그대로의 악기예요.' },
   { id: 'afx', name: '오디오 이펙트', icon: 'fx', info: '소리를 바꾸는 이펙트예요. 트랙이나 장치 사이에 끌어다 놓으세요.' },
   { id: 'mfx', name: 'MIDI 이펙트', icon: 'midi', info: '악기 앞에서 음표를 바꾸는 장치예요.' },
@@ -88,10 +89,17 @@ function items() {
         preview: () => previewDev(U.kitDevice(k), 'drums')
       });
       break;
+    case 'pads':
+      for (const k of U.LOOPKITS) out.push({
+        label: k.name, sub: k.tags.join(' · '), icon: 'pads', drag: { type: 'loopkit', item: k }, infoText: k.info,
+        load: () => { const t = A.loadLoopKit(loadTarget('midi'), k); if (t) U.ui.padTrack = t.id; },
+        preview: () => previewDev(U.loopKitDevice(k), 'loopkit')
+      });
+      break;
     case 'inst':
-      for (const kind of ['polysynth', 'fm', 'drums', 'sampler']) out.push({
-        label: U.DEV[kind].name, sub: U.DEV[kind].info, icon: kind === 'drums' ? 'drum' : 'synth', drag: { type: 'device', kind },
-        load: () => A.addDevice(loadTarget('midi'), kind), preview: kind === 'sampler' ? null : () => previewDev(U.makeDevice(kind), kind === 'drums' ? 'drums' : '패드')
+      for (const kind of ['polysynth', 'fm', 'drums', 'looppad', 'sampler']) out.push({
+        label: U.DEV[kind].name, sub: U.DEV[kind].info, icon: kind === 'drums' ? 'drum' : kind === 'looppad' ? 'pads' : 'synth', drag: { type: 'device', kind },
+        load: () => A.addDevice(loadTarget('midi'), kind), preview: kind === 'sampler' ? null : () => previewDev(U.makeDevice(kind), kind === 'drums' ? 'drums' : kind === 'looppad' ? 'loopkit' : '패드')
       });
       break;
     case 'afx':
@@ -249,8 +257,9 @@ const CHORD = [{ p: 57, s: 0, d: 1.6 }, { p: 60, s: 0, d: 1.6 }, { p: 64, s: 0, 
 const BASS = [{ p: 33, s: 0, d: 0.4 }, { p: 33, s: 0.5, d: 0.4 }, { p: 45, s: 1, d: 0.4 }, { p: 36, s: 1.5, d: 0.8 }];
 const LEAD = [{ p: 69, s: 0, d: 0.45 }, { p: 72, s: 0.5, d: 0.45 }, { p: 76, s: 1, d: 0.45 }, { p: 74, s: 1.5, d: 0.9 }];
 const BEAT = [36, 42, 38, 42, 36, 36, 38, 46].map((p, i) => ({ p, s: i * 0.5, d: 0.25, v: 110 })).concat([{ p: 42, s: 0.25, d: 0.2, v: 70 }]);
+const PADS8 = [0, 1, 2, 3, 4, 5, 6, 7].map(i => ({ p: 36 + i, s: i * 0.5, d: 0.4, v: 110 })); // 패드 1~8을 8분음표로
 function previewDev(dev, tag) {
-  const notes = tag === 'drums' ? BEAT : tag === '베이스' ? BASS : tag === '리드' || tag === '플럭' ? LEAD : tag === '보컬' ? [{ p: 57, s: 0, d: 1.5 }] : CHORD;
+  const notes = tag === 'drums' ? BEAT : tag === 'loopkit' ? PADS8 : tag === '베이스' ? BASS : tag === '리드' || tag === '플럭' ? LEAD : tag === '보컬' ? [{ p: 57, s: 0, d: 1.5 }] : CHORD;
   U.engine.previewDevice(dev, notes);
 }
 function previewTpl(tpl) {

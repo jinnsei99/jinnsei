@@ -62,6 +62,7 @@ function build(root) {
   refs.key = btn({ icon: 'scale', cls: 'keybtn', title: '키', info: ['프로젝트 키', '새 클립과 스케일 기능이 따르는 키예요. 피아노 롤에서 이 스케일의 음이 밝게 보여요.'], onclick: () => keyMenu(refs.key) });
   refs.swing = numBox({ cls: 'swing', label: '스윙', get: () => pr().swing || 0, set: (v, f) => { pr().swing = v; f ? U.commit('스윙') : U.touch(); }, fmt: v => 'Swing ' + Math.round(50 + v * 25) + '%', parse: s => (parseFloat(s) - 50) / 25, min: 0, max: 1, step: 0.01, def: 0, range: 300 });
   info(refs.swing, '스윙 (그루브)', '16분음표 엇박을 뒤로 밀어 출렁이는 느낌을 줘요. 50%는 똑바로, 66%는 셋잇단 느낌이에요. 클립마다 끌 수 있어요.');
+  refs.pads = btn({ icon: 'pads', cls: 'tg', toggle: true, on: ui.view === 'pads', title: '패드 화면 (P)', info: ['패드 화면', '루프 패드·드럼 머신의 패드 16개를 크게 띄워요. 패드마다 정한 글자 키로 MPC처럼 두드려요. 다시 누르면 앞 화면으로 돌아가요.'], onclick: () => U.setView(ui.view === 'pads' ? ui.prevView || 'session' : 'pads') });
   refs.kbd = btn({ icon: 'keys', cls: 'tg', toggle: true, on: ui.keyboard, title: '컴퓨터 건반 (M)', info: ['컴퓨터 건반', '켜면 A~K 줄이 건반이 돼요. W, E, T, Y, U는 검은 건반, Z/X는 옥타브, C/V는 세기예요.'], onclick: () => U.setKeyboard(!ui.keyboard) });
   refs.map = btn({ text: 'MIDI', cls: 'tg map', toggle: true, on: !!ui.mapMode, title: 'MIDI 매핑 모드', info: ['MIDI 매핑 모드', '켜고 노브·페이더를 누른 뒤 MIDI 장치의 손잡이를 돌리면 둘이 이어져요. 다시 누르면 매핑 모드를 끝내요.'], onclick: () => U.setMapMode(!ui.mapMode) });
 
@@ -72,7 +73,7 @@ function build(root) {
     g(refs.play, refs.stop, refs.rec, refs.srec, refs.cap, refs.pos, refs.back),
     g(refs.loop, refs.lstart, refs.llen),
     h('div', { class: 'cb-flex' }),
-    g(refs.swing, refs.key, refs.draw, refs.auto, refs.follow, refs.kbd, refs.map)
+    g(refs.swing, refs.key, refs.draw, refs.auto, refs.follow, refs.pads, refs.kbd, refs.map)
   );
   refresh();
 }
@@ -107,6 +108,7 @@ function refresh() {
   setPressed(refs.auto, ui.auto);
   setPressed(refs.follow, ui.follow);
   setPressed(refs.kbd, ui.keyboard);
+  setPressed(refs.pads, ui.view === 'pads');
   setPressed(refs.map, !!ui.mapMode);
   refs.swing.update();
   refs.key.querySelector('span') ? (refs.key.querySelector('span').textContent = U.scaleLabel(p.key.root, p.key.scale)) : refs.key.append(h('span', { text: U.scaleLabel(p.key.root, p.key.scale) }));

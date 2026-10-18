@@ -42,6 +42,7 @@ const TOOLS = [
     init(clip, track) {
       const inst = track && U.instrumentOf(track);
       if (inst && inst.kind === 'drums') return { pitch: 42 };
+      if (inst && inst.kind === 'looppad') return { pitch: 36 };
       const k = scaleOfClip(clip);
       return { pitch: 60 + ((k.root - 60) % 12 + 12) % 12 };
     },

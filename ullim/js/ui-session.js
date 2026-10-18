@@ -100,7 +100,7 @@ function newTrackZone(head) {
       { label: '리턴 트랙', action: () => A.addReturn() }
     ], el));
     U.dropTarget(el, {
-      accept: d => ['sound', 'kit', 'device', 'sample', 'tpl', 'clip'].includes(d.type),
+      accept: d => ['sound', 'kit', 'loopkit', 'device', 'sample', 'tpl', 'clip'].includes(d.type),
       drop: d => dropNewTrack(d)
     });
   }
@@ -111,6 +111,7 @@ function dropNewTrack(d) {
   const end = pr().tracks.length;
   if (d.type === 'sound') A.loadSound(A.addTrack('midi', end).id, d.item);
   else if (d.type === 'kit') A.loadKit(A.addTrack('midi', end).id, d.item);
+  else if (d.type === 'loopkit') A.loadLoopKit(A.addTrack('midi', end).id, d.item);
   else if (d.type === 'device') {
     const type = U.DEV[d.kind].type;
     const t = A.addTrack(type === 'audio' ? 'audio' : 'midi', end);
@@ -127,10 +128,11 @@ function dropNewTrack(d) {
 /* 트랙 머리·슬롯에 장치/사운드를 놓기 */
 function devDrop(t) {
   return {
-    accept: d => ['sound', 'kit', 'device'].includes(d.type),
+    accept: d => ['sound', 'kit', 'loopkit', 'device'].includes(d.type),
     drop: d => {
       if (d.type === 'sound') A.loadSound(t.id, d.item);
       else if (d.type === 'kit') A.loadKit(t.id, d.item);
+      else if (d.type === 'loopkit') A.loadLoopKit(t.id, d.item);
       else A.addDevice(t.id, d.kind, { preset: d.preset, presetName: d.presetName });
       U.selectTrack(ui.track, { device: true });
     }
@@ -183,7 +185,7 @@ function slot(t, i) {
   }
   el.addEventListener('contextmenu', e => { e.preventDefault(); selectSlot(t, i, !!c); slotMenu(t, i, { x: e.clientX, y: e.clientY }); });
   U.dropTarget(el, {
-    accept: d => ['clip', 'tpl', 'sample', 'sound', 'kit', 'device'].includes(d.type),
+    accept: d => ['clip', 'tpl', 'sample', 'sound', 'kit', 'loopkit', 'device'].includes(d.type),
     drop: (d, e) => {
       if (d.type === 'clip') A.moveClip(d.from, { t: t.id, s: i }, e.altKey || e.ctrlKey || e.metaKey);
       else if (d.type === 'tpl') A.insertTemplate(t.id, i, d.item);

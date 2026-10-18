@@ -102,7 +102,7 @@ function render() {
   for (const t of p.tracks) lanesEl.append(lane(t, 58));
   const dz = h('div', { class: 'lane-drop' }, icon('plus'), h('span', { text: '여기에 놓으면 새 트랙' }));
   U.dropTarget(dz, {
-    accept: d => ['sound', 'kit', 'device', 'sample', 'tpl', 'clip'].includes(d.type),
+    accept: d => ['sound', 'kit', 'loopkit', 'device', 'sample', 'tpl', 'clip'].includes(d.type),
     drop: (d, e) => dropOnNew(d, e)
   });
   dz.addEventListener('dblclick', () => A.addTrack('midi'));
@@ -122,7 +122,7 @@ function lane(t, hgt) {
   lanes.push(L);
   bindLane(L);
   U.dropTarget(cv, {
-    accept: d => ['clip', 'tpl', 'sample', 'sound', 'kit', 'device'].includes(d.type),
+    accept: d => ['clip', 'tpl', 'sample', 'sound', 'kit', 'loopkit', 'device'].includes(d.type),
     over: (d, e) => { L.dropB = snap(bOf(e.clientX - cv.getBoundingClientRect().left), e, 'floor'); drawLane(L); },
     leave: () => { L.dropB = null; drawLane(L); },
     drop: (d, e) => {
@@ -746,6 +746,7 @@ function dropOnLane(t, d, b) {
   }
   if (d.type === 'sound') A.loadSound(t.id, d.item);
   else if (d.type === 'kit') A.loadKit(t.id, d.item);
+  else if (d.type === 'loopkit') A.loadLoopKit(t.id, d.item);
   else if (d.type === 'device') A.addDevice(t.id, d.kind, { preset: d.preset, presetName: d.presetName });
 }
 async function insertAudioArr(trackId, ref, b) {
@@ -767,6 +768,7 @@ function dropOnNew(d) {
   }
   if (d.type === 'sound') A.loadSound(A.addTrack('midi', end).id, d.item);
   else if (d.type === 'kit') A.loadKit(A.addTrack('midi', end).id, d.item);
+  else if (d.type === 'loopkit') A.loadLoopKit(A.addTrack('midi', end).id, d.item);
   else if (d.type === 'device') { const ty = U.DEV[d.kind].type; const t = A.addTrack(ty === 'audio' ? 'audio' : 'midi', end); A.addDevice(t.id, d.kind, { preset: d.preset, presetName: d.presetName }); }
 }
 
