@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "울림 스튜디오",
+  "short_name": "울림",
+  "description": "브라우저에서 바로 쓰는 음악 작업실: 세션·어레인지먼트, 장르 템플릿, 스텝 시퀀서, 루프 패드, 신스와 이펙트",
+  "lang": "ko",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#17181b",
+  "theme_color": "#17181b",
+  "categories": ["music", "entertainment", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
