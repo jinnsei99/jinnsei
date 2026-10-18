@@ -115,7 +115,6 @@ function render() {
   draw();
 }
 function lane(t, hgt) {
-  const p = pr();
   const cv = h('canvas', { class: 'lane-cv' });
   const head = laneHead(t);
   const el = h('div', { class: 'lane' + (t.type === 'return' || t.type === 'master' ? ' small' : ''), style: { height: hgt + 'px', '--c': U.colorOf(t.color) }, dataset: { t: t.id } }, cv, head);
@@ -132,7 +131,6 @@ function lane(t, hgt) {
       dropOnLane(t, d, b);
     }
   });
-  void p;
   return el;
 }
 function laneHead(t) {
@@ -480,7 +478,7 @@ function bindScroll() {
 }
 
 /* ================= 레인 조작 ================= */
-function hitClip(t, x, y, H) {
+function hitClip(t, x) {
   const b = bOf(x);
   for (let i = t.arr.length - 1; i >= 0; i--) {
     const a = t.arr[i];
@@ -490,7 +488,6 @@ function hitClip(t, x, y, H) {
       return { a, zone, b };
     }
   }
-  void y; void H;
   return null;
 }
 function laneAt(clientY) {
@@ -784,6 +781,7 @@ function clipMenu(t, a, at, pos) {
     { sep: true },
     { label: '여기서 나누기', key: U.MOD + '+E', action: () => A.split(t.id, a.id, snap(at)) },
     { label: '복제', key: U.MOD + '+D', action: () => { ui.arrSel = A.duplicateArr(sel); drawLanes(); } },
+    { label: '합치기', key: U.MOD + '+J', disabled: t.type !== 'midi', action: () => { ui.arrSel = A.consolidate(sel); drawLanes(); } },
     { label: '루프 구간으로', key: U.MOD + '+L', action: () => loopSelection() },
     { sep: true },
     { label: '지우기', key: 'Del', danger: true, action: () => { A.deleteArrClips(sel); ui.arrSel = []; } }

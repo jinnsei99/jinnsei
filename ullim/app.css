@@ -583,6 +583,12 @@ body.narrow .sess-mix { height: 222px; }
   .cb-group .tap, .cb-group .sig, .num.swing { display: none; }
 }
 
+/* MIDI 매핑 모드 */
+.btn.map { font: 600 10.5px var(--font-mono); letter-spacing: 0.04em; }
+body.map-mode [data-map] { position: relative; outline: 1px dashed var(--cue); outline-offset: -1px; background: color-mix(in srgb, var(--cue) 12%, transparent); cursor: pointer; }
+body.map-mode [data-map].map-target { outline: 2px solid var(--accent); }
+body.map-mode [data-cc]::after { content: attr(data-cc); position: absolute; left: 50%; top: 0; transform: translateX(-50%); padding: 0 3px; border-radius: 3px; background: var(--cue); color: #04131f; font: 600 9px var(--font-mono); pointer-events: none; }
+
 /* 끌어서 조절하는 것들은 터치로 끌어도 화면이 밀리지 않게 */
 .knob, .num, .fader, .lane-cv, .arr-ruler, .arr-thumb, .pr-grid, .pr-keys, .pr-vel, .pr-ruler, .wave-cv, .vis, .eq-cv, .smp-cv, .split-h, .pad { touch-action: none; }
 

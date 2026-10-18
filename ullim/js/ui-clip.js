@@ -189,12 +189,8 @@ function toolsTab(body, c) {
   if (!R.toolParams[tool.id]) R.toolParams[tool.id] = U.toolDefaults(tool, c, cur.track);
   const P = R.toolParams[tool.id];
   const grid = h('div', { class: 'tool-grid' });
-  for (const s of tool.params) {
-    const ctl = U.control({ spec: s, get: () => P[s.id], set: v => { P[s.id] = v; if (live) preview(); } });
-    grid.append(ctl);
-  }
+  for (const s of tool.params) grid.append(U.control({ spec: s, get: () => P[s.id], set: v => { P[s.id] = v; } }));
   body.append(grid);
-  let live = false;
   const target = tool.kind === 'gen' ? '루프 구간에 만들기' : (R.sel.size ? '고른 음 ' + R.sel.size + '개에 적용' : '모든 음에 적용');
   const apply = btn({ text: target, cls: 'primary sm wide', onclick: () => {
     const out = U.runTool(tool, c, R.sel, P, cur.track);
@@ -205,7 +201,6 @@ function toolsTab(body, c) {
   } });
   body.append(apply);
   body.append(h('p', { class: 'hint', text: '마음에 들지 않으면 ' + U.MOD + '+Z로 되돌려요.' }));
-  function preview() { /* 값만 바꾸고 적용은 버튼으로 */ }
 }
 function runQuick(id, params) {
   const c = clip();
@@ -583,7 +578,7 @@ function previewPitch(p, v) {
   const e = U.engine;
   if (audition) e.liveOff(cur.track.id, audition.p);
   audition = { p };
-  e.liveOn(cur.track.id, p, v || 100);
+  e.liveOn(cur.track.id, p, v || 100, true);
   drawKeys();
 }
 function stopPreview() {

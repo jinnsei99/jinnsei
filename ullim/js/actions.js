@@ -450,6 +450,76 @@ A.setSessionRec = function (on) {
   if (!on) U.audioRec.stop();
 };
 
+/* ================= MIDI 캡처 =================
+   녹음 버튼을 누르지 않고 친 연주를 나중에 클립으로 건진다 */
+A.capture = function () {
+  const e = eng();
+  // 가장 최근에 연주한 트랙 (건반을 보내는 트랙을 먼저 본다)
+  const last = id => { const n = e.nodes.get(id); return n && n.liveLog && n.liveLog.length ? n.liveLog[n.liveLog.length - 1].t0 : -1; };
+  const ids = U.input.liveTargets().concat(pr().tracks.filter(t => t.type === 'midi').map(t => t.id));
+  let id = null;
+  for (const x of ids) if (last(x) >= 0 && (id == null || last(x) > last(id))) id = x;
+  const n = id && e.nodes.get(id);
+  if (!n) { U.toast('건질 연주가 없어요. 건반으로 몇 음 친 뒤 눌러 주세요.'); return; }
+  const log = n.liveLog;
+  let i = log.length - 1;
+  while (i > 0 && log[i].t0 - log[i - 1].t0 < 3) i--;
+  const phrase = log.slice(i);
+  const bar = U.barLen(pr().sig);
+  const playingSince = e.playing ? e.timeAt(e.startB) : Infinity;
+  let toB;
+  if (e.playing && phrase[0].t0 >= playingSince) toB = t => e.beatAt(t - e.latency());
+  else { const t0 = phrase[0].t0; toB = t => (t - t0) * pr().bpm / 60; }
+  let notes = phrase.map(x => {
+    const s = toB(x.t0);
+    const end = toB(x.t1 != null ? x.t1 : e.ctx.currentTime);
+    return { p: x.p, s, d: Math.max(1 / 16, end - s), v: x.v };
+  });
+  const start = Math.floor(Math.min(...notes.map(x => x.s)) / bar + 1e-6) * bar;
+  notes = notes.map(x => ({ p: x.p, s: U.round(x.s - start, 4), d: U.round(x.d, 4), v: x.v }));
+  const len = Math.max(bar, Math.ceil(Math.max(...notes.map(x => x.s + x.d)) / bar - 1e-6) * bar);
+  const t = T(id);
+  const clip = U.newMidiClip(len, { name: '캡처', color: t.color, notes });
+  n.liveLog = [];
+  if (U.ui.view === 'arrange') { A.addArrClip(t.id, e.playing ? start : pr().pos, clip, len, 'MIDI 캡처'); }
+  else {
+    let slot = U.ui.slot && U.ui.slot.t === t.id && !t.slots[U.ui.slot.s] ? U.ui.slot.s : t.slots.findIndex(c => !c);
+    if (slot < 0) slot = t.slots.length;
+    A.putClip(t.id, slot, clip, 'MIDI 캡처');
+    U.showClip({ t: t.id, s: slot });
+  }
+  U.toast('연주를 클립으로 건졌어요 (' + notes.length + '음).');
+};
+
+/* ================= 합치기 (Consolidate) ================= */
+A.consolidate = function (list) {
+  const byTrack = new Map();
+  for (const s of list) { if (!byTrack.has(s.t)) byTrack.set(s.t, []); byTrack.get(s.t).push(s.a); }
+  const out = [];
+  for (const [tid, ids] of byTrack) {
+    const t = T(tid);
+    const clips = t.arr.filter(a => ids.includes(a.id));
+    if (!clips.length || t.type !== 'midi') continue;
+    const lo = Math.min(...clips.map(a => a.pos)), hi = Math.max(...clips.map(a => a.pos + a.dur));
+    const notes = [];
+    for (const a of clips) {
+      U.forEachNote(a.clip, a.off, a.off + a.dur, (n, el, dur) => {
+        const s = a.pos + (el - a.off);
+        if (s < a.pos + a.dur - 1e-6) notes.push({ p: n.p, s: U.round(s - lo, 4), d: U.round(Math.min(dur, a.pos + a.dur - s), 4), v: n.v });
+      });
+    }
+    const first = clips.slice().sort((x, y) => x.pos - y.pos)[0];
+    const c = U.newMidiClip(hi - lo, { name: first.clip.name, color: first.clip.color, notes });
+    t.arr = t.arr.filter(a => !ids.includes(a.id));
+    const a = { id: U.uid('a'), pos: lo, dur: hi - lo, off: 0, clip: c };
+    t.arr.push(a);
+    out.push({ t: tid, a: a.id });
+  }
+  if (out.length) commit('합치기');
+  else U.toast('MIDI 클립을 골라 주세요.');
+  return out;
+};
+
 /* ================= 되돌리기 ================= */
 A.undo = function () {
   const l = U.undo();

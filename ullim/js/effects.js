@@ -358,14 +358,14 @@ class Saturator extends AudioFx {
     const ctx = this.ctx;
     this.shape = ctx.createWaveShaper();
     this.shape.oversample = '4x';
-    this.out = gainNode(ctx, dbToGain(this.v.out));
-    this.input.connect(this.shape); this.shape.connect(this.out);
-    this.makeMix(this.out);
+    this.post = gainNode(ctx, dbToGain(this.v.out));
+    this.input.connect(this.shape); this.shape.connect(this.post);
+    this.makeMix(this.post);
     this.applyCurve();
   }
   applyCurve() { const P = this.v; this.shape.curve = U.satCurve(P.type, P.drive, P.bits); }
   param(id, v, t) {
-    if (id === 'out') smooth(this.out.gain, dbToGain(v), t);
+    if (id === 'out') smooth(this.post.gain, dbToGain(v), t);
     else if (id === 'mix') this.applyMix(v, t);
     else this.applyCurve();
   }

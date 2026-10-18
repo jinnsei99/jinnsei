@@ -77,6 +77,7 @@ function onKeyDown(e) {
       case 'KeyD': done(); duplicate(ctx, roll); return;
       case 'KeyE': done(); if (U.arrangeView.splitAtCursor()) U.toast('클립을 나눴어요'); return;
       case 'KeyL': done(); U.arrangeView.loopSelection(); return;
+      case 'KeyJ': done(); if (ui.arrSel.length) { ui.arrSel = A.consolidate(ui.arrSel); U.inval('arrange-draw'); } return;
       case 'KeyU': done(); if (U.clipView.midi) U.clipView.quantizeSel(); return;
       case 'KeyA': if (roll) { done(); U.clipView.selectAll(); } else if (ctx === 'arrange') { done(); U.arrangeView.selectAll(); } return;
       case 'KeyC': if (roll && U.clipView.copySel()) { done(); U.toast('복사했어요'); } return;
@@ -97,7 +98,7 @@ function onKeyDown(e) {
     case 'F9': done(); A.setRecord(!U.engine.recording); return;
     case 'F2': done(); renameSel(); return;
     case 'Escape': ui.arrSel = []; ui.timeSel = null; U.inval('arrange-draw'); return;
-    case 'Delete': case 'Backspace': done(); del(ctx, roll); return;
+    case 'Delete': case 'Backspace': done(); if (ui.mapMode && U.unmapTarget()) return; del(ctx, roll); return;
     case 'Enter': if (ctx === 'session' && ui.slot) { done(); U.ensureAudio(); U.engine.launch(ui.slot.t, ui.slot.s); } return;
     case '+': case '=': done(); U.arrangeView.zoomAt(1.4, U.arrangeView.width / 2); return;
     case '-': done(); U.arrangeView.zoomAt(1 / 1.4, U.arrangeView.width / 2); return;
@@ -180,10 +181,71 @@ async function connectMidi(ask) {
   if (ask) U.toast(midiCount() ? 'MIDI 장치 ' + midiCount() + '개를 연결했어요.' : 'MIDI 장치를 찾지 못했어요. 장치를 꽂은 뒤 다시 눌러 주세요.');
   return true;
 }
+/* ================= MIDI 매핑 =================
+   매핑 모드에서 노브를 누르고 장치의 손잡이를 돌리면 이어진다 */
+function mapKey(m) { return JSON.stringify(m.t); }
+U.mapFor = json => (pr().midimap || []).find(m => mapKey(m) === json) || null;
+U.setMapMode = function (on) {
+  ui.mapMode = on;
+  ui.mapTarget = null;
+  document.body.classList.toggle('map-mode', on);
+  document.querySelectorAll('.map-target').forEach(el => el.classList.remove('map-target'));
+  U.inval('transport', 'status');
+  if (on) U.toast(midiCount() ? '바꿀 노브나 페이더를 누른 뒤 MIDI 장치의 손잡이를 돌려 주세요.' : 'MIDI 장치를 먼저 연결해 주세요 (상태 줄의 "MIDI 연결").');
+};
+U.midiLearn = function (el) {
+  document.querySelectorAll('.map-target').forEach(x => x.classList.remove('map-target'));
+  el.classList.add('map-target');
+  ui.mapTarget = el.dataset.map;
+  const m = U.mapFor(ui.mapTarget);
+  U.setInfo('MIDI 매핑', m ? '지금 CC ' + m.cc + '(채널 ' + (m.ch + 1) + ')에 이어져 있어요. 다른 손잡이를 돌리면 바꿔요. Delete를 누르면 끊어요.' : '이제 MIDI 장치의 손잡이나 페이더를 돌려 주세요.');
+};
+function learnCC(ch, cc) {
+  const p = pr();
+  if (!p.midimap) p.midimap = [];
+  const t = JSON.parse(ui.mapTarget);
+  p.midimap = p.midimap.filter(m => !(m.ch === ch && m.cc === cc) && mapKey(m) !== ui.mapTarget);
+  p.midimap.push({ ch, cc, t });
+  U.commit('MIDI 매핑');
+  U.toast('CC ' + cc + '에 이었어요.');
+  document.querySelectorAll('[data-map]').forEach(el => { const m = U.mapFor(el.dataset.map); if (m) el.dataset.cc = 'CC' + m.cc; else delete el.dataset.cc; });
+}
+U.unmapTarget = function () {
+  if (!ui.mapTarget) return false;
+  const p = pr();
+  p.midimap = (p.midimap || []).filter(m => mapKey(m) !== ui.mapTarget);
+  U.commit('MIDI 매핑 끊기');
+  document.querySelectorAll('[data-map]').forEach(el => { if (el.dataset.map === ui.mapTarget) delete el.dataset.cc; });
+  return true;
+};
+const commitCC = U.debounce(() => U.commit('MIDI 컨트롤'), 500);
+function applyCC(m, val) {
+  const n = val / 127, t = m.t;
+  if (t.k === 'dev') {
+    const r = U.deviceById(pr(), t.d);
+    if (!r) return;
+    const spec = U.DEV[r.dev.kind].byId[t.p];
+    if (spec) A.setParam(t.d, t.p, U.fromNorm(spec, n), false);
+  } else if (t.k === 'vol') A.setMixer(t.tr, 'vol', U.round(U.posToDb(n), 1), false);
+  else if (t.k === 'pan') A.setMixer(t.tr, 'pan', U.round(n * 2 - 1, 3), false);
+  else if (t.k === 'send') {
+    const i = pr().returns.findIndex(r => r.id === t.r);
+    if (i >= 0) A.setMixer(t.tr, 'send', U.round(U.posToDb(n * U.dbToPos(0)), 1), false, i);
+  }
+  const json = JSON.stringify(t);
+  document.querySelectorAll('[data-map]').forEach(el => { if (el.dataset.map === json && el.update) el.update(); });
+  commitCC();
+}
+function onCC(ch, cc, val) {
+  if (ui.mapMode && ui.mapTarget) { learnCC(ch, cc); return; }
+  for (const m of pr().midimap || []) if (m.cc === cc && m.ch === ch) applyCC(m, val);
+}
+
 function midiCount() { return midi ? [...midi.inputs.values()].filter(i => i.state === 'connected').length : 0; }
 function onMidi(ev) {
   const [st, d1, d2] = ev.data;
   const type = st & 0xf0;
+  if (type === 0xb0) { onCC(st & 0x0f, d1, d2); return; }
   if (type === 0x90 && d2 > 0) {
     U.ensureAudio();
     const ids = liveTargets();
@@ -205,5 +267,5 @@ function init() {
   document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
   connectMidi(false);
 }
-U.input = { init, connectMidi, midiCount, liveTargets };
+U.input = { init, connectMidi, midiCount, liveTargets, onMidi };
 })(window.U = window.U || {});

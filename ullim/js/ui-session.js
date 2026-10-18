@@ -269,7 +269,8 @@ function strip(t) {
         spec: sendSpec(letter), size: 'xs', title: '센드 ' + letter,
         get: () => { const a = U.engine && U.engine.autoNow(t.id, 'send:' + r.id); return a != null ? a / P0() : U.dbToPos(t.sends[i]) / P0(); },
         set: (v, f) => A.setMixer(t.id, 'send', U.round(U.posToDb(v * P0()), 1), f, i),
-        auto: () => !!t.auto['send:' + r.id]
+        auto: () => !!t.auto['send:' + r.id],
+        map: { k: 'send', tr: t.id, r: r.id }
       });
       refs.knobs.push(k);
       sends.append(k);
@@ -280,13 +281,15 @@ function strip(t) {
     spec: PAN, size: 'sm', title: '팬',
     get: () => { const a = U.engine && U.engine.autoNow(t.id, 'pan'); return a != null ? a * 2 - 1 : t.pan; },
     set: (v, f) => A.setMixer(t.id, 'pan', U.round(v, 3), f),
-    auto: () => !!t.auto.pan
+    auto: () => !!t.auto.pan,
+    map: { k: 'pan', tr: t.id }
   });
   refs.knobs.push(pan);
   // 볼륨
   const fd = U.fader({
     get: () => { const a = U.engine && U.engine.autoNow(t.id, 'vol'); return a != null ? U.posToDb(a) : t.vol; },
-    set: (v, f) => { A.setMixer(t.id, 'vol', v, f); refs.db.update(); }
+    set: (v, f) => { A.setMixer(t.id, 'vol', v, f); refs.db.update(); },
+    map: { k: 'vol', tr: t.id }
   });
   refs.fader = fd;
   refs.db = U.numBox({ cls: 'dbbox', label: '볼륨 dB', get: () => t.vol, set: (v, f) => { A.setMixer(t.id, 'vol', v, f); fd.update(); }, fmt: v => (v <= U.OFF_DB + 0.1 ? '-∞' : v.toFixed(1)), min: U.OFF_DB, max: 6, step: 0.1, def: 0, toN: v => U.dbToPos(v), fromN: n => U.round(U.posToDb(n), 1), range: 200 });

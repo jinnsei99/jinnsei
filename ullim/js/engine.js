@@ -86,8 +86,8 @@ class TrackNode {
     this.audiofx = devs.filter(d => d.spec.type === 'audio');
     try { this.input.disconnect(); } catch (e) { /* 무시 */ }
     for (const d of devs) {
-      if (d.out) { try { d.out.disconnect(); } catch (e) { /* 무시 */ } }
-      if (d.output) { try { d.output.disconnect(); } catch (e) { /* 무시 */ } }
+      const outNode = d.spec.type === 'instrument' ? d.out : d.output;
+      if (outNode) { try { outNode.disconnect(); } catch (e) { /* 무시 */ } }
       if (d.an && d.output) d.output.connect(d.an);
     }
     if (this.inst) this.inst.out.connect(this.input);
@@ -322,8 +322,9 @@ class Engine {
   }
   stop(keepQueue) {
     const t = this.ctx.currentTime;
-    const wasRec = this.recording || this.sessionRec;
-    if (wasRec) this.finishRecording();
+    if (this.recording || this.sessionRec) this.finishRecording();
+    this.recording = false;
+    this.sessionRec = false;
     this.playing = false;
     for (const n of this.nodes.values()) {
       n.cutFrom(t);
@@ -467,7 +468,7 @@ class Engine {
   }
 
   /* ---------- 건반 연주 ---------- */
-  liveOn(trackId, p, v) {
+  liveOn(trackId, p, v, audition) {
     const n = this.nodes.get(trackId);
     if (!n || n.track.type !== 'midi') return;
     if (this.ctx.state !== 'running') this.ctx.resume();
@@ -487,7 +488,11 @@ class Engine {
       if (prev && prev.voices) for (const vo of prev.voices) n.inst.noteOff(vo, t);
       n.live.set(p, { voices });
     }
+    if (audition) { n.auditions = (n.auditions || new Set()).add(p); return; }
     this.recordNote(n, p, v, true);
+    if (!n.liveLog) n.liveLog = [];
+    n.liveLog.push({ p, v, t0: t, t1: null });
+    if (n.liveLog.length > 600) n.liveLog.splice(0, 100);
   }
   liveOff(trackId, p) {
     const n = this.nodes.get(trackId);
@@ -499,7 +504,9 @@ class Engine {
       if (h.voices && n.inst) for (const vo of h.voices) n.inst.noteOff(vo, t);
       n.live.delete(p);
     }
+    if (n.auditions && n.auditions.delete(p)) return;
     this.recordNote(n, p, 0, false);
+    if (n.liveLog) for (let i = n.liveLog.length - 1; i >= 0; i--) if (n.liveLog[i].p === p && n.liveLog[i].t1 == null) { n.liveLog[i].t1 = t; break; }
   }
   allLiveOff() {
     for (const n of this.nodes.values()) for (const p of [...n.live.keys()]) this.liveOff(n.id, p);
@@ -580,7 +587,7 @@ class Engine {
       if (next > b + 1e-9) this.scheduleSource(n, b, next);
       if (!act) break;
       if (act === 'queued') this.applyQueued(n, next);
-      else if (act === 'end') { this.endRecording(n, next); n.play = null; this.stateDirty = true; }
+      else if (act === 'end') { this.endRecording(n, next); if (this.recording) this.closeSeg(n, next); n.play = null; this.stateDirty = true; }
       else this.followAction(n, next);
       b = next;
     }
@@ -591,6 +598,7 @@ class Engine {
     n.queued = null;
     const prev = n.play;
     if (prev && n.rec) this.endRecording(n, at);
+    if (this.recording) this.closeSeg(n, at);
     // 세션 클립이 시작되거나 멈추는 순간부터 이 트랙의 어레인지먼트는 쉰다
     n.cutFrom(this.timeAt(at), prev ? 'sess' : null);
     if (n.inst) n.inst.cut(this.timeAt(at));
@@ -613,6 +621,13 @@ class Engine {
     if (st.end != null && st.follow != null && st.follow >= st.end - 1e-6) st.follow = st.end - 1e-6;
     n.play = st;
     if (n.rec && n.rec.pending === q.slot) n.rec.start = at;
+    if (this.recording) n.seg = { clip: U.cloneClip(clip), start: at, off: st.off };
+  }
+  /* 어레인지먼트 녹음 중 세션 클립이 재생된 구간을 기록 */
+  closeSeg(n, b) {
+    if (!n.seg) return;
+    if (b - n.seg.start > 0.02) (this.segs || (this.segs = [])).push(Object.assign({ track: n.id, end: b }, n.seg));
+    n.seg = null;
   }
   followAction(n, at) {
     const p = n.play;
@@ -913,6 +928,13 @@ class Engine {
       const n = this.nodes.get(t.id);
       n.rec = { arr: true, from: Math.floor(from / this.barLen()) * this.barLen(), notes: [], open: new Map() };
     }
+    this.segs = [];
+    for (const t of this.project.tracks) {
+      const n = this.nodes.get(t.id);
+      const clip = n.play && t.slots[n.play.slot];
+      if (!clip || from < n.play.start) continue;
+      n.seg = { clip: U.cloneClip(clip), start: from, off: (from - n.play.start) / U.clipScale(clip, this.bpm) + n.play.off };
+    }
     this.emit('transport');
   }
   /* 세션 녹음: 암된 트랙의 선택된 빈 슬롯에 새 클립을 만들어 녹음하거나, 재생 중인 클립에 겹쳐 녹음 */
@@ -1007,6 +1029,17 @@ class Engine {
         changed = true;
       }
     }
+    if (which !== 'sess') {
+      for (const n of this.nodes.values()) this.closeSeg(n, b);
+      for (const sg of this.segs || []) {
+        const t = U.trackById(this.project, sg.track);
+        if (!t) continue;
+        carve(t, sg.start, sg.end, this.bpm);
+        t.arr.push({ id: U.uid('a'), pos: U.round(sg.start, 4), dur: U.round(sg.end - sg.start, 4), off: U.round(sg.off, 4), clip: sg.clip });
+        changed = true;
+      }
+      this.segs = [];
+    }
     if (changed) U.commit('녹음');
   }
 
@@ -1092,6 +1125,18 @@ function forEachNote(c, e0, e1, fn) {
     }
   }
 }
+/* 어레인지먼트의 [a,b) 자리를 비운다 (덮어쓰기 녹음) */
+function carve(t, a, b, bpm) {
+  const out = [];
+  for (const x of t.arr) {
+    const s = x.pos, e = x.pos + x.dur;
+    if (e <= a + 1e-6 || s >= b - 1e-6) { out.push(x); continue; }
+    const scale = U.clipScale(x.clip, bpm);
+    if (s < a - 1e-6) out.push(Object.assign({}, x, { dur: a - s }));
+    if (e > b + 1e-6) out.push({ id: U.uid('a'), pos: b, dur: e - b, off: x.off + (b - s) / scale, clip: s < a - 1e-6 ? U.cloneClip(x.clip) : x.clip });
+  }
+  t.arr = out;
+}
 function autoValue(pts, a) {
   if (a <= pts[0].t) return pts[0].v;
   const last = pts[pts.length - 1];
@@ -1103,5 +1148,5 @@ function autoValue(pts, a) {
   return p.v + (q.v - p.v) * (a - p.t) / (q.t - p.t);
 }
 
-Object.assign(U, { Engine, TrackNode, posToDb, dbToPos, clipPasses, forEachNote, autoValue });
+Object.assign(U, { Engine, TrackNode, posToDb, dbToPos, clipPasses, forEachNote, autoValue, carve });
 })(window.U = window.U || {});

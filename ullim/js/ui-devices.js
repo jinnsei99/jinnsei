@@ -78,7 +78,7 @@ function panel(t, d) {
   const mk = id => {
     const s = spec.byId[id];
     if (!s) return null;
-    const c = U.control({ spec: s, get: () => get(id), set: (v, f) => { A.setParam(d.id, id, v, f); if (f) refreshVis(); else liveVis(); }, auto: () => !!t.auto['dev:' + d.id + ':' + id], prefix: U.devName(d) });
+    const c = U.control({ spec: s, get: () => get(id), set: (v, f) => { A.setParam(d.id, id, v, f); if (f) refreshVis(); else liveVis(); }, auto: () => !!t.auto['dev:' + d.id + ':' + id], prefix: U.devName(d), map: { k: 'dev', d: d.id, p: id } });
     c.dataset.pid = id;
     ctls.push(c);
     return c;

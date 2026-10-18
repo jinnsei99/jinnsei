@@ -40,6 +40,7 @@ function build(root) {
   refs.stop = btn({ icon: 'stop', cls: 'tr', title: '정지 (Space)', info: ['정지', '재생을 멈춰요. 멈춘 상태에서 한 번 더 누르면 시작 위치를 처음으로 돌려요.'], onclick: () => A.stop() });
   refs.rec = btn({ icon: 'rec', cls: 'tr rec', toggle: true, title: '어레인지먼트 녹음 (F9)', info: ['어레인지먼트 녹음', '녹음 준비(●)한 MIDI 트랙에 연주를 어레인지먼트 클립으로 녹음해요.'], onclick: () => A.setRecord(!U.engine.recording) });
   refs.srec = btn({ icon: 'sessrec', cls: 'tr rec', toggle: true, title: '세션 녹음', info: ['세션 녹음', '녹음 준비한 트랙의 선택된 빈 슬롯에 새 클립을 녹음해요. 클립이 재생 중이면 그 위에 겹쳐 녹음해요. 다시 누르면 녹음을 마치고 루프로 돌려요.'], onclick: () => A.setSessionRec(!U.engine.sessionRec) });
+  refs.cap = btn({ icon: 'capture', cls: 'tr', title: 'MIDI 캡처', info: ['MIDI 캡처', '녹음 버튼을 누르지 않고 방금 친 연주를 클립으로 건져요. 템포가 맞지 않아도 첫 음부터 마디에 맞춰요.'], onclick: () => U.act.capture() });
   refs.pos = numBox({
     cls: 'pos', label: '재생 위치', get: () => U.engine.heardBeat(), set: (v, f) => { if (f) setPos(v); },
     fmt: v => U.fmtPos(v, pr().sig), parse: s => U.parsePos(s, pr().sig, true), min: 0, max: 4096, step: 0.25, range: 1200
@@ -62,15 +63,16 @@ function build(root) {
   refs.swing = numBox({ cls: 'swing', label: '스윙', get: () => pr().swing || 0, set: (v, f) => { pr().swing = v; f ? U.commit('스윙') : U.touch(); }, fmt: v => 'Swing ' + Math.round(50 + v * 25) + '%', parse: s => (parseFloat(s) - 50) / 25, min: 0, max: 1, step: 0.01, def: 0, range: 300 });
   info(refs.swing, '스윙 (그루브)', '16분음표 엇박을 뒤로 밀어 출렁이는 느낌을 줘요. 50%는 똑바로, 66%는 셋잇단 느낌이에요. 클립마다 끌 수 있어요.');
   refs.kbd = btn({ icon: 'keys', cls: 'tg', toggle: true, on: ui.keyboard, title: '컴퓨터 건반 (M)', info: ['컴퓨터 건반', '켜면 A~K 줄이 건반이 돼요. W, E, T, Y, U는 검은 건반, Z/X는 옥타브, C/V는 세기예요.'], onclick: () => U.setKeyboard(!ui.keyboard) });
+  refs.map = btn({ text: 'MIDI', cls: 'tg map', toggle: true, on: !!ui.mapMode, title: 'MIDI 매핑 모드', info: ['MIDI 매핑 모드', '켜고 노브·페이더를 누른 뒤 MIDI 장치의 손잡이를 돌리면 둘이 이어져요. 다시 누르면 매핑 모드를 끝내요.'], onclick: () => U.setMapMode(!ui.mapMode) });
 
   const g = (...kids) => h('div', { class: 'cb-group' }, ...kids);
   el.append(
     g(menuBtn, logo),
     g(tap, refs.bpm, refs.sig, refs.metro, refs.quant),
-    g(refs.play, refs.stop, refs.rec, refs.srec, refs.pos, refs.back),
+    g(refs.play, refs.stop, refs.rec, refs.srec, refs.cap, refs.pos, refs.back),
     g(refs.loop, refs.lstart, refs.llen),
     h('div', { class: 'cb-flex' }),
-    g(refs.swing, refs.key, refs.draw, refs.auto, refs.follow, refs.kbd)
+    g(refs.swing, refs.key, refs.draw, refs.auto, refs.follow, refs.kbd, refs.map)
   );
   refresh();
 }
@@ -105,6 +107,7 @@ function refresh() {
   setPressed(refs.auto, ui.auto);
   setPressed(refs.follow, ui.follow);
   setPressed(refs.kbd, ui.keyboard);
+  setPressed(refs.map, !!ui.mapMode);
   refs.swing.update();
   refs.key.querySelector('span') ? (refs.key.querySelector('span').textContent = U.scaleLabel(p.key.root, p.key.scale)) : refs.key.append(h('span', { text: U.scaleLabel(p.key.root, p.key.scale) }));
   if (e) {

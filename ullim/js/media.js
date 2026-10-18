@@ -20,7 +20,7 @@ function get(ref, sr) {
   if (ref.startsWith('gen:')) {
     const g = U.GEN[ref.slice(4)];
     if (!g) p = Promise.reject(new Error('없는 내장 샘플: ' + ref));
-    else p = Promise.resolve().then(() => g.render(sr));
+    else p = Promise.resolve().then(() => g.render(sr)).then(limitPeak);
   } else if (ref.startsWith('user:')) {
     p = U.store.getAudio(ref.slice(5)).then(rec => {
       if (!rec) throw Object.assign(new Error('이 브라우저에 없는 오디오 파일이에요: ' + ref), { missing: true });
@@ -38,6 +38,16 @@ function get(ref, sr) {
   p.catch(() => bufs.delete(k));
   bufs.set(k, p);
   return p;
+}
+/* 만든 샘플이 0 dB를 넘지 않게 */
+function limitPeak(buf) {
+  let pk = 0;
+  for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) { const a = Math.abs(d[i]); if (a > pk) pk = a; } }
+  if (pk > 0.95) {
+    const g = 0.95 / pk;
+    for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] *= g; }
+  }
+  return buf;
 }
 function decode(bytes, sr) {
   const ctx = U.OfflineCtx(2, 1, sr);

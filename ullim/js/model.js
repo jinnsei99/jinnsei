@@ -114,6 +114,7 @@ function normalize(pr) {
   if (!Array.isArray(pr.scenes) || !pr.scenes.length) pr.scenes = [newScene()];
   if (!Array.isArray(pr.returns)) pr.returns = [];
   if (!pr.master) pr.master = newTrack('master', { color: 19 });
+  if (!Array.isArray(pr.midimap)) pr.midimap = [];
   for (const t of allTracks(pr)) {
     const d = newTrack(t.type);
     for (const k in d) if (t[k] == null) t[k] = d[k];

@@ -132,7 +132,8 @@ const ICONS = {
   upload: '<path d="M8 11V3M4.8 6L8 2.8 11.2 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 10.5v2.5h11v-2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   download: '<path d="M8 2.5v8M4.8 7.3L8 10.5l3.2-3.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 10.5v2.5h11v-2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   scale: '<path d="M2 12.5h3v-3h3v-3h3v-3h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>',
-  undo: '<path d="M5.5 3L2.5 6l3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h6.5a3.5 3.5 0 0 1 0 7H6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'
+  undo: '<path d="M5.5 3L2.5 6l3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h6.5a3.5 3.5 0 0 1 0 7H6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  capture: '<path d="M2 3.5h5M2 6.5h3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M11 2v7.5M8.3 7L11 9.7 13.7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 11.5v2h11v-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'
 };
 function icon(name, cls) {
   const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -192,6 +193,7 @@ function info(el, title, text) { el.dataset.info = title + '|' + (text || ''); r
 function dragValue(el, o) {
   el.addEventListener('pointerdown', e => {
     if (e.button !== 0) return;
+    if (ui.mapMode && el.dataset.map) { e.preventDefault(); e.stopPropagation(); U.midiLearn(el); return; }
     e.preventDefault();
     el.focus({ preventScroll: true });
     const start = o.get();
@@ -279,8 +281,16 @@ function knob(o) {
     range: o.range
   });
   el.update = draw;
+  mappable(el, o.map);
   draw();
   return el;
+}
+/* MIDI 매핑할 수 있는 조절기 표시 */
+function mappable(el, map) {
+  if (!map) return;
+  el.dataset.map = JSON.stringify(map);
+  const m = U.mapFor && U.mapFor(el.dataset.map);
+  if (m) el.dataset.cc = 'CC' + m.cc;
 }
 /* 파라미터 종류에 맞는 조절기 */
 function control(o) {
@@ -399,6 +409,7 @@ function fader(o) {
     }
   };
   info(el, '볼륨', '끌어서 트랙 음량을 바꿔요. 더블클릭하면 0 dB로 돌아가요. 옆의 막대는 지금 나가는 소리 크기예요.');
+  mappable(el, o.map);
   draw();
   return el;
 }

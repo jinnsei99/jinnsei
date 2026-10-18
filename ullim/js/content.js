@@ -59,7 +59,7 @@ const SOUNDS = [
   { name: '부드러운 리드', kind: 'polysynth', tags: ['리드'], p: { w1: 'square', w2: 'triangle', o2: 1, d2: 0, l1: 0.6, l2: 0.4, ft: 'lp12', cut: 2600, res: 0.2, fenv: 0.1, a: 0.02, s: 0.85, r: 0.2, mono: true, glide: 0.08, lpitch: 0.18, lrate: 5.5, vol: -10 }, fx: [FX('delay', { mix: 0.18 })] },
   { name: '칩튠', kind: 'polysynth', tags: ['리드'], p: { w1: 'square', l1: 0.8, l2: 0, ft: 'lp12', cut: 14000, res: 0, fenv: 0, a: 0.001, d: 0.1, s: 0.7, r: 0.05, vol: -14 } },
   { name: '브라스', kind: 'polysynth', tags: ['리드'], p: { w1: 'sawtooth', w2: 'sawtooth', d2: 5, ft: 'lp12', cut: 700, res: 0.18, fenv: 0.45, fa: 0.07, fd: 0.5, fs: 0.45, fr: 0.3, a: 0.04, d: 0.4, s: 0.85, r: 0.25, vel: 0.6, vol: -10 } },
-  { name: '노이즈 스윕', kind: 'polysynth', tags: ['FX'], p: { l1: 0, l2: 0, nz: 1, ft: 'bp', cut: 300, res: 0.6, fenv: 1, fa: 3, fd: 1, fs: 1, fr: 1, a: 1.5, s: 1, r: 1.5, vol: -14 }, fx: [FX('reverb', { mix: 0.4 })] },
+  { name: '노이즈 스윕', kind: 'polysynth', tags: ['FX'], p: { l1: 0, l2: 0, nz: 1, ft: 'bp', cut: 500, res: 0.45, fenv: 1, fa: 3, fd: 1, fs: 1, fr: 1, a: 1.2, s: 1, r: 1.5, vol: 0 }, fx: [FX('reverb', { mix: 0.4 })] },
   { name: '보컬 아', kind: 'sampler', tags: ['보컬'], data: { sample: 'gen:vox-a' }, p: { root: 57, loop: true, lstart: 0.4, end: 0.95, a: 0.05, s: 1, r: 0.35, vol: -6 }, fx: [FX('reverb', { mix: 0.3 })] },
   { name: '보컬 오', kind: 'sampler', tags: ['보컬'], data: { sample: 'gen:vox-o' }, p: { root: 57, loop: true, lstart: 0.4, end: 0.95, a: 0.05, s: 1, r: 0.35, vol: -6 }, fx: [FX('reverb', { mix: 0.3 })] },
   { name: '보컬 찹', kind: 'sampler', tags: ['보컬'], data: { sample: 'gen:vox-chops' }, p: { mode: 'slice', slices: 8, a: 0.003, s: 1, r: 0.05, vol: -6 }, fx: [FX('delay', { mix: 0.18 })] },

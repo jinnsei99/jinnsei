@@ -283,7 +283,7 @@ function exportDialog() {
     body.append(h('div', { class: 'xp-prog', hidden: true }, h('div', { class: 'xp-bar' }), h('span', { class: 'xp-t', text: '' })));
   };
   draw();
-  const dlg = U.dialog({
+  U.dialog({
     title: '오디오 내보내기', body, width: '420px',
     actions: [{ label: '취소' }, { label: '내보내기', primary: true, action: async b => {
       b.disabled = true;
@@ -319,7 +319,6 @@ function exportDialog() {
       }
     } }]
   });
-  void dlg;
 }
 async function exportMidi() {
   const tracks = U.arrangementNotes(pr());
