@@ -607,7 +607,7 @@ function clipDown(L, e, hit, r) {
       for (const o of orig) {
         const end = Math.max(o.pos + gridStep() * 0.25, snap(o.pos + o.dur + d, ev));
         let dur = end - o.pos;
-        if (!o.s.a.clip.loop.on) dur = Math.min(dur, (U.clipSpan(o.s.a.clip) - o.off + o.s.a.clip.start) * scaleOf(o.s.a));
+        if (!o.s.a.clip.loop.on) dur = Math.min(dur, (U.clipSpan(o.s.a.clip) - o.off) * scaleOf(o.s.a));
         o.s.a.dur = Math.max(0.0625, dur);
       }
     } else if (zone === 'l') {
@@ -616,7 +616,7 @@ function clipDown(L, e, hit, r) {
         let np = snap(o.pos + d, ev);
         np = Math.min(np, o.pos + o.dur - 0.0625);
         let off = o.off + (np - o.pos) / sc;
-        if (off < 0 && !o.s.a.clip.loop.on) { np = o.pos - o.off * sc; off = 0; }
+        if (off < 0) { np = o.pos - o.off * sc; off = 0; }
         o.s.a.pos = Math.max(0, np);
         o.s.a.off = off;
         o.s.a.dur = o.pos + o.dur - o.s.a.pos;

@@ -162,6 +162,8 @@ async function render(project, opts, onProgress) {
   await eng.ready();
   eng.playing = true;
   eng.anchorT = 0; eng.anchorB = from; eng.schedB = from; eng.startB = from;
+  eng.arrMap = { b0: from, a0: from };
+  eng.loopCfg = Object.assign({}, pr.loop);
   if (opts.scene != null) {
     for (const t of pr.tracks) {
       const n = eng.nodes.get(t.id);

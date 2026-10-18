@@ -181,6 +181,8 @@ class Engine {
     this.anchorB = 0;
     this.schedB = 0;
     this.startB = 0;
+    this.arrMap = { b0: 0, a0: 0 };
+    this.loopCfg = null;
     this.freeAnchor = null;
     this.recording = false;
     this.sessionRec = false;
@@ -204,24 +206,28 @@ class Engine {
   barLen() { return U.barLen(this.project.sig); }
   keyOf() { return this.project ? this.project.key : { root: 0, scale: 'major' }; }
 
-  /* 어레인지먼트 위치: 루프를 켜면 루프 끝에서 처음으로 돌아간다 */
+  /* 어레인지먼트 위치: 박 m.b0에서 위치 m.a0로 출발해(재생 시작·루프 바꿈),
+     루프가 켜져 있으면 루프 끝에서 처음으로 돌아간다 */
+  loopActive(L, a0) { return !!(L && L.on && L.end - L.start >= 0.25 && a0 < L.end); }
   arrPos(b) {
-    const L = this.project.loop;
-    if (!L.on || this.startB >= L.end || L.end - L.start < 0.25 || b < L.end) return b;
+    const m = this.arrMap, L = this.loopCfg || this.project.loop;
+    const x = m.a0 + (b - m.b0);
+    if (!this.loopActive(L, m.a0) || x < L.end) return x;
     const len = L.end - L.start;
-    return L.start + ((b - L.end) % len + len) % len;
+    return L.start + ((x - L.end) % len + len) % len;
   }
   /* [b0,b1) 를 어레인지먼트 위치가 끊기지 않는 조각으로 나눈다 */
   arrSegs(b0, b1) {
-    const L = this.project.loop;
-    if (!L.on || this.startB >= L.end || L.end - L.start < 0.25) return [{ b0, b1, a0: b0 }];
+    const m = this.arrMap, L = this.loopCfg || this.project.loop;
+    if (!this.loopActive(L, m.a0)) return [{ b0, b1, a0: this.arrPos(b0) }];
     const len = L.end - L.start;
     const segs = [];
     let b = b0;
     while (b < b1 - 1e-9 && segs.length < 64) {
       const a = this.arrPos(b);
+      const x = m.a0 + (b - m.b0);
       let next = b1;
-      if (b >= L.end - 1e-9 || a < L.end) {
+      if (x >= L.end - 1e-9 || a < L.end) {
         const toEnd = L.end - a;
         next = Math.min(b1, b + (toEnd > 1e-9 ? toEnd : len));
       }
@@ -235,6 +241,12 @@ class Engine {
   sync(pr) {
     this.project = pr;
     if (Math.abs(pr.bpm - this.bpm) > 1e-9) this.setTempo(pr.bpm);
+    // 재생 중에 루프를 바꾸면 지금 위치에서 이어지게 다시 잡는다
+    const L = pr.loop, C = this.loopCfg;
+    if (!C || C.on !== L.on || C.start !== L.start || C.end !== L.end) {
+      if (this.playing && C) this.arrMap = { b0: this.schedB, a0: this.arrPos(this.schedB) };
+      this.loopCfg = Object.assign({}, L);
+    }
     const all = U.allTracks(pr);
     const ids = new Set(all.map(t => t.id));
     for (const [id, n] of this.nodes) if (!ids.has(id)) { n.dispose(); this.nodes.delete(id); }
@@ -312,6 +324,8 @@ class Engine {
     this.anchorB = from;
     this.schedB = from;
     this.startB = from;
+    this.arrMap = { b0: from, a0: from };
+    this.loopCfg = Object.assign({}, pr.loop);
     this.playing = true;
     this.freeAnchor = null;
     for (const n of this.nodes.values()) {
@@ -322,6 +336,7 @@ class Engine {
   }
   stop(keepQueue) {
     const t = this.ctx.currentTime;
+    if (this.playing) this.lastStopB = Math.max(0, this.arrPos(this.heardBeat()));
     if (this.recording || this.sessionRec) this.finishRecording();
     this.recording = false;
     this.sessionRec = false;

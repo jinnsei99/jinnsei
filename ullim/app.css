@@ -84,6 +84,7 @@ html:root[data-skin="light"] {
 /* ================= 바탕 ================= */
 * { box-sizing: border-box; }
 html, body { height: 100%; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
 body {
   margin: 0;
   background: var(--bg);
@@ -563,7 +564,7 @@ body.narrow .main { grid-template-columns: minmax(0, 1fr); }
 body.narrow .browser { display: none; }
 body.narrow .split-h, body.narrow .infoview { display: none; }
 body.narrow .detail { display: none; grid-template-columns: minmax(0, 1fr); }
-body.narrow .panes { display: flex; background: var(--panel-2); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body.narrow .panes { display: flex; background: var(--panel-2); border-top: 1px solid var(--line); }
 .pane-b { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; background: none; color: var(--fg-3); font-size: 10.5px; }
 .pane-b[aria-pressed="true"] { color: var(--accent); }
 .pane-b .ic { width: 16px; height: 16px; }
@@ -580,7 +581,7 @@ body.narrow .lane-drop, body.narrow .arr-scroll { margin-right: 132px; }
 body.narrow .sess-mix { height: 222px; }
 @media (max-width: 520px) {
   :root { --col: 96px; --mcol: 118px; }
-  .cb-group .tap, .cb-group .sig, .num.swing { display: none; }
+  .cb-group .tap, .cb-group .sig, .num.swing, .logo-t { display: none; }
 }
 
 /* MIDI 매핑 모드 */

@@ -462,7 +462,6 @@ function wire() {
       U.inval('arrange-draw');
       if (inf.tempo || inf.loop || inf.mixer) U.inval('transport');
       if (inf.rec) U.inval('session');
-      if (inf.device) U.inval('detail');
       return;
     }
     U.inval('transport', 'session', 'arrange', 'detail', 'status');

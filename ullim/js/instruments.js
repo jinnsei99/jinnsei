@@ -341,14 +341,15 @@ class Drums extends Instrument {
     for (let i = 0; i < 16; i++) {
       const pd = pads[i];
       let pn = this.pads[i];
-      if (!pn) {
+      const fresh = !pn;
+      if (fresh) {
         pn = this.pads[i] = { gain: gainNode(this.ctx, 1), pan: this.ctx.createStereoPanner(), key: null, buffer: null };
         pn.gain.connect(pn.pan); pn.pan.connect(this.out);
       }
       if (!pd) { pn.buffer = null; pn.key = null; continue; }
-      const t = this.ctx.currentTime;
-      smooth(pn.gain.gain, pd.mute ? 0 : dbToGain(pd.level || 0), t);
-      smooth(pn.pan.pan, pd.pan || 0, t);
+      const lvl = pd.mute ? 0 : dbToGain(pd.level || 0), pan = pd.pan || 0;
+      if (fresh) { pn.gain.gain.value = lvl; pn.pan.pan.value = pan; }
+      else { const t = this.ctx.currentTime; smooth(pn.gain.gain, lvl, t); smooth(pn.pan.pan, pan, t); }
       const key = pd.src === 'sample' ? 'S:' + (pd.sample || '') : ['D', pd.type, pd.tune, pd.decay, pd.tone].join(':');
       if (key !== pn.key) {
         pn.key = key;

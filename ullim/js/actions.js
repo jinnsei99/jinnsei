@@ -397,11 +397,12 @@ A.stop = function () {
   }
   e.stop();
 };
+/* Shift+Space: 멈춘 곳에서 이어서 재생 */
 A.togglePlay = function (cont) {
   U.ensureAudio();
   const e = eng();
-  if (e.playing) { const b = e.heardBeat(); e.stop(); if (cont) { pr().pos = Math.max(0, b); U.inval('arrange'); } }
-  else e.play(pr().pos);
+  if (e.playing) e.stop();
+  else e.play(cont && e.lastStopB != null ? e.lastStopB : pr().pos);
 };
 A.setTempo = function (bpm, final) {
   bpm = U.clamp(U.round(bpm, 2), 20, 999);
