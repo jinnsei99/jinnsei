@@ -37,8 +37,22 @@ const KITS = [
     sub: { name: '808 Sub', decay: 0.85, tone: 0.55, level: -1 }, snap: { level: -2 }, zap: {}
   }) }
 ];
+/* 전자음악 키트 (뒤에 붙여서 앞 번호는 그대로) */
+KITS.push(
+  { id: 'ktechno', name: '테크노', tags: ['테크노'], pads: kit({
+    kick: { tune: -1, decay: 0.45, tone: 0.9 }, snare: { tune: 2, decay: 0.28, tone: 0.8 }, clap: { decay: 0.5, tone: 0.65 },
+    chh: { decay: 0.16, tone: 0.9, level: -4, choke: 1 }, ohh: { decay: 0.4, tone: 0.9, level: -5, choke: 1 }, ride: { tone: 0.85, level: -6 },
+    rim: { level: -4 }, shaker: { decay: 0.3, level: -8 }, sub: { name: '럼블', decay: 0.7, tone: 0.2, level: -6 }
+  }) },
+  { id: 'kdnb', name: '드럼 앤 베이스', tags: ['DnB', '정글'], pads: kit({
+    kick: { tune: 3, decay: 0.3, tone: 0.8 }, snare: { tune: 7, decay: 0.32, tone: 0.95 }, clap: { tune: 3, decay: 0.3, tone: 0.8, level: -3 },
+    chh: { tune: 2, decay: 0.12, tone: 0.8, level: -4, choke: 1 }, ohh: { tune: 2, decay: 0.3, tone: 0.8, level: -6, choke: 1 }, ride: { tune: 2, tone: 0.8, level: -6 },
+    rim: { tune: 4, level: -3 }, shaker: { level: -9 }
+  }) }
+);
 U.KITS = KITS;
 U.DEFAULT_KIT = KITS[0].pads;
+U.kitById = id => KITS.find(k => k.id === id) || KITS[0];
 
 /* ================= 사운드 (악기 프리셋) ================= */
 const FX = (kind, p) => ({ kind, p });
@@ -65,7 +79,17 @@ const SOUNDS = [
   { name: '보컬 찹', kind: 'sampler', tags: ['보컬'], data: { sample: 'gen:vox-chops' }, p: { mode: 'slice', slices: 8, a: 0.003, s: 1, r: 0.05, vol: -6 }, fx: [FX('delay', { mix: 0.18 })] },
   { name: '빈 샘플러', kind: 'sampler', tags: ['샘플러'], p: {} }
 ];
+/* 전자음악용 사운드 (뒤에 붙여서 앞 번호는 그대로) */
+SOUNDS.push(
+  { name: '리스 베이스', kind: 'polysynth', tags: ['베이스'], p: { w1: 'sawtooth', w2: 'sawtooth', o2: 0, d1: -18, d2: 18, l1: 0.8, l2: 0.8, ft: 'lp24', cut: 650, res: 0.18, fenv: 0.12, fa: 0.01, fd: 0.6, fs: 0.5, a: 0.008, d: 0.5, s: 1, r: 0.18, lfilt: 0.12, lrate: 0.35, mono: true, glide: 0.05, vel: 0.3, vol: -9 }, fx: [FX('chorus', { mix: 0.3, rate: 0.3, depth: 0.6 }), FX('sat', { type: 'soft', drive: 6, out: -5 })] },
+  { name: '808 베이스', kind: 'polysynth', tags: ['베이스'], p: { w1: 'sine', w2: 'triangle', o2: 0, d2: 0, l1: 1, l2: 0.15, ft: 'lp12', cut: 1200, res: 0, fenv: 0, a: 0.003, d: 2.2, s: 0.25, r: 0.5, mono: true, glide: 0.08, vel: 0.3, vol: -4 }, fx: [FX('sat', { type: 'tube', drive: 9, out: -7, mix: 0.6 })] },
+  { name: '후버', kind: 'polysynth', tags: ['리드'], p: { w1: 'sawtooth', w2: 'sawtooth', o2: -1, d1: -24, d2: 24, l1: 0.8, l2: 0.6, ft: 'lp24', cut: 3200, res: 0.12, fenv: 0.1, a: 0.01, d: 0.4, s: 0.9, r: 0.3, lpitch: 0.12, lrate: 5.5, mono: true, glide: 0.12, vol: -12 }, fx: [FX('chorus', { mix: 0.55, depth: 0.75, rate: 0.5 })] },
+  { name: '퓨처 베이스 코드', kind: 'polysynth', tags: ['코드'], p: { w1: 'sawtooth', w2: 'sawtooth', d1: -14, d2: 14, l1: 0.75, l2: 0.75, ft: 'lp24', cut: 3800, res: 0.1, fenv: 0.28, fa: 0.002, fd: 0.35, fs: 0.45, fr: 0.2, a: 0.004, d: 0.4, s: 0.85, r: 0.22, vel: 0.4, vol: -14 }, fx: [FX('duck', { div: '1/4', depth: 0.85, rel: 0.2 }), FX('chorus', { mix: 0.35 }), FX('reverb', { mix: 0.22, decay: 2.4 })] },
+  { name: '신스 스탭', kind: 'polysynth', tags: ['코드'], p: { w1: 'sawtooth', w2: 'square', o2: 1, d2: 3, l1: 0.8, l2: 0.35, ft: 'lp12', cut: 1500, res: 0.22, fenv: 0.5, fa: 0.001, fd: 0.16, fs: 0, fr: 0.12, a: 0.001, d: 0.28, s: 0, r: 0.18, vel: 0.5, vol: -11 }, fx: [FX('delay', { mix: 0.16, divl: '1/8D' }), FX('reverb', { mix: 0.18 })] },
+  { name: '로파이 건반', kind: 'fm', tags: ['키'], p: { algo: 'para', cw: 'sine', cr: 1, ar: 1, al: 0.25, aa: 0.002, ad: 1.2, as: 0.1, arl: 0.4, br: 14, bl: 0.06, bd: 0.08, bs: 0, a: 0.004, d: 2, s: 0.2, r: 0.5, cut: 5200, vel: 0.6, vol: -9 }, fx: [FX('chorus', { mode: 'vibrato', rate: 0.9, depth: 0.18 }), FX('sat', { type: 'crush', bits: 10, drive: 2, out: -3, mix: 0.35 }), FX('eq', { b6on: true, b6f: 6500 })] }
+);
 U.SOUNDS = SOUNDS;
+U.sound = name => SOUNDS.find(x => x.name === name) || SOUNDS[0];
 
 /* ================= 이펙트 프리셋 ================= */
 const FX_PRESETS = {
@@ -132,9 +156,9 @@ const GEN = {
   'vox-o': { name: '보컬 오 (A2)', cat: 'vox', render: sr => U.media.renderVowels(sr, ['o'], 1.8, 57) },
   'vox-chops': { name: '보컬 찹 8조각', cat: 'vox', render: sr => U.media.renderVowels(sr, ['a', 'o0', 'e3', 'a5', 'i7', 'o5', 'u3', 'a0'], 0.36, 57) },
   'vox-robot': { name: '로봇 보컬 16음절', cat: 'vox', render: sr => U.media.renderRobot(sr, ROBOT.map(([s, p, , end]) => [s, p, end]), 0.32) },
-  'fx-riser': { name: '노이즈 라이저', cat: 'fx', render: sr => U.media.renderFx(sr, 'riser') },
-  'fx-down': { name: '다운리프터', cat: 'fx', render: sr => U.media.renderFx(sr, 'down') },
-  'fx-impact': { name: '임팩트', cat: 'fx', render: sr => U.media.renderFx(sr, 'impact') }
+  'fx-riser': { name: '노이즈 라이저', cat: 'fx', dur: 4, render: sr => U.media.renderFx(sr, 'riser') },
+  'fx-down': { name: '다운리프터', cat: 'fx', dur: 4, render: sr => U.media.renderFx(sr, 'down') },
+  'fx-impact': { name: '임팩트', cat: 'fx', dur: 3, render: sr => U.media.renderFx(sr, 'impact') }
 };
 const ONESHOTS = [['kick', '킥 909', K909], ['kick', '킥 808', { decay: 0.8, tone: 0.25 }], ['snare', '스네어', { tune: 3, tone: 0.7 }], ['clap', '클랩', {}],
   ['chh', '닫힌 하이햇', { tone: 0.6 }], ['ohh', '열린 하이햇', { tone: 0.6 }], ['crash', '크래시', {}], ['sub', '808 서브', { decay: 0.7 }], ['rim', '림샷', {}], ['cow', '카우벨', {}], ['zap', '잽', {}], ['conga', '콩가', {}]];
@@ -229,6 +253,7 @@ function chords(key, roots, each, seventh) {
   return { len: roots.length * each, notes };
 }
 U.CLIPS = CLIPS;
+U.drumPattern = drum;
 
 /* 사운드 프리셋을 장치 배열로 */
 function soundDevices(s) {

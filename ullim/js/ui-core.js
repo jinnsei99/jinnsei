@@ -489,7 +489,7 @@ function colorMenu(cur, onPick) {
 /* ================= 대화상자 ================= */
 function dialog(o) {
   const back = h('div', { class: 'dlg-back' });
-  const box = h('div', { class: 'dlg', role: 'dialog', 'aria-modal': 'true', 'aria-label': o.title, style: o.width ? { width: o.width } : null });
+  const box = h('div', { class: 'dlg', role: 'dialog', 'aria-modal': 'true', 'aria-label': o.title, style: o.width ? { width: 'min(' + o.width + ', 100%)' } : null });
   const close = () => { back.remove(); document.removeEventListener('keydown', key, true); if (o.onclose) o.onclose(); };
   const head = h('div', { class: 'dlg-head' }, h('h2', { text: o.title }), btn({ icon: 'close', cls: 'ghost', title: '닫기', onclick: close }));
   const body = h('div', { class: 'dlg-body' }, o.body);

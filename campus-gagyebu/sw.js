@@ -1,6 +1,6 @@
 // 캠퍼스 가계부 서비스 워커: 한 번 열어 두면 인터넷이 없어도 앱이 열리게 한다.
 // 앱 파일이 바뀌면 CACHE 이름의 숫자를 올린다.
-const CACHE = 'campus-gagyebu-v8';
+const CACHE = 'campus-gagyebu-v9';
 const CORE = [
   './',
   './index.html',
@@ -27,6 +27,9 @@ self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
+
+  // 같은 사이트에 함께 올린 울림 스튜디오(ullim/)는 그 앱의 서비스 워커에 맡긴다.
+  if (url.origin === self.location.origin && url.pathname.startsWith(new URL('ullim/', self.registration.scope).pathname)) return;
 
   // 화면(HTML)은 인터넷이 되면 새 버전을, 안 되면 저장해 둔 버전을 연다.
   if (request.mode === 'navigate') {

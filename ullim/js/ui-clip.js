@@ -1,4 +1,4 @@
-/* 울림 — 클립 뷰: 클립 설정, 피아노 롤(음표·벨로시티), 오디오 파형, MIDI 도구 */
+/* 울림 — 클립 뷰: 클립 설정, 피아노 롤(음표·벨로시티), 드럼은 스텝 시퀀서도, 오디오 파형, MIDI 도구 */
 (function (U) {
 'use strict';
 const { h, ui, info, clamp, icon, btn } = U;
@@ -8,7 +8,8 @@ const KEYS_W = 58, RULER_H = 22, VEL_H = 54;
 
 const R = ui.roll = {
   ppb: 60, x0: 0, rowH: 13, scrollY: 0, grid: 'auto', tri: false, snap: true, fold: 'none',
-  sel: new Set(), clipId: null, tab: U.pref('clipTab', 'notes'), tool: 'rhythm', toolParams: {}
+  sel: new Set(), clipId: null, tab: U.pref('clipTab', 'notes'), tool: 'rhythm', toolParams: {},
+  view: U.pref('drumView', 'steps') // 드럼·패드 클립: 'steps' 스텝 시퀀서 | 'roll' 피아노 롤
 };
 let root = null, props = null, editor = null, cvGrid, cvKeys, cvRuler, cvVel, gridWrap, W = 400, H = 200;
 let cur = null; // {track, clip, slot|arr}
@@ -31,8 +32,18 @@ function render(el) {
   editor = h('div', { class: 'cv-editor' });
   root.append(h('div', { class: 'clipview' }, props, editor));
   renderProps();
-  if (cur.clip.type === 'midi') buildRoll();
-  else buildWave();
+  if (cur.clip.type !== 'midi') buildWave();
+  else if (isDrums() && R.view === 'steps') { cvGrid = null; U.stepView.build(editor, cur); }
+  else buildRoll();
+}
+/* 드럼·패드 클립에서 피아노 롤과 스텝 시퀀서를 오간다 */
+function viewSeg() {
+  if (!isDrums()) return null;
+  return U.seg([['steps', '스텝', '칸을 눌러 찍는 스텝 시퀀서예요. 드럼 패턴 만들기에 편해요.'], ['roll', '피아노 롤', '음 길이와 위치를 자유롭게 고치는 피아노 롤이에요.']], R.view, v => {
+    R.view = v;
+    U.setPref('drumView', v);
+    if (root) render(root);
+  }, 'view-seg');
 }
 function openClip() {
   R.clipId = cur.clip.id;
@@ -277,7 +288,7 @@ function buildRoll() {
   const snapB = btn({ text: '스냅', cls: 'tg sm', toggle: true, on: R.snap, info: ['격자에 맞추기', U.MOD + '+4. 끈 동안 Alt를 누르면 잠깐 켜져요.'], onclick: () => { R.snap = !R.snap; U.setPressed(snapB, R.snap); } });
   const fitB = btn({ icon: 'zoomfit', cls: 'ghost sm', title: '클립에 맞춰 보기', onclick: () => { R.needFit = true; drawAll(); } });
   const label = h('span', { class: 'pr-title', text: (c.name || 'MIDI 클립') + ' · ' + U.trackLabel(pr(), cur.track) });
-  const bar = h('div', { class: 'pr-bar' }, drawB, foldB, gridSel, triB, snapB, fitB, h('span', { class: 'cb-flex' }), label);
+  const bar = h('div', { class: 'pr-bar' }, viewSeg(), drawB, foldB, gridSel, triB, snapB, fitB, h('span', { class: 'cb-flex' }), label);
   cvRuler = h('canvas', { class: 'pr-ruler' });
   cvKeys = h('canvas', { class: 'pr-keys' });
   cvGrid = h('canvas', { class: 'pr-grid', tabindex: '0' });
@@ -1054,7 +1065,7 @@ function bindWave() {
 
 U.on('media', () => { if (cur && clip() && clip().type === 'audio') drawWaveEditor(); });
 U.clipView = {
-  render, drawAll, selectAll, deleteSel, duplicateSel, muteSel, nudge, copySel, paste, quantizeSel, gridNarrow,
+  render, drawAll, selectAll, deleteSel, duplicateSel, muteSel, nudge, copySel, paste, quantizeSel, gridNarrow, viewSeg, playhead: playheadBeat,
   get open() { return !!(cur && clip()); }, get midi() { return !!(cur && clip() && clip().type === 'midi'); },
   toggleTri() { R.tri = !R.tri; drawAll(); }, toggleSnap() { R.snap = !R.snap; U.toast(R.snap ? '스냅 켬' : '스냅 끔'); }
 };

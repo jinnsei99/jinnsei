@@ -381,7 +381,7 @@ body[data-view="session"] .v-session, body[data-view="arrange"] .v-arrange, body
 .stoprow { display: flex; align-items: center; justify-content: center; background: var(--panel); }
 .stoprow .stopbtn { min-height: 18px; height: 18px; padding: 0 6px; border-color: transparent; background: var(--panel-2); color: var(--fg-2); font-size: 10.5px; }
 .stoprow .stopbtn .ic { width: 10px; height: 10px; }
-.scene.stoprow { justify-content: flex-start; }
+.scene.stoprow { justify-content: flex-start; gap: 4px; padding-left: 4px; }
 
 /* 믹서 */
 .sess-mix { flex: none; height: 236px; overflow-x: auto; overflow-y: hidden; border-top: 1px solid var(--line); background: var(--panel); }
@@ -475,6 +475,12 @@ body.no-detail .dt-body, body.no-detail .infoview { display: none; }
 .pr-bar::-webkit-scrollbar { display: none; }
 .pr-title { color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; padding-left: 6px; }
 .pr-main { position: relative; flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 58px minmax(0, 1fr); grid-template-rows: 22px minmax(0, 1fr) 54px; overflow: hidden; }
+/* 스텝 시퀀서 */
+.view-seg { flex: none; }
+.st-main { position: relative; flex: 1 1 auto; min-height: 0; overflow: auto; }
+.st-inner { display: flex; width: max-content; min-width: 100%; }
+.st-labels { position: sticky; left: 0; z-index: 1; flex: none; cursor: pointer; border-right: 1px solid var(--line); }
+.st-grid { flex: none; cursor: pointer; touch-action: none; }
 .pr-corner, .pr-vlabel { background: var(--panel-2); border-right: 1px solid var(--line); }
 .pr-vlabel { display: flex; align-items: center; justify-content: center; color: var(--fg-3); font-size: 10px; border-top: 1px solid var(--line); }
 .pr-ruler, .pr-keys, .pr-grid, .pr-vel { display: block; }
@@ -619,6 +625,22 @@ body.no-detail .dt-body, body.no-detail .infoview { display: none; }
 .pe2.compact .pe2-head .inp { height: 20px; }
 .pe2.compact .pe2-knobs .knob { width: 44px; }
 .pe2.compact .ctl { min-width: 0; }
+
+/* 새 프로젝트 · 처음 안내 */
+.np-lead { margin: 2px 0 12px; color: var(--fg-2); font-size: 13px; line-height: 1.55; }
+.np-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.np-card { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-height: 92px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--panel-2); text-align: left; font-family: var(--font-kr); }
+.np-card:hover { border-color: var(--accent); background: var(--panel-3); }
+.np-card.demo { border-color: var(--accent); }
+.np-t { font-size: 14px; font-weight: 600; color: var(--fg); }
+.np-s { font: 11px var(--font-mono); color: var(--accent); }
+.np-d { font-size: 12px; line-height: 1.45; color: var(--fg-2); }
+/* 씬으로 곡 만들기 */
+.sg-top { display: flex; align-items: center; gap: 6px; margin: 8px 0; flex-wrap: wrap; }
+.sg-list { display: flex; flex-direction: column; gap: 4px; max-height: 46vh; overflow: auto; }
+.sg-row { display: flex; align-items: center; gap: 4px; padding: 3px 4px; border-radius: 5px; background: var(--panel-2); }
+.sg-pos { width: 52px; flex: none; font: 11px var(--font-mono); color: var(--fg-3); }
+.sg-scene { flex: 1 1 auto; min-width: 0; }
 
 /* ================= 상태 줄 ================= */
 .status { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 6px 0 8px; background: var(--panel-2); font-size: 11px; color: var(--fg-2); min-width: 0; }

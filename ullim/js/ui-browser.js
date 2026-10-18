@@ -151,6 +151,8 @@ function items() {
       const list = st.projList || [];
       out.push({ label: '새 프로젝트', sub: '빈 프로젝트로 시작', icon: 'plus', load: () => U.newProjectFlow() });
       out.push({ label: '데모 곡: 새벽 네 시', sub: '122 BPM · A 마이너', icon: 'file', load: () => U.openDemo() });
+      head('장르로 시작');
+      for (const g of U.GENRES) out.push({ label: g.name, sub: g.bpm + ' BPM · ' + U.scaleLabel(g.key.root, g.key.scale), infoText: g.desc + '.', icon: 'plus', load: () => U.newProjectFlow(g.id) });
       if (list.length) head(U.store.mode === 'cloud' ? 'Claude 계정에 저장됨' : '이 브라우저에 저장됨');
       for (const p of list) out.push({
         label: p.name || '이름 없음', sub: new Date(p.updated).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) + (p.id === pr().id ? ' · 지금 열림' : ''), icon: 'file',

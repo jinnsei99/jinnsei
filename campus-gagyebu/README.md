@@ -82,7 +82,7 @@ GitHub Pages 주소(https://jinnsei99.github.io/jinnsei/)를 휴대폰 브라우
 
 ## 배포
 
-`.github/workflows/campus-gagyebu-pages.yml`이 `main`에 이 폴더가 바뀔 때마다 GitHub Pages로 올려요. 처음 한 번은 저장소 **Settings → Pages → Source**를 **GitHub Actions**로 바꾼 뒤, Actions 탭에서 **캠퍼스 가계부 배포**를 실행해 주세요.
+`.github/workflows/campus-gagyebu-pages.yml`이 `main`에 이 폴더가 바뀔 때마다 GitHub Pages로 올려요. 같은 사이트의 `/ullim/`에는 울림 스튜디오(`ullim/` 폴더)도 함께 올라가요. 처음 한 번은 저장소 **Settings → Pages → Source**를 **GitHub Actions**로 바꾼 뒤, Actions 탭에서 **사이트 배포 (캠퍼스 가계부 · 울림 스튜디오)**를 실행해 주세요.
 
 ## 파일
 

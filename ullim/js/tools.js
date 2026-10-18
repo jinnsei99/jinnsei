@@ -173,6 +173,37 @@ const TOOLS = [
       return notes;
     }
   },
+  {
+    id: 'roll', kind: 'gen', name: '빌드업 롤',
+    info: '드롭 앞에서 점점 빨라지고 커지는 롤을 만들어요. 구간을 몇 토막으로 나눠 갈수록 두 배씩 촘촘하게 쳐요.',
+    params: [
+      num('pitch', 'Pitch', 0, 127, 38, { step: 1, unit: 'note', info: '칠 음 (드럼이면 스네어나 클랩 패드)' }),
+      en('from', 'Start', [['1', '1/4'], ['0.5', '1/8']], '1', { info: '처음 간격' }),
+      en('to', 'End', [['0.25', '1/16'], ['0.125', '1/32']], '0.125', { info: '마지막 간격' }),
+      num('vlo', 'Vel Start', 1, 127, 55, { step: 1, info: '처음 세기' }),
+      num('vhi', 'Vel End', 1, 127, 127, { step: 1, info: '마지막 세기' })
+    ],
+    init(clip, track) {
+      const inst = track && U.instrumentOf(track);
+      if (inst && inst.kind === 'drums') return { pitch: 38 };
+      if (inst && inst.kind === 'looppad') return { pitch: 36 };
+      const k = scaleOfClip(clip);
+      return { pitch: 60 + ((k.root - 60) % 12 + 12) % 12 };
+    },
+    run(clip, sel, P) {
+      const [a, b] = region(clip);
+      const rates = [];
+      for (let r = +P.from; r >= +P.to - 1e-9; r /= 2) rates.push(r);
+      const part = (b - a) / rates.length;
+      const notes = clip.notes.filter(n => n.s < a || n.s >= b || n.p !== P.pitch);
+      rates.forEach((st, q) => {
+        for (let s = a + q * part; s < a + (q + 1) * part - 1e-9; s += st) {
+          notes.push(clampNote({ p: P.pitch, s: U.round(s, 5), d: st * 0.9, v: P.vlo + (P.vhi - P.vlo) * (s - a) / (b - a) }));
+        }
+      });
+      return notes;
+    }
+  },
   /* ---------- 바꾸기 ---------- */
   {
     id: 'arpeggiate', kind: 'tf', name: '아르페지오',

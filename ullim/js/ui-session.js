@@ -236,7 +236,8 @@ function stopCell(t) {
 function stopAllCell() {
   const el = h('div', { class: 'scene stoprow' });
   const b = btn({ icon: 'stop', cls: 'stopbtn', text: '모두 정지', info: ['모든 클립 정지', '재생 중인 클립을 모두 다음 박자 경계에서 멈춰요.'], onclick: () => U.engine.stopAll() });
-  el.append(b);
+  const song = btn({ icon: 'arrange', cls: 'stopbtn', text: '곡 만들기', info: ['씬으로 곡 만들기', '씬들을 인트로·빌드업·드롭… 순서로 어레인지먼트에 한 번에 늘어놓아요.'], onclick: () => U.songDialog() });
+  el.append(b, song);
   return el;
 }
 
@@ -412,6 +413,7 @@ function sceneMenu(i, at) {
     { label: '아래에 씬 넣기', action: () => A.insertScene(i + 1) },
     { label: '씬 복제', key: U.MOD + '+D', action: () => A.duplicateScene(i) },
     { label: '재생 중인 클립으로 새 씬', action: () => { ui.scene = i; A.captureScene(); } },
+    { label: '씬으로 곡 만들기…', action: () => U.songDialog() },
     { sep: true },
     { label: '씬 지우기', danger: true, disabled: pr().scenes.length <= 1, action: () => A.deleteScene(i) }
   ], at);

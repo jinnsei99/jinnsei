@@ -181,13 +181,21 @@ U.openDemo = function () {
   loadProject(U.demoProject());
   U.toast('데모 곡을 열었어요. 고치면 새 프로젝트로 저장돼요.');
 };
-U.newProjectFlow = function () {
+/* genre를 주면 그 장르의 곡 뼈대로 시작한다 */
+U.newProjectFlow = function (genre) {
   autosave.flush();
-  const p = U.newProject('새 프로젝트');
-  p.key = Object.assign({}, pr().key);
+  let p;
+  if (genre) p = U.genreProject(genre);
+  else {
+    p = U.newProject('새 프로젝트');
+    p.key = Object.assign({}, pr().key);
+  }
   loadProject(p);
   U.commit('새 프로젝트');
-  U.toast('새 프로젝트를 만들었어요.');
+  if (genre) {
+    U.setView('session');
+    U.toast(p.name + '를 만들었어요. 씬의 ▶로 부분을 띄우거나, Tab → Space로 곡 전체를 들어 보세요.');
+  } else U.toast('새 프로젝트를 만들었어요.');
 };
 async function saveAs() {
   const name = await U.ask('다른 이름으로 저장', '새 이름', (pr().name || '프로젝트') + ' 사본');
@@ -383,7 +391,10 @@ function helpDialog() {
   const guide = h('div', { class: 'guide' },
     h('h3', { text: '처음 쓸 때' }),
     h('ol', null,
-      h('li', { text: '세션 뷰에서 클립의 ▶를 눌러 데모 곡의 부분들을 하나씩 띄워 보세요. 오른쪽 열의 ▶는 한 줄(씬)을 통째로 띄워요.' }),
+      h('li', { text: '메뉴 › 새 프로젝트에서 장르(하우스·테크노·트랩·드럼 앤 베이스·로파이·퓨처 베이스)를 고르면 드럼·베이스·코드와 곡 구조까지 만들어져요.' }),
+      h('li', { text: '세션 뷰에서 클립의 ▶를 눌러 부분들을 하나씩 띄워 보세요. 오른쪽 열의 ▶는 한 줄(씬)을 통째로 띄워요.' }),
+      h('li', { text: '드럼 클립을 누르면 아래에 스텝 시퀀서가 열려요. 칸을 눌러 찍고, 다시 누르면 지워요.' }),
+      h('li', { text: '씬을 다 만들었으면 "곡 만들기"(세션 뷰 오른쪽 아래)로 인트로부터 아웃트로까지 어레인지먼트에 한 번에 늘어놓아요.' }),
       h('li', { text: '클립을 누르면 아래에 피아노 롤이 열려요. 빈 곳을 두 번 눌러 음을 넣고, 끌어서 옮겨요.' }),
       h('li', { text: '트랙 이름을 누르고 아래 칸을 "장치"로 바꾸면 악기와 이펙트의 노브를 돌릴 수 있어요.' }),
       h('li', { text: '왼쪽 브라우저에서 사운드·드럼·샘플을 트랙이나 빈 칸에 끌어다 놓아요.' }),
@@ -395,14 +406,14 @@ function aboutDialog() {
   U.dialog({
     title: '울림 스튜디오', width: '420px',
     body: h('div', { class: 'xp' },
-      h('p', { text: '브라우저에서 돌아가는 음악 작업 앱이에요. 세션 뷰의 클립 런치, 어레인지먼트, 피아노 롤, 신스·드럼 머신·샘플러, 이펙트, 자동화, MIDI 도구, 오디오 내보내기를 담았어요.' }),
+      h('p', { text: '브라우저에서 돌아가는 음악 작업 앱이에요. 장르 템플릿, 세션 뷰의 클립 런치, 어레인지먼트, 스텝 시퀀서와 피아노 롤, 루프 패드, 신스·드럼 머신·샘플러, 이펙트, 자동화, MIDI 도구, 오디오 내보내기를 담았어요.' }),
       h('p', { class: 'hint', text: '소리는 모두 Web Audio로 합성해요. 녹음된 샘플을 내려받지 않아서 인터넷이 느려도 바로 열려요.' })),
     actions: [{ label: '닫기', primary: true }]
   });
 }
 U.appMenu = function (anchor) {
   U.menu([
-    { label: '새 프로젝트', action: () => U.newProjectFlow() },
+    { label: '새 프로젝트…', action: () => U.newProjectDialog() },
     { label: '프로젝트 열기…', action: () => { U.toggleBrowser(true); U.setPref('brCat', 'projects'); U.browserView.build(els.browser); if (ui.narrow) setPane('browser'); } },
     { label: '다른 이름으로 저장…', action: saveAs },
     { label: '데모 곡 열기', action: () => U.openDemo() },
@@ -420,9 +431,11 @@ U.appMenu = function (anchor) {
     { label: '오디오 트랙 넣기', action: () => A.addTrack('audio') },
     { label: '리턴 트랙 넣기', action: () => A.addReturn() },
     { label: '씬 넣기', action: () => A.insertScene(ui.scene + 1) },
+    { label: '씬으로 곡 만들기…', action: () => U.songDialog() },
     { sep: true },
     { label: '환경설정…', action: prefsDialog },
     { label: '도움말 · 단축키', key: '?', action: helpDialog },
+    window.claude ? null : { label: '앱으로 설치하기…', action: installApp },
     { label: '울림 스튜디오 정보', action: aboutDialog }
   ], anchor);
 };
@@ -445,6 +458,35 @@ function bindFileDrop() {
     const x = e.clientX, y = e.clientY;
     const refs = await U.browserView.importFiles(audio);
     if (refs.length) U.dropAt(x, y, { type: 'sample', ref: refs[0] });
+  });
+}
+
+/* ================= 웹 앱 (설치·오프라인) ================= */
+/* 사이트로 열었을 때만: 서비스 워커로 인터넷 없이도 열리게 하고, 설치를 권할 수 있으면 메뉴에 띄운다 */
+let installPrompt = null;
+function setupWebApp() {
+  if (window.claude) return;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; });
+  window.addEventListener('appinstalled', () => { installPrompt = null; U.toast('울림 스튜디오를 앱으로 설치했어요.'); });
+  const secure = location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname);
+  if (!secure || !('serviceWorker' in navigator)) return;
+  const register = () => navigator.serviceWorker.register('sw.js').catch(err => console.warn('서비스 워커', err));
+  if (document.readyState === 'complete') register();
+  else window.addEventListener('load', register);
+}
+function installApp() {
+  if (installPrompt) {
+    installPrompt.prompt();
+    installPrompt.userChoice.finally(() => { installPrompt = null; });
+    return;
+  }
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  U.dialog({
+    title: '앱으로 설치하기', width: '420px',
+    body: h('div', { class: 'xp' },
+      h('p', { text: ios ? '사파리 아래쪽의 공유 버튼을 누른 뒤 "홈 화면에 추가"를 고르세요. 홈 화면에서 열면 주소창 없이 앱처럼 열려요.' : '크롬·엣지 주소창 오른쪽의 설치 아이콘(모니터 모양)을 누르거나, 브라우저 메뉴에서 "앱 설치" 또는 "홈 화면에 추가"를 고르세요.' }),
+      h('p', { class: 'hint', text: '한 번 연 뒤에는 인터넷이 없어도 열려요. 프로젝트는 이 기기의 브라우저에 저장돼요.' })),
+    actions: [{ label: '닫기', primary: true }]
   });
 }
 
@@ -509,7 +551,12 @@ async function pickStartProject() {
   let list = [];
   try { list = await U.store.listProjects(); } catch (e) { /* 무시 */ }
   if (!id || !list.some(p => p.id === id)) id = list[0] && list[0].id;
-  if (!id) { U.inval('status'); return; }
+  if (!id) {
+    U.inval('status');
+    // 처음 온 사람에게는 무엇부터 할지 고르게 한다
+    if (!U.pref('welcomed', false) && !document.querySelector('.dlg-back')) { U.setPref('welcomed', true); U.newProjectDialog(true); }
+    return;
+  }
   try {
     const p = await U.store.loadProject(id);
     if (p && !U.canUndo()) loadProject(p);
@@ -538,6 +585,7 @@ function boot() {
   checkNarrow();
   U.inval('detail', 'status');
   U.engine.start();
+  setupWebApp();
   pickStartProject();
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

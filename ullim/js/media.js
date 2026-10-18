@@ -62,7 +62,7 @@ function info(ref) {
   if (ref && ref.startsWith('gen:')) {
     const g = U.GEN[ref.slice(4)];
     if (g) {
-      const m = { name: g.name, bpm: g.bpm || 120, loop: !!g.beats, duration: g.beats ? g.beats * 60 / g.bpm : null };
+      const m = { name: g.name, bpm: g.bpm || 120, loop: !!g.beats, duration: g.beats ? g.beats * 60 / g.bpm : g.dur || null };
       meta.set(ref, m);
       return m;
     }
@@ -316,12 +316,13 @@ async function renderRobot(sr, syl, each) {
     for (let i = 0; i < d.length; i++) {
       const j = (i % cell) - (cell - tail);
       const g = j < 0 ? 1 : Math.max(0, 1 - j / fade);
-      d[i] = Math.tanh(d[i] * 2) * g;
+      d[i] = Math.tanh(d[i] * 1.5) * g;
       const a = Math.abs(d[i]);
       if (a > pk) pk = a;
     }
   }
-  if (pk > 1e-6) for (let c = 0; c < 2; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] *= 0.9 / pk; }
+  // 빽빽한 소리라 다른 샘플보다 낮게 맞춘다
+  if (pk > 1e-6) for (let c = 0; c < 2; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] *= 0.6 / pk; }
   return buf;
 }
 async function renderFx(sr, kind) {
