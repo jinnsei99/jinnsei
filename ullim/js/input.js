@@ -1,0 +1,209 @@
+/* 울림 — 입력: 단축키, 컴퓨터 건반, MIDI 장치 */
+(function (U) {
+'use strict';
+const { ui } = U;
+const A = U.act;
+const pr = () => U.project;
+
+/* ================= 컴퓨터 건반 ================= */
+const KEYMAP = { KeyA: 0, KeyW: 1, KeyS: 2, KeyE: 3, KeyD: 4, KeyF: 5, KeyT: 6, KeyG: 7, KeyY: 8, KeyH: 9, KeyU: 10, KeyJ: 11, KeyK: 12, KeyO: 13, KeyL: 14, KeyP: 15, Semicolon: 16, Quote: 17 };
+const held = new Map(); // code → {track ids, pitch}
+function liveTargets() {
+  const armed = pr().tracks.filter(t => t.type === 'midi' && t.arm);
+  if (armed.length) return armed.map(t => t.id);
+  const t = U.selTrack();
+  return t && t.type === 'midi' ? [t.id] : [];
+}
+function kbDown(e) {
+  if (e.code === 'KeyZ') { ui.octave = Math.max(-1, ui.octave - 1); kbStatus(); return true; }
+  if (e.code === 'KeyX') { ui.octave = Math.min(8, ui.octave + 1); kbStatus(); return true; }
+  if (e.code === 'KeyC') { ui.velocity = Math.max(1, ui.velocity - 20); kbStatus(); return true; }
+  if (e.code === 'KeyV') { ui.velocity = Math.min(127, ui.velocity + 20); kbStatus(); return true; }
+  const off = KEYMAP[e.code];
+  if (off == null) return false;
+  if (e.repeat || held.has(e.code)) return true;
+  const p = (ui.octave + 2) * 12 + off;
+  if (p < 0 || p > 127) return true;
+  U.ensureAudio();
+  const ids = liveTargets();
+  if (!ids.length) { U.toast('MIDI 트랙을 고르거나 ● 녹음 준비를 켜 주세요.'); return true; }
+  for (const id of ids) U.engine.liveOn(id, p, ui.velocity);
+  held.set(e.code, { ids, p });
+  U.emit('livenote', { p, on: true });
+  return true;
+}
+function kbUp(e) {
+  const h = held.get(e.code);
+  if (!h) return false;
+  held.delete(e.code);
+  for (const id of h.ids) U.engine.liveOff(id, h.p);
+  U.emit('livenote', { p: h.p, on: false });
+  return true;
+}
+function releaseAll() {
+  for (const [code] of held) kbUp({ code });
+  U.engine && U.engine.allLiveOff();
+}
+function kbStatus() {
+  U.toast('건반 옥타브 C' + ui.octave + ' · 세기 ' + ui.velocity);
+  U.inval('status');
+}
+U.setKeyboard = function (on) {
+  ui.keyboard = on;
+  U.setPref('keyboard', on);
+  if (!on) releaseAll();
+  U.inval('transport', 'status');
+  U.toast(on ? '컴퓨터 건반을 켰어요. A~K 줄로 연주해요.' : '컴퓨터 건반을 껐어요.');
+};
+U.setDraw = function (on) { ui.draw = on; U.inval('transport', 'detail'); };
+U.setAutoMode = function (on) { ui.auto = on; U.inval('transport', 'arrange'); if (on && ui.view !== 'arrange') U.setView('arrange'); };
+
+/* ================= 단축키 ================= */
+function onKeyDown(e) {
+  if (U.isTyping(e)) return;
+  if (document.querySelector('.dlg-back')) return;
+  const mod = U.modKey(e);
+  if (ui.keyboard && !mod && !e.altKey && kbDown(e)) { e.preventDefault(); return; }
+  const k = e.key;
+  const ctx = ui.focus || (ui.view === 'arrange' ? 'arrange' : 'session');
+  const roll = U.clipView.midi && (ctx === 'roll' || ctx === 'detail');
+  const done = () => { e.preventDefault(); e.stopPropagation(); };
+  if (mod) {
+    switch (e.code) {
+      case 'KeyZ': done(); e.shiftKey ? A.redo() : A.undo(); return;
+      case 'KeyY': done(); A.redo(); return;
+      case 'KeyS': done(); U.saveNow(); return;
+      case 'KeyF': done(); if (!ui.browserOpen) U.toggleBrowser(true); U.browserView.focusSearch(); return;
+      case 'KeyD': done(); duplicate(ctx, roll); return;
+      case 'KeyE': done(); if (U.arrangeView.splitAtCursor()) U.toast('클립을 나눴어요'); return;
+      case 'KeyL': done(); U.arrangeView.loopSelection(); return;
+      case 'KeyU': done(); if (U.clipView.midi) U.clipView.quantizeSel(); return;
+      case 'KeyA': if (roll) { done(); U.clipView.selectAll(); } else if (ctx === 'arrange') { done(); U.arrangeView.selectAll(); } return;
+      case 'KeyC': if (roll && U.clipView.copySel()) { done(); U.toast('복사했어요'); } return;
+      case 'KeyX': if (roll && U.clipView.copySel(true)) done(); return;
+      case 'KeyV': if (roll && U.clipView.paste()) done(); return;
+      case 'Digit1': done(); if (roll || ctx !== 'arrange') U.clipView.gridNarrow(1); else { ui.arr.gridMul = Math.min(4, ui.arr.gridMul * 2); U.arrangeView.draw(); } return;
+      case 'Digit2': done(); if (roll || ctx !== 'arrange') U.clipView.gridNarrow(-1); else { ui.arr.gridMul = Math.max(0.25, ui.arr.gridMul / 2); U.arrangeView.draw(); } return;
+      case 'Digit3': done(); U.clipView.toggleTri(); return;
+      case 'Digit4': done(); if (roll) U.clipView.toggleSnap(); else { ui.arr.snap = !ui.arr.snap; U.toast(ui.arr.snap ? '스냅 켬' : '스냅 끔'); U.inval('arrange'); } return;
+    }
+    if (e.altKey && e.code === 'KeyB') { done(); U.toggleBrowser(); return; }
+    return;
+  }
+  if (e.altKey) return;
+  switch (k) {
+    case ' ': done(); A.togglePlay(e.shiftKey); return;
+    case 'Tab': done(); if (e.shiftKey) { U.setDetail(ui.detail === 'clip' ? 'device' : 'clip'); if (!ui.detailOpen) U.toggleDetail(true); } else U.setView(ui.view === 'session' ? 'arrange' : 'session'); return;
+    case 'F9': done(); A.setRecord(!U.engine.recording); return;
+    case 'F2': done(); renameSel(); return;
+    case 'Escape': ui.arrSel = []; ui.timeSel = null; U.inval('arrange-draw'); return;
+    case 'Delete': case 'Backspace': done(); del(ctx, roll); return;
+    case 'Enter': if (ctx === 'session' && ui.slot) { done(); U.ensureAudio(); U.engine.launch(ui.slot.t, ui.slot.s); } return;
+    case '+': case '=': done(); U.arrangeView.zoomAt(1.4, U.arrangeView.width / 2); return;
+    case '-': done(); U.arrangeView.zoomAt(1 / 1.4, U.arrangeView.width / 2); return;
+  }
+  switch (e.code) {
+    case 'KeyB': done(); U.setDraw(!ui.draw); return;
+    case 'KeyA': done(); U.setAutoMode(!ui.auto); return;
+    case 'KeyM': done(); U.setKeyboard(!ui.keyboard); return;
+    case 'Digit0': if (roll) { done(); U.clipView.muteSel(); } return;
+  }
+  if (k.startsWith('Arrow')) {
+    const dx = k === 'ArrowLeft' ? -1 : k === 'ArrowRight' ? 1 : 0;
+    const dy = k === 'ArrowUp' ? 1 : k === 'ArrowDown' ? -1 : 0;
+    if (roll) { if (U.clipView.nudge(dx, dy * (e.shiftKey ? 12 : 1))) done(); return; }
+    if (ctx === 'session') { done(); moveSlot(dx, -dy); }
+  }
+}
+function onKeyUp(e) {
+  if (ui.keyboard && kbUp(e)) e.preventDefault();
+}
+function duplicate(ctx, roll) {
+  if (roll) { U.clipView.duplicateSel(); return; }
+  if (ctx === 'arrange') { U.arrangeView.dup(); return; }
+  if (ctx === 'session') {
+    if (ui.slot && U.trackById(pr(), ui.slot.t) && U.trackById(pr(), ui.slot.t).slots[ui.slot.s]) A.duplicateClip(ui.slot.t, ui.slot.s);
+    else A.duplicateScene(ui.scene);
+    return;
+  }
+  const t = U.selTrack();
+  if (t) A.duplicateTrack(t.id);
+}
+function del(ctx, roll) {
+  if (roll) { U.clipView.deleteSel(); return; }
+  if (ctx === 'arrange') { U.arrangeView.del(); return; }
+  if (ctx === 'session' && ui.slot) { A.deleteSlot(ui.slot.t, ui.slot.s); return; }
+  if (ctx === 'devices' && ui.selDevice) {
+    const r = U.deviceById(pr(), ui.selDevice);
+    if (r) A.removeDevice(r.track.id, r.dev.id);
+  }
+}
+function renameSel() {
+  const r = U.clipRef();
+  if (r && (ui.focus === 'session' || ui.focus === 'arrange' || ui.focus === 'roll')) {
+    U.ask('클립 이름', '이름', r.clip.name).then(v => { if (v != null) A.clipProp(ui.clip, c => { c.name = v; }, '클립 이름'); });
+    return;
+  }
+  const t = U.selTrack();
+  if (t) U.ask('트랙 이름', '이름', t.name || U.trackLabel(pr(), t)).then(v => { if (v != null) A.renameTrack(t.id, v); });
+}
+function moveSlot(dx, dy) {
+  const p = pr();
+  let ti = Math.max(0, p.tracks.findIndex(t => ui.slot ? t.id === ui.slot.t : t.id === ui.track));
+  let s = ui.slot ? ui.slot.s : ui.scene;
+  ti = U.clamp(ti + dx, 0, p.tracks.length - 1);
+  s = U.clamp(s + dy, 0, p.scenes.length - 1);
+  const t = p.tracks[ti];
+  U.sessionView.selectSlot(t, s, !!t.slots[s]);
+}
+
+/* ================= MIDI 장치 ================= */
+let midi = null;
+const midiHeld = new Map();
+async function connectMidi(ask) {
+  if (!navigator.requestMIDIAccess) { if (ask) U.toast('이 브라우저는 MIDI 장치를 지원하지 않아요. 크롬이나 엣지를 써 보세요.', 'error'); return false; }
+  if (!ask) {
+    try {
+      const st = await navigator.permissions.query({ name: 'midi' });
+      if (st.state !== 'granted') return false;
+    } catch (e) { return false; }
+  }
+  try {
+    midi = await navigator.requestMIDIAccess();
+  } catch (e) {
+    if (ask) U.toast('MIDI 장치에 연결하지 못했어요. 브라우저 권한을 확인해 주세요.', 'error');
+    return false;
+  }
+  const bind = () => { for (const inp of midi.inputs.values()) inp.onmidimessage = onMidi; U.inval('status'); };
+  bind();
+  midi.onstatechange = bind;
+  if (ask) U.toast(midiCount() ? 'MIDI 장치 ' + midiCount() + '개를 연결했어요.' : 'MIDI 장치를 찾지 못했어요. 장치를 꽂은 뒤 다시 눌러 주세요.');
+  return true;
+}
+function midiCount() { return midi ? [...midi.inputs.values()].filter(i => i.state === 'connected').length : 0; }
+function onMidi(ev) {
+  const [st, d1, d2] = ev.data;
+  const type = st & 0xf0;
+  if (type === 0x90 && d2 > 0) {
+    U.ensureAudio();
+    const ids = liveTargets();
+    for (const id of ids) U.engine.liveOn(id, d1, d2);
+    midiHeld.set(d1, ids);
+    U.emit('livenote', { p: d1, on: true });
+  } else if (type === 0x80 || (type === 0x90 && d2 === 0)) {
+    const ids = midiHeld.get(d1) || liveTargets();
+    for (const id of ids) U.engine.liveOff(id, d1);
+    midiHeld.delete(d1);
+    U.emit('livenote', { p: d1, on: false });
+  }
+}
+
+function init() {
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup', onKeyUp);
+  window.addEventListener('blur', releaseAll);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
+  connectMidi(false);
+}
+U.input = { init, connectMidi, midiCount, liveTargets };
+})(window.U = window.U || {});
