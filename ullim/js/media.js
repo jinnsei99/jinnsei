@@ -235,6 +235,94 @@ async function renderVowels(sr, seq, each, pitch) {
   });
   return U.trimBuffer(await ctx.startRendering(), total);
 }
+/* 로봇 보컬: 톱니파 버즈를 모음 포먼트로 거르고(보코더 느낌), 자음은 잡음 조각으로 붙인다.
+   음절 하나가 칸 하나(each초)에 딱 들어가서, 같은 길이로 자르면 그대로 찹이 된다.
+   syl: [[자음+모음, 음높이, 끝 음높이(없으면 그대로)], ...] */
+const NASAL = { m: [280, 1000, 2300, 3300], n: [280, 1500, 2500, 3400] };
+const GLIDE = { r: [430, 1300, 1650, 3200], y: VOWELS.i, w: VOWELS.u };
+const STOP = { h: 0.05, k: 0.04, p: 0.03, t: 0.035, s: 0.085, b: 0.012, d: 0.012, g: 0.012 };
+async function renderRobot(sr, syl, each) {
+  const total = syl.length * each;
+  const ctx = U.OfflineCtx(2, Math.ceil(total * sr), sr);
+  const bus = U.gainNode(ctx, 1);
+  bus.connect(ctx.destination);
+  syl.forEach(([s, pitch, pitchEnd], k) => {
+    const t0 = k * each;
+    const cons = s.length > 1 ? s[0] : '';
+    const vow = VOWELS[s[s.length - 1]] || VOWELS.a;
+    const end = t0 + each - 0.035; // 다음 칸 앞을 조금 비워 두어 찹이 깔끔하게
+    const tv = t0 + (STOP[cons] || 0); // 목소리가 나오기 시작하는 때
+    const from = NASAL[cons] || GLIDE[cons] || vow;
+    // 버즈: 톱니파 + 한 옥타브 아래 사각파, 떨림 없이 곧게
+    const f0 = U.mtof(pitch), f1 = U.mtof(pitchEnd != null ? pitchEnd : pitch);
+    const saw = ctx.createOscillator(), sub = ctx.createOscillator();
+    saw.type = 'sawtooth'; sub.type = 'square';
+    const subG = U.gainNode(ctx, 0.45), voiced = U.gainNode(ctx, 0);
+    saw.connect(voiced); sub.connect(subG); subG.connect(voiced);
+    for (const [o, mul] of [[saw, 1], [sub, 0.5]]) {
+      o.frequency.setValueAtTime(f0 * mul, t0);
+      if (pitchEnd != null) o.frequency.setTargetAtTime(f1 * mul, tv + 0.08, 0.06);
+      o.start(t0); o.stop(end + 0.02);
+    }
+    const amps = [1, 0.6, 0.32, 0.18];
+    const formants = vow.map((f, i) => {
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.Q.value = 9 + i * 3;
+      bp.frequency.setValueAtTime(from[i], t0);
+      if (from !== vow) bp.frequency.setTargetAtTime(f, tv + 0.02, 0.025);
+      const g = U.gainNode(ctx, amps[i] * 5);
+      voiced.connect(bp); bp.connect(g); g.connect(bus);
+      return bp;
+    });
+    voiced.gain.setValueAtTime(0, t0);
+    voiced.gain.setValueAtTime(0, tv);
+    voiced.gain.linearRampToValueAtTime(NASAL[cons] ? 0.5 : 1, tv + 0.012);
+    if (NASAL[cons]) voiced.gain.linearRampToValueAtTime(1, tv + 0.07);
+    voiced.gain.setValueAtTime(1, end - 0.03);
+    voiced.gain.linearRampToValueAtTime(0, end);
+    // 자음: 잡음 조각
+    if (!STOP[cons]) return;
+    const nz = U.noiseSource(ctx, true), ng = U.gainNode(ctx, 0);
+    nz.start(t0); nz.stop(tv + 0.05);
+    nz.connect(ng);
+    if (cons === 'h') {
+      // 숨소리: 모음 포먼트로 거른 잡음이라 속삭이는 모음처럼 들린다
+      for (const bp of formants) ng.connect(bp);
+      ng.gain.setValueAtTime(0, t0);
+      ng.gain.linearRampToValueAtTime(0.35, t0 + 0.012);
+      ng.gain.setValueAtTime(0.35, tv);
+      ng.gain.linearRampToValueAtTime(0, tv + 0.03);
+      return;
+    }
+    const fl = ctx.createBiquadFilter();
+    const shape = { k: ['highpass', 1800, 0.6], t: ['highpass', 3500, 0.55], p: ['lowpass', 1200, 0.6], s: ['highpass', 5000, 0.35], b: ['lowpass', 800, 0.3], d: ['highpass', 2500, 0.3], g: ['bandpass', 1500, 0.3] }[cons];
+    fl.type = shape[0]; fl.frequency.value = shape[1];
+    ng.connect(fl); fl.connect(bus);
+    const a = cons === 's' ? 0.02 : 0.004;
+    ng.gain.setValueAtTime(0, t0);
+    ng.gain.linearRampToValueAtTime(shape[2], t0 + a);
+    ng.gain.setValueAtTime(shape[2], Math.max(t0 + a, tv - 0.012));
+    ng.gain.linearRampToValueAtTime(0, tv + 0.004);
+  });
+  const buf = await ctx.startRendering();
+  // 2:1 표본 잡기와 살짝 일그러뜨리기로 기계 같은 질감. 칸 끝에 남는 필터 울림은 잘라 낸다
+  let pk = 0;
+  const tail = Math.round(0.035 * sr), fade = Math.round(0.008 * sr), cell = Math.round(each * sr);
+  for (let c = 0; c < 2; c++) {
+    const d = buf.getChannelData(c);
+    for (let i = 1; i < d.length; i += 2) d[i] = d[i - 1];
+    for (let i = 0; i < d.length; i++) {
+      const j = (i % cell) - (cell - tail);
+      const g = j < 0 ? 1 : Math.max(0, 1 - j / fade);
+      d[i] = Math.tanh(d[i] * 2) * g;
+      const a = Math.abs(d[i]);
+      if (a > pk) pk = a;
+    }
+  }
+  if (pk > 1e-6) for (let c = 0; c < 2; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] *= 0.9 / pk; }
+  return buf;
+}
 async function renderFx(sr, kind) {
   if (kind === 'riser' || kind === 'down') {
     const dur = 4;
@@ -279,5 +367,5 @@ async function renderFx(sr, kind) {
   return c2.startRendering();
 }
 
-U.media = { get, cached, info, setInfo, peaks, reversed, guessTempo, importFile, addBuffer, decode, renderHits, renderInstrument, renderVowels, renderFx };
+U.media = { get, cached, info, setInfo, peaks, reversed, guessTempo, importFile, addBuffer, decode, renderHits, renderInstrument, renderVowels, renderRobot, renderFx };
 })(window.U = window.U || {});

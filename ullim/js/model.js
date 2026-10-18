@@ -129,6 +129,7 @@ function normalize(pr) {
       if (!dev.id) dev.id = U.uid('d');
       if (dev.on == null) dev.on = true;
       if (dev.kind === 'drums' && (!dev.data || !Array.isArray(dev.data.pads))) dev.data = { pads: U.clone(U.DEFAULT_KIT), sel: 0 };
+      if (dev.kind === 'looppad') dev.data = U.fixLoopPad(dev.data);
     }
     t.devices = t.devices.filter(dev => U.DEV[dev.kind]);
     for (const c of t.slots) if (c) fixClip(c);

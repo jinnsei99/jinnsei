@@ -205,6 +205,7 @@ async function exportProjectFile() {
     for (const a of t.arr) if (a.clip.type === 'audio' && a.clip.ref.startsWith('user:')) refs.add(a.clip.ref);
     for (const d of t.devices) {
       if (d.data && d.data.sample && d.data.sample.startsWith('user:')) refs.add(d.data.sample);
+      if (d.data && d.data.src && d.data.src.startsWith('user:')) refs.add(d.data.src);
       if (d.data && d.data.pads) for (const pd of d.data.pads) if (pd.sample && pd.sample.startsWith('user:')) refs.add(pd.sample);
     }
   }

@@ -1,4 +1,4 @@
-/* 울림 — 내장 콘텐츠: 드럼 키트, 사운드 프리셋, 이펙트 프리셋, 샘플, 클립 템플릿, 데모 곡 */
+/* 울림 — 내장 콘텐츠: 드럼 키트, 사운드 프리셋, 이펙트 프리셋, 샘플, 루프 패드 키트, 클립 템플릿, 데모 곡 */
 (function (U) {
 'use strict';
 const pad = U.pad;
@@ -96,6 +96,9 @@ function seq(type, steps, every, vel, o, pan) {
   return out;
 }
 const K909 = { tune: 2, decay: 0.32, tone: 0.75 };
+/* 로봇 보컬 16음절 (A 마이너 펜타토닉). 패드 이름은 음절을 한글로 */
+const ROBOT = [['ha', 57, '하'], ['me', 60, '메'], ['do', 62, '도'], ['ki', 64, '키'], ['ro', 57, '로'], ['bo', 55, '보'], ['tu', 60, '투'], ['ne', 57, '네'],
+  ['sa', 64, '사'], ['yo', 67, '요'], ['mi', 62, '미'], ['da', 60, '다'], ['wa', 57, '와'], ['ke', 55, '케'], ['no', 52, '노'], ['ha', 57, '하~', 52]];
 const GEN = {
   'loop-break': { name: '브레이크 루프 96', cat: 'loop', bpm: 96, beats: 8, render: sr => U.media.renderHits(sr, 96, 8, [
     ...seq('kick', 'x.......x.x.....x.......x..x....', 0.25, 1, { tune: -1, decay: 0.4, tone: 0.5 }),
@@ -128,6 +131,7 @@ const GEN = {
   'vox-a': { name: '보컬 아 (A2)', cat: 'vox', render: sr => U.media.renderVowels(sr, ['a'], 1.8, 57) },
   'vox-o': { name: '보컬 오 (A2)', cat: 'vox', render: sr => U.media.renderVowels(sr, ['o'], 1.8, 57) },
   'vox-chops': { name: '보컬 찹 8조각', cat: 'vox', render: sr => U.media.renderVowels(sr, ['a', 'o0', 'e3', 'a5', 'i7', 'o5', 'u3', 'a0'], 0.36, 57) },
+  'vox-robot': { name: '로봇 보컬 16음절', cat: 'vox', render: sr => U.media.renderRobot(sr, ROBOT.map(([s, p, , end]) => [s, p, end]), 0.32) },
   'fx-riser': { name: '노이즈 라이저', cat: 'fx', render: sr => U.media.renderFx(sr, 'riser') },
   'fx-down': { name: '다운리프터', cat: 'fx', render: sr => U.media.renderFx(sr, 'down') },
   'fx-impact': { name: '임팩트', cat: 'fx', render: sr => U.media.renderFx(sr, 'impact') }
@@ -138,6 +142,38 @@ for (const [type, name, o] of ONESHOTS) {
   GEN['os-' + name] = { name, cat: 'oneshot', render: sr => U.renderDrum(type, Object.assign({ tune: 0, decay: 0.5, tone: 0.5 }, o), sr) };
 }
 U.GEN = GEN;
+
+/* ================= 루프 패드 키트 =================
+   패드 0이 왼쪽 아래. 찹 키트는 원본 하나를 16조각으로 나누고, 루프 팩은 패드마다 다른 샘플을 쓴다 */
+const LKEYS = U.PAD_LAYOUTS[0].keys;
+const chops = (names, o) => names.map((name, i) => U.lpad(Object.assign({ name, key: LKEYS[i], start: i / 16, end: (i + 1) / 16 }, o)));
+const own = (name, ref, o) => Object.assign({ name, sample: 'gen:' + ref, start: 0, end: 1 }, o);
+const loopPad = (beats, o) => Object.assign({ mode: 'toggle', sync: true, beats }, o);
+const LOOPKITS = [
+  { id: 'lp-robot', name: '로봇 보컬 찹', tags: ['보컬 찹'], info: '기계 목소리 16음절을 한 음절씩 패드에 나눴어요. 같은 초크 그룹이라 새로 친 음절이 앞 음절을 끊어요.',
+    src: 'gen:vox-robot', pads: chops(ROBOT.map(x => x[2]), { choke: 1 }) },
+  { id: 'lp-break', name: '브레이크 찹', tags: ['드럼 찹'], info: '브레이크 루프 두 마디를 8분음표 16조각으로 잘랐어요. 순서를 바꿔 치면 새 비트가 돼요.',
+    src: 'gen:loop-break', pads: chops(['킥 크래시', '햇', '스네어', '햇 고스트', '킥 고스트', '킥', '스네어', '햇', '킥', '햇', '스네어', '햇 고스트', '킥', '햇 킥', '스네어', '오픈햇'], { choke: 1 }) },
+  { id: 'lp-loops', name: '루프 팩', tags: ['루프'], info: '아래 두 줄은 원샷, 위 두 줄은 켜고 끄는 루프예요. 루프는 템포에 맞춰 늘고 줄며 마디 첫 박에 맞춰 시작해요.',
+    src: null, p: { q: '1bar' }, pads: [
+      own('킥', 'os-킥 909'), own('스네어', 'os-스네어'), own('클랩', 'os-클랩'), own('하이햇', 'os-닫힌 하이햇'),
+      own('808 서브', 'os-808 서브'), own('임팩트', 'fx-impact'), own('라이저', 'fx-riser', { mode: 'hold' }), own('다운리프터', 'fx-down'),
+      own('브레이크', 'loop-break', loopPad(8, { choke: 1, gain: -2 })), own('하우스', 'loop-house', loopPad(4, { choke: 1, gain: -2 })),
+      own('붐뱁', 'loop-boombap', loopPad(8, { choke: 1, gain: -2 })), own('퍼커션', 'loop-perc', loopPad(4, { gain: -4 })),
+      own('베이스', 'loop-bass', loopPad(8, { gain: -3 })), own('코드', 'loop-chords', loopPad(16, { gain: -5 })),
+      own('보컬 아', 'vox-a', { mode: 'loop', start: 0.25, end: 0.75, choke: 3 }), own('보컬 오', 'vox-o', { mode: 'loop', start: 0.25, end: 0.75, choke: 3 })
+    ].map((o, i) => U.lpad(Object.assign({ key: LKEYS[i] }, o))) }
+];
+function loopKitData(k) { return { src: k.src || null, pads: U.clone(k.pads), sel: 0 }; }
+function loopKitDevice(k) {
+  const d = U.makeDevice('looppad', { p: k.p, data: loopKitData(k) });
+  d.preset = k.name;
+  return d;
+}
+U.LOOPKITS = LOOPKITS;
+U.DEFAULT_LOOPKIT = LOOPKITS[0];
+U.loopKitData = loopKitData;
+U.loopKitDevice = loopKitDevice;
 
 /* ================= 클립 템플릿 =================
    멜로디는 스케일 도수로 적어 두고, 넣을 때 프로젝트 키에 맞춘다 */
@@ -284,10 +320,12 @@ function demoProject() {
   br.vol = -9;
   br.devices.push(U.makeDevice('eq', { p: { b1on: true, b1f: 180 } }));
 
-  // 7 보컬 찹
-  const vx = U.addTrack(pr, 'midi', null, { name: '보컬 찹', color: 11, devices: U.soundDevices(SOUNDS[19]) });
-  const chopNotes = [n(36, 0, 0.4), n(37, 0.75, 0.3), n(38, 1.5, 0.5), n(36, 2.5, 0.25), n(39, 3, 0.9)];
-  vx.slots = [null, null, U.newMidiClip(4, { name: '찹', color: vx.color, notes: chopNotes }), U.newMidiClip(4, { name: '찹', color: vx.color, notes: chopNotes.map(x => Object.assign({}, x)) }), null, null, null, null];
+  // 7 로봇 보컬 (루프 패드: 음절 하나가 패드 하나, C1부터)
+  const vx = U.addTrack(pr, 'midi', null, { name: '로봇 보컬', color: 11, devices: [loopKitDevice(LOOPKITS[0])] });
+  const hit = (list, d) => list.map(([i, s]) => n(36 + i, s, d, 104));
+  const robotA = hit([[0, 0], [1, 0.5], [2, 1], [3, 1.5], [4, 2.5], [5, 3], [8, 4], [9, 4.5], [10, 5], [11, 5.5], [12, 6.5], [15, 7]], 0.45);
+  const robotB = hit([[0, 0], [0, 0.25], [0, 0.5], [1, 1], [2, 1.5], [3, 2], [3, 2.25], [4, 2.5], [5, 3.5], [8, 4], [8, 4.25], [8, 4.5], [9, 5], [10, 5.5], [11, 6], [11, 6.25], [12, 6.5], [15, 7]], 0.22);
+  vx.slots = [null, null, U.newMidiClip(8, { name: '로봇 찹', color: vx.color, notes: robotA }), U.newMidiClip(8, { name: '로봇 스터터', color: vx.color, notes: robotB }), null, null, null, null];
   vx.sends = [-12, -14];
   vx.vol = -3;
 

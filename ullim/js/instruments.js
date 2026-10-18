@@ -1,4 +1,4 @@
-/* 울림 — 장치 실행부 1: 공통 바탕, 악기 4종, MIDI 이펙트 4종 */
+/* 울림 — 장치 실행부 1: 공통 바탕, 악기 5종, MIDI 이펙트 4종 */
 (function (U) {
 'use strict';
 const { envOn, envOff, envEnd, stopAt, smooth, velGain, gainNode, mtof, dbToGain, clamp } = U;
@@ -108,6 +108,8 @@ class Instrument extends Device {
     for (const n of vo.nodes || []) { try { n.disconnect(); } catch (e) { /* 무시 */ } }
   }
   activeVoices(t) { return this.voices.filter(vo => vo.end > t && vo.t0 <= t + 0.01); }
+  /* 울리는 소리를 모두 끊는다 (패드 화면의 '모두 멈춤') */
+  stopAll(t) { for (const vo of this.voices) if (vo.end > t) this.kill(vo, t); }
   dispose() {
     const t = this.ctx.currentTime;
     for (const vo of this.voices) this.kill(vo, t);
@@ -393,6 +395,7 @@ class Drums extends Instrument {
   }
   release() { /* 드럼은 끝까지 울린다 */ }
   param(id) { if (id === 'vol' && this.on) smooth(this.out.gain, this.outLevel(), this.ctx.currentTime); }
+  get isPads() { return true; }
   /* 화면에서 패드를 눌렀을 때 */
   hits(t) { return this.voices.filter(v => v.t0 > t - 0.12 && v.t0 <= t + 0.01).map(v => v.pad); }
 }
@@ -471,6 +474,208 @@ class Sampler extends Instrument {
     for (const s of vo.srcs) stopAt(s, vo.end);
   }
   param(id) { if (id === 'vol' && this.on) smooth(this.out.gain, this.outLevel(), this.ctx.currentTime); }
+}
+
+/* ================= Loop Pad =================
+   패드 16개(C1~D#2). 패드마다 샘플의 한 구간(찹)을 원샷·누르는 동안·반복·켜고 끄기로 연주한다.
+   같은 패드끼리, 같은 초크 그룹끼리는 서로 끊는다. 템포 맞춤을 켜면 구간을 16분음표 조각으로
+   잘라 지금 템포에 맞춰 이어 붙인다 (음높이는 그대로) */
+class LoopPad extends Instrument {
+  constructor(eng, dev) {
+    super(eng, dev);
+    this.out.gain.value = this.on ? this.outLevel() : 0;
+    this.pads = [];
+    this.streams = [];
+    this.maxVoices = 32;
+    if (eng.pumps) eng.pumps.add(this);
+    this.syncData(dev.data);
+  }
+  get isPads() { return true; }
+  padData(i) { const d = this.dev.data; return d && d.pads ? d.pads[i] || null : null; }
+  syncData(data) {
+    const pads = (data && data.pads) || [];
+    const sr = this.ctx.sampleRate, t = this.ctx.currentTime;
+    const jobs = [];
+    for (let i = 0; i < 16; i++) {
+      const pd = pads[i];
+      let pn = this.pads[i];
+      const fresh = !pn;
+      if (fresh) {
+        pn = this.pads[i] = { gain: gainNode(this.ctx, 1), pan: this.ctx.createStereoPanner(), ref: null, buffer: null, job: null };
+        pn.gain.connect(pn.pan); pn.pan.connect(this.out);
+      }
+      const lvl = pd ? dbToGain(pd.gain || 0) : 0, pan = pd ? clamp(pd.pan || 0, -1, 1) : 0;
+      if (fresh) { pn.gain.gain.value = lvl; pn.pan.pan.value = pan; }
+      else { smooth(pn.gain.gain, lvl, t); smooth(pn.pan.pan, pan, t); }
+      const ref = pd ? pd.sample || (data && data.src) || null : null;
+      if (ref !== pn.ref) {
+        pn.ref = ref;
+        pn.buffer = ref ? U.media.cached(ref, sr) : null;
+        pn.job = ref && !pn.buffer ? U.media.get(ref, sr).then(buf => { if (pn.ref === ref) pn.buffer = buf; }, err => console.warn(err)) : null;
+      }
+      if (pn.job && !pn.buffer) jobs.push(pn.job);
+    }
+    this.ready = Promise.all(jobs);
+    return this.ready;
+  }
+  /* 패드가 울릴 구간(초). 거꾸로 재생이면 뒤집은 버퍼의 거울 자리 */
+  region(pd, buf) {
+    const dur = buf.duration;
+    let s = clamp(Math.min(pd.start, pd.end), 0, 1) * dur, e = clamp(Math.max(pd.start, pd.end), 0, 1) * dur;
+    if (e - s < 0.005) return null;
+    if (pd.rev) { const s2 = dur - e; e = dur - s; s = s2; buf = U.media.reversed(buf); }
+    return { buf, s, e, len: e - s };
+  }
+  /* 손으로 친 반복·켜고 끄기 패드는 Launch 값만큼 박자 경계를 기다린다.
+     멈춰 있을 때는 이미 돌고 있는 루프의 시작점을 기준으로 맞춘다 */
+  launchTime(t) {
+    const e = this.eng, q = this.v.q;
+    if (!q || q === 'none' || !e.project) return t;
+    const qb = U.quantBeats(q, e.project.sig);
+    if (!qb) return t;
+    if (e.playing) return Math.max(t, e.timeAt(Math.ceil(e.beatAt(t) / qb - 1e-6) * qb));
+    let first = null;
+    for (const vo of this.voices) if ((vo.mode === 'loop' || vo.mode === 'toggle') && vo.end > t && vo.t1 > t && (!first || vo.t0 < first.t0)) first = vo;
+    if (!first) return t;
+    const qs = qb * 60 / (e.bpm || 120);
+    return Math.max(t, first.t0 + Math.ceil((t - first.t0) / qs - 1e-6) * qs);
+  }
+  noteOn(p, v, t, live) {
+    const pd = this.padData(p - 36);
+    if (live && pd && (pd.mode === 'loop' || pd.mode === 'toggle')) t = this.launchTime(t);
+    const vo = super.noteOn(p, v, t, live);
+    if (vo && vo.cutAt < Infinity) this.kill(vo, vo.cutAt);
+    return vo;
+  }
+  noteOff(vo, t) {
+    // 원샷과 켜고 끄기는 떼어도 멈추지 않는다
+    if (vo && (vo.mode === 'oneshot' || vo.mode === 'toggle')) return;
+    super.noteOff(vo, t);
+  }
+  cut(t, withLive) {
+    for (const vo of this.voices) {
+      if (vo.live && !withLive) continue;
+      if (vo.t0 >= t - 1e-4) this.kill(vo, t);
+      else if (vo.t1 > t && vo.mode !== 'oneshot' && vo.mode !== 'toggle') { vo.t1 = t; this.release(vo, t); }
+    }
+  }
+  voice(p, vel, t) {
+    const i = p - 36;
+    if (i < 0 || i >= 16) return null;
+    const pd = this.padData(i), pn = this.pads[i];
+    if (!pd || !pn || !pn.buffer) return null;
+    const rg = this.region(pd, pn.buffer);
+    if (!rg) return null;
+    if (pd.mode === 'toggle') {
+      const cur = this.voices.find(vo => vo.pad === i && vo.mode === 'toggle' && vo.t0 <= t + 1e-4 && vo.t1 > t + 1e-4);
+      if (cur) { cur.t1 = t; this.release(cur, t, true); return null; }
+    }
+    // 이미 울리는 같은 패드·초크 그룹은 끊고, 뒤에 시작할 소리가 있으면 그때 이 소리를 끊는다
+    let cutAt = Infinity;
+    for (const vo of this.voices) {
+      if (vo.end <= t || (vo.pad !== i && !(pd.choke && vo.choke === pd.choke))) continue;
+      if (vo.t0 <= t + 1e-4) this.kill(vo, t);
+      else cutAt = Math.min(cutAt, vo.t0);
+    }
+    const ctx = this.ctx;
+    const amp = gainNode(ctx, 0);
+    amp.connect(pn.gain);
+    const g = velGain(vel, this.v.vel);
+    amp.gain.setValueAtTime(0, t);
+    amp.gain.linearRampToValueAtTime(g, t + 0.003);
+    const rate = Math.pow(2, (pd.tune || 0) / 12);
+    const loop = pd.mode === 'loop' || pd.mode === 'toggle';
+    const vo = { amp, srcs: [], nodes: [amp], pad: i, choke: pd.choke || 0, mode: pd.mode, end: Infinity, cutAt };
+    if (pd.sync) {
+      const n = U.clamp(Math.round((+pd.beats || 4) * 4), 1, 256);
+      vo.stream = { buf: rg.buf, s: rg.s, slen: rg.len / n, n, rate, loop, next: t, k: 0, until: Infinity };
+      if (!loop) vo.end = t + n * this.step() + 0.01;
+      this.streams.push(vo);
+      this.pumpStream(vo, t + 0.15);
+      return vo;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = rg.buf;
+    src.playbackRate.value = rate;
+    src.connect(amp);
+    vo.srcs.push(src);
+    vo.nodes.push(src);
+    if (loop) {
+      src.loop = true;
+      src.loopStart = rg.s;
+      src.loopEnd = rg.e;
+      src.start(t, rg.s);
+    } else {
+      src.start(t, rg.s, rg.len);
+      vo.end = t + rg.len / rate + 0.004;
+      // 조각 끝에서 딸깍 소리가 나지 않게 살짝 줄인다
+      const f = Math.min(0.004, rg.len / rate / 4);
+      amp.gain.setValueAtTime(g, Math.max(t + 0.003, vo.end - 0.004 - f));
+      amp.gain.linearRampToValueAtTime(0, vo.end - 0.004);
+      stopAt(src, vo.end);
+    }
+    return vo;
+  }
+  step() { return 15 / (this.eng.bpm || 120); } // 16분음표 길이(초)
+  /* 템포 맞춤 패드: tEnd까지 16분음표 조각을 예약한다. 엔진이 틱마다 부른다 */
+  pump(tEnd) {
+    if (!this.streams.length) return;
+    for (const vo of this.streams) this.pumpStream(vo, tEnd);
+    this.streams = this.streams.filter(vo => vo.stream.next < vo.stream.until - 1e-6);
+  }
+  pumpStream(vo, tEnd) {
+    const st = vo.stream, step = this.step();
+    let guard = 0;
+    while (st.next < Math.min(tEnd, st.until) - 1e-6 && guard++ < 256) {
+      if (!st.loop && st.k >= st.n) { st.until = st.next; break; }
+      this.slice(vo, st.buf, st.s + (st.k % st.n) * st.slen, st.next, Math.min(step, st.slen / st.rate), st.rate);
+      st.k++;
+      st.next += step;
+    }
+  }
+  slice(vo, buf, off, t, dur, rate) {
+    const ctx = this.ctx;
+    const late = Math.max(0, ctx.currentTime - t);
+    const len = dur - late;
+    if (len < 0.005) return;
+    const t0 = t + late;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = rate;
+    const g = gainNode(ctx, 0);
+    src.connect(g); g.connect(vo.amp);
+    const f = Math.min(0.003, len / 4);
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(1, t0 + f);
+    g.gain.setValueAtTime(1, t0 + len - f);
+    g.gain.linearRampToValueAtTime(0, t0 + len);
+    src.start(t0, off + late * rate, len * rate + 0.002);
+    stopAt(src, t0 + len + 0.01);
+    src.onended = () => { try { g.disconnect(); } catch (e) { /* 무시 */ } };
+    vo.srcs.push(src);
+    if (vo.srcs.length > 40) vo.srcs.splice(0, vo.srcs.length - 40);
+  }
+  release(vo, t, force) {
+    if (!force && (vo.mode === 'oneshot' || vo.mode === 'toggle')) return;
+    const r = Math.max(0.003, this.v.rel);
+    envOff(vo.amp.gain, t, r);
+    vo.end = Math.min(vo.end, envEnd(t, r));
+    if (vo.stream) vo.stream.until = Math.min(vo.stream.until, vo.end);
+    for (const s of vo.srcs) stopAt(s, vo.end);
+  }
+  silence(vo, t) {
+    super.silence(vo, t);
+    if (vo.stream) vo.stream.until = Math.min(vo.stream.until, t + 0.03);
+  }
+  /* 트랜스포트를 멈추면 되풀이하던 패드도 멈춘다 */
+  stopped(t) { for (const vo of this.voices) if ((vo.mode === 'loop' || vo.mode === 'toggle') && vo.end > t) this.kill(vo, t); }
+  param(id) { if (id === 'vol' && this.on) smooth(this.out.gain, this.outLevel(), this.ctx.currentTime); }
+  hits(t) { return this.voices.filter(v => v.t0 > t - 0.12 && v.t0 <= t + 0.01).map(v => v.pad); }
+  sounding(t) { return this.voices.filter(v => v.t0 <= t + 0.01 && v.end > t && v.t1 > t).map(v => v.pad); }
+  dispose() {
+    if (this.eng.pumps) this.eng.pumps.delete(this);
+    super.dispose();
+  }
 }
 
 /* ================= MIDI 이펙트 =================
@@ -572,7 +777,7 @@ class ArpFx extends MidiFx {
 }
 
 const KINDS = {
-  polysynth: PolySynth, fm: FMSynth, drums: Drums, sampler: Sampler,
+  polysynth: PolySynth, fm: FMSynth, drums: Drums, sampler: Sampler, looppad: LoopPad,
   arp: ArpFx, chord: ChordFx, scale: ScaleFx, velocity: VelocityFx
 };
 U.Device = Device;

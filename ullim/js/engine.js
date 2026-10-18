@@ -188,6 +188,9 @@ class Engine {
     this.sessionRec = false;
     this.lastLateness = 0;
     this.listeners = [];
+    this.pumps = new Set();   // 틱마다 앞을 채워야 하는 장치 (템포 맞춤 루프 패드)
+    this.repeat = { on: false, div: '1/16' }; // 노트 리피트
+    this.repeats = new Map(); // 누르고 있는 패드 → 되풀이 상태
     if (!this.offline) {
       this.mAn = ctx.createAnalyser();
       this.mAn.fftSize = 2048;
@@ -487,6 +490,7 @@ class Engine {
     const n = this.nodes.get(trackId);
     if (!n || n.track.type !== 'midi') return;
     if (this.ctx.state !== 'running') this.ctx.resume();
+    if (!audition && this.repeat.on && n.inst && n.inst.isPads) { this.startRepeat(n, p, v); return; }
     const t = this.ctx.currentTime;
     let notes = [{ p, v, b: 0, d: 0 }];
     const voices = [];
@@ -512,6 +516,7 @@ class Engine {
   liveOff(trackId, p) {
     const n = this.nodes.get(trackId);
     if (!n) return;
+    if (this.repeats.delete(n.id + ':' + p)) return;
     const t = this.ctx.currentTime;
     const h = n.live.get(p);
     if (h) {
@@ -524,7 +529,52 @@ class Engine {
     if (n.liveLog) for (let i = n.liveLog.length - 1; i >= 0; i--) if (n.liveLog[i].p === p && n.liveLog[i].t1 == null) { n.liveLog[i].t1 = t; break; }
   }
   allLiveOff() {
+    this.repeats.clear();
     for (const n of this.nodes.values()) for (const p of [...n.live.keys()]) this.liveOff(n.id, p);
+  }
+  /* ---------- 노트 리피트 ----------
+     패드를 누르고 있는 동안 정한 박자마다 다시 친다. 재생 중이면 박자선에 맞추고,
+     박자선을 막 지나서 눌렀으면 바로 한 번 친다 */
+  startRepeat(n, p, v) {
+    const key = n.id + ':' + p;
+    if (this.repeats.has(key)) return;
+    const t = this.ctx.currentTime;
+    let next = t;
+    if (this.playing) {
+      const step = U.divBeats(this.repeat.div);
+      const g = this.beatAt(t) / step;
+      if (g - Math.floor(g) >= 0.3) next = this.timeAt(Math.ceil(g) * step);
+    }
+    this.repeats.set(key, { n, p, v, next });
+    this.pumpRepeats(t + LOOKAHEAD);
+  }
+  pumpRepeats(horizon) {
+    for (const rp of this.repeats.values()) {
+      let guard = 0;
+      while (rp.next < horizon && guard++ < 64) {
+        const t = rp.next;
+        const step = U.divBeats(this.repeat.div);
+        const stepSec = step * 60 / this.bpm;
+        this.repeatHit(rp, t, Math.max(0.02, stepSec * 0.5));
+        rp.next = this.playing ? this.timeAt((Math.round(this.beatAt(t) / step) + 1) * step) : t + stepSec;
+        if (rp.next <= t + 0.005) rp.next = t + stepSec;
+      }
+    }
+  }
+  repeatHit(rp, t, gate) {
+    const n = rp.n;
+    if (!n.inst) return;
+    let notes = [{ p: rp.p, v: rp.v, b: 0, d: 0 }];
+    for (const fx of n.midifx) if (fx.on && !fx.isArp) notes = notes.flatMap(x => fx.map(x));
+    for (const x of notes) n.inst.playNote(x.p, x.v, t, gate);
+    if (this.playing && n.track.arm && n.rec) {
+      const b = this.beatAt(t);
+      this.commitRecNote(n, { p: rp.p, v: rp.v, b }, b + gate * this.bpm / 60);
+    }
+    if (!n.liveLog) n.liveLog = [];
+    const lat = this.latency();
+    n.liveLog.push({ p: rp.p, v: rp.v, t0: t + lat, t1: t + lat + gate });
+    if (n.liveLog.length > 600) n.liveLog.splice(0, 100);
   }
   /* 멈춘 상태에서도 아르페지에이터가 돌도록 */
   ensureFree() {
@@ -573,6 +623,8 @@ class Engine {
       f.sched = b1;
       if (!any) this.freeAnchor = null;
     }
+    for (const d of this.pumps) d.pump(now + LOOKAHEAD);
+    if (this.repeats.size) this.pumpRepeats(now + LOOKAHEAD);
   }
   /* 실시간 대신 한 번에: 오프라인 렌더용 */
   scheduleUntil(b1) {
@@ -583,6 +635,7 @@ class Engine {
     for (const t of pr.tracks) this.scheduleTrack(this.nodes.get(t.id), b0, b1);
     for (const t of pr.returns.concat([pr.master])) this.applyAutomation(this.nodes.get(t.id), b0, b1);
     for (const n of this.nodes.values()) for (const d of n.devs.values()) if (d.schedule && d.on) d.schedule(b0, b1);
+    for (const d of this.pumps) d.pump(this.timeAt(b1));
     if (pr.metro) this.scheduleMetronome(b0, b1);
     this.emitIfStateChanged();
   }
@@ -722,6 +775,8 @@ class Engine {
       evs = evs.flatMap(x => fx.map(x));
     }
     if (!n.inst) return;
+    // 시간 순서대로 쳐야 초크·같은 패드 끊기가 맞게 된다
+    evs.sort((a, b) => a.b - b.b);
     for (const x of evs) {
       const t = tOf(x.b);
       if (t < this.ctx.currentTime - 0.05 && !this.offline) continue;

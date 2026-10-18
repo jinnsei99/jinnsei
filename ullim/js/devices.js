@@ -191,8 +191,20 @@ def('sampler', {
   ]
 });
 
+def('looppad', {
+  name: 'Loop Pad', type: 'instrument',
+  info: '패드 16개로 샘플 조각(찹)이나 루프를 두드려 연주해요. MPC처럼 보컬을 잘게 잘라 손가락으로 치거나, 루프를 켜고 끄며 곡을 쌓아요. 패드마다 컴퓨터 키보드 글자를 정할 수 있어요.',
+  params: [
+    en('q', 'Launch', [['none', '바로'], ['1/16', '1/16'], ['1/8', '1/8'], ['1/4', '1/4'], ['1bar', '1마디']], 'none', { info: '반복·켜고 끄기 패드를 손으로 칠 때 다음 박자 경계까지 기다렸다가 시작하고 멈춰요. 재생 중일 때만 맞춰요. 원샷 패드는 늘 바로 울려요.' }),
+    sec('rel', 'Release', 0.003, 2, 0.03, { info: '누르는 동안·반복 패드에서 손을 뗐을 때 소리가 사라지는 시간' }),
+    pct('vel', 'Vel', 0.4, { info: '세게 칠수록 크게 나는 정도. 0%면 늘 같은 크기예요.' }),
+    db('vol', 'Volume', -36, 6, 0, { info: '루프 패드 전체 음량' })
+  ],
+  layout: [{ visual: 'looppads' }, { title: 'Out', params: ['q', 'rel', 'vel', 'vol'] }]
+});
+
 /* ---------- 오디오 이펙트 ---------- */
-const EQT = [['hp', 'Low Cut'], ['ls', 'Low Shelf'], ['pk', 'Bell'], ['notch', 'Notch'], ['hs', 'High Shelf'], ['lp', 'High Cut']];
+const EQT =[['hp', 'Low Cut'], ['ls', 'Low Shelf'], ['pk', 'Bell'], ['notch', 'Notch'], ['hs', 'High Shelf'], ['lp', 'High Cut']];
 const EQ_DEF = [
   [false, 'hp', 40, 0, 0.71], [true, 'ls', 110, 0, 0.71], [true, 'pk', 400, 0, 1],
   [true, 'pk', 2200, 0, 1], [true, 'hs', 8000, 0, 0.71], [false, 'lp', 16000, 0, 0.71]
@@ -425,11 +437,48 @@ function pad(type, o) {
   const name = (PAD_TYPES.find(t => t[0] === type) || [type, type])[1];
   return Object.assign({ name, src: 'synth', type, tune: 0, decay: 0.5, tone: 0.5, level: 0, pan: 0, choke: 0, sample: null }, o);
 }
+/* ================= 루프 패드 ================= */
+/* 패드 0이 왼쪽 아래, 16이 오른쪽 위 (MPC 배치). 키는 KeyboardEvent.code라서 한글 입력 상태에서도 같다 */
+const PAD_MODES = [
+  ['oneshot', '원샷', '한 번 치면 조각 끝까지 울려요. 떼도 멈추지 않아요.'],
+  ['hold', '누르는 동안', '누르고 있는 동안만 울리고, 떼면 멈춰요.'],
+  ['loop', '누르는 동안 반복', '누르고 있는 동안 조각을 계속 되풀이해요.'],
+  ['toggle', '켜고 끄기', '한 번 치면 계속 되풀이하고, 다시 치면 멈춰요. 루프를 쌓을 때 좋아요.']
+];
+const PAD_LAYOUTS = [
+  { id: 'left', name: '왼손 4×4 · 1234 / QWER / ASDF / ZXCV', keys: ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyQ', 'KeyW', 'KeyE', 'KeyR', 'Digit1', 'Digit2', 'Digit3', 'Digit4'] },
+  { id: 'right', name: '오른손 4×4 · 7890 / UIOP / JKL; / M,./', keys: ['KeyM', 'Comma', 'Period', 'Slash', 'KeyJ', 'KeyK', 'KeyL', 'Semicolon', 'KeyU', 'KeyI', 'KeyO', 'KeyP', 'Digit7', 'Digit8', 'Digit9', 'Digit0'] },
+  { id: 'rows', name: '두 줄 · ASDFGHJK / QWERTYUI', keys: ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK', 'KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI'] }
+];
+const KEY_NAMES = { Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/', BracketLeft: '[', BracketRight: ']', Backslash: '\\', IntlBackslash: '\\', Minus: '-', Equal: '=', Backquote: '`', NumpadAdd: 'N+', NumpadSubtract: 'N-', NumpadMultiply: 'N*', NumpadDivide: 'N/', NumpadDecimal: 'N.' };
+function keyLabel(code) {
+  if (!code) return '';
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  if (/^Digit\d$/.test(code)) return code.slice(5);
+  if (/^Numpad\d$/.test(code)) return 'N' + code.slice(6);
+  return KEY_NAMES[code] || code;
+}
+/* 패드에 줄 수 있는 키: 글자·숫자·기호 (Space, Enter, Tab, 화살표 같은 조작 키는 뺀다) */
+function padKeyOk(code) { return !!code && (/^(Key[A-Z]|Digit\d|Numpad\d)$/.test(code) || code in KEY_NAMES); }
+function lpad(o) {
+  return Object.assign({ name: '', key: null, sample: null, start: 0, end: 0, mode: 'oneshot', sync: false, beats: 4, tune: 0, gain: 0, pan: 0, rev: false, choke: 0 }, o);
+}
+/* 루프 패드 데이터를 고친다: 패드 16개, 빠진 값 채우기 */
+function fixLoopPad(data) {
+  data = data && typeof data === 'object' ? data : {};
+  const pads = Array.isArray(data.pads) ? data.pads : [];
+  data.pads = Array.from({ length: 16 }, (_, i) => lpad(pads[i] || { key: PAD_LAYOUTS[0].keys[i] }));
+  if (data.src === undefined) data.src = null;
+  if (data.sel == null) data.sel = 0;
+  return data;
+}
+
 function makeDevice(kind, over) {
   const d = DEV[kind];
   if (!d) throw new Error('unknown device ' + kind);
   const dev = { id: U.uid('d'), kind, on: true, p: defaults(kind) };
   if (kind === 'drums') dev.data = { pads: U.DEFAULT_KIT ? U.clone(U.DEFAULT_KIT) : [], sel: 0 };
+  if (kind === 'looppad') dev.data = fixLoopPad(U.DEFAULT_LOOPKIT ? U.loopKitData(U.DEFAULT_LOOPKIT) : null);
   if (kind === 'sampler') dev.data = { sample: null };
   if (kind === 'eq') dev.data = { sel: 3 };
   if (over) {
@@ -437,6 +486,7 @@ function makeDevice(kind, over) {
     if (over.data) dev.data = Object.assign(dev.data || {}, U.clone(over.data));
     if (over.name) dev.name = over.name;
   }
+  if (kind === 'looppad') fixLoopPad(dev.data);
   return dev;
 }
 function devName(dev) { return dev.name || (DEV[dev.kind] ? DEV[dev.kind].name : dev.kind); }
@@ -455,6 +505,7 @@ function eqBiquad(type, q) {
 }
 
 Object.assign(U, {
-  DEV, toNorm, fromNorm, fmtParam, defaults, makeDevice, devName, visible, PAD_TYPES, pad, eqBiquad
+  DEV, toNorm, fromNorm, fmtParam, defaults, makeDevice, devName, visible, PAD_TYPES, pad, eqBiquad,
+  PAD_MODES, PAD_LAYOUTS, keyLabel, padKeyOk, lpad, fixLoopPad
 });
 })(window.U = window.U || {});
