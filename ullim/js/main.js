@@ -133,6 +133,14 @@ function renderStatus() {
     right.append(on);
   }
   if (ui.keyboard) right.append(h('span', { class: 'st-kb', text: '⌨ C' + ui.octave + ' · ' + ui.velocity }));
+  if (U.isTouch) {
+    // 키보드가 없을 때를 위해 되돌리기·다시 실행을 눈에 보이게
+    const un = btn({ icon: 'undo', cls: 'ghost sm st-undo', title: '되돌리기', onclick: () => A.undo() });
+    const re = btn({ icon: 'undo', cls: 'ghost sm st-redo', title: '다시 실행', onclick: () => A.redo() });
+    un.disabled = !U.canUndo();
+    re.disabled = !U.canRedo();
+    right.append(un, re);
+  }
   const mc = U.input.midiCount();
   const midi = h('button', { class: 'st-midi', type: 'button', text: mc ? 'MIDI ' + mc : 'MIDI 연결' });
   info(midi, 'MIDI 장치', mc ? 'MIDI 건반 ' + mc + '개가 연결돼 있어요. 연주는 녹음 준비(●)한 트랙이나 고른 트랙으로 가요.' : 'USB MIDI 건반을 꽂고 눌러서 연결해요.');
@@ -194,7 +202,7 @@ U.newProjectFlow = function (genre) {
   U.commit('새 프로젝트');
   if (genre) {
     U.setView('session');
-    U.toast(p.name + '를 만들었어요. 씬의 ▶로 부분을 띄우거나, Tab → Space로 곡 전체를 들어 보세요.');
+    U.toast(p.name + '를 만들었어요. 씬의 ▶로 부분을 띄우거나, ' + (U.isTouch ? '위의 ▶ 재생으로' : 'Tab → Space로') + ' 곡 전체를 들어 보세요.');
   } else U.toast('새 프로젝트를 만들었어요.');
 };
 async function saveAs() {
@@ -400,7 +408,16 @@ function helpDialog() {
       h('li', { text: '왼쪽 브라우저에서 사운드·드럼·샘플을 트랙이나 빈 칸에 끌어다 놓아요.' }),
       h('li', { text: 'P를 누르면 패드 화면이에요. 로봇 보컬 찹 패드를 Z·X·C·V, A·S·D·F … 글자 키로 두드려 보세요. "키 지정"을 켜면 패드마다 원하는 글자를 줄 수 있어요.' }),
       h('li', { text: 'Tab으로 어레인지먼트 뷰로 가서 클립을 시간 순서로 배치하고, 메뉴의 "오디오 내보내기"로 WAV를 받아요.' })));
-  U.dialog({ title: '도움말', body: h('div', { class: 'help' }, guide, h('h3', { text: '단축키' }), tbl), width: '560px', actions: [{ label: '닫기', primary: true }] });
+  const touch = h('div', { class: 'guide' },
+    h('h3', { text: '손가락으로 쓸 때 (아이패드·휴대폰)' }),
+    h('ul', null,
+      h('li', { text: '길게 누르기는 오른쪽 클릭이에요. 클립·씬·트랙·음표·어레인지먼트 클립의 메뉴가 열려요.' }),
+      h('li', { text: '두 번 탭은 더블클릭이에요. 빈 칸에 클립 만들기, 피아노 롤에 음 넣기·지우기, 노브를 기본값으로, 브라우저 항목 넣기.' }),
+      h('li', { text: '두 손가락으로 밀면 피아노 롤·어레인지먼트·스텝 시퀀서가 넘어가고, 벌리거나 오므리면 확대·축소돼요.' }),
+      h('li', { text: '패드 화면에서 드럼·루프 패드 트랙은 패드로, 신스 트랙은 건반으로 쳐요. 스케일을 고르면 키에 맞는 음만 칸으로 나오고, 코드를 켜면 한 손가락으로 코드를 쳐요.' }),
+      h('li', { text: '클립은 길게 눌러 "복사"한 뒤 빈 칸을 길게 눌러 "붙여넣기"로 옮겨요. 스텝 시퀀서의 찍힌 칸을 길게 누르면 세기가 바뀌어요.' }),
+      h('li', { text: '메뉴 › 앱으로 설치하기로 홈 화면에 두면 전체 화면으로 열리고, 인터넷이 없어도 돼요.' })));
+  U.dialog({ title: '도움말', body: h('div', { class: 'help' }, U.isTouch ? touch : null, guide, U.isTouch ? null : touch, h('h3', { text: '단축키' }), tbl), width: '560px', actions: [{ label: '닫기', primary: true }] });
 }
 function aboutDialog() {
   U.dialog({

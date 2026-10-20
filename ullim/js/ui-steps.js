@@ -4,6 +4,7 @@
 'use strict';
 const { h, ui, info, clamp, btn } = U;
 const LABEL_W = 104, HEAD_H = 18;
+let hold = null;   // 손가락으로 누르고 있는 찍힌 칸 (길게 누르면 세기 바꾸기)
 const ST = ui.steps = { res: +U.pref('stepRes', 0.25), vel: 100, row: 0 };
 let cur = null, cvGrid = null, cvLabels = null, main = null;
 let geo = null, index = new Map(), lastCol = null;
@@ -62,6 +63,8 @@ function build(editor, ref) {
   cvGrid = h('canvas', { class: 'st-grid', tabindex: '0' });
   main = h('div', { class: 'st-main' }, h('div', { class: 'st-inner' }, cvLabels, cvGrid));
   editor.append(main);
+  // 두 손가락으로 밀면 칸이 많은 패턴을 옆으로·아래로 넘겨 봐요
+  U.gestures.pan(main, { pan: (dx, dy) => { main.scrollLeft -= dx; main.scrollTop -= dy; } });
   info(cvGrid, '스텝 시퀀서', '칸을 누르면 찍히고, 찍힌 칸을 누르면 지워져요. 누른 채 끌면 이어서 찍거나 지워요. 오른쪽 클릭으로 세기를 바꿔요. 밝을수록 세게 쳐요.');
   info(cvLabels, '패드 줄', '이름을 누르면 소리를 들어 보고 그 줄을 골라요. 위의 "줄 채우기"는 고른 줄에 적용돼요. 글자는 패드에 정한 키예요.');
   bind();
@@ -74,8 +77,9 @@ function layout() {
   const c = cur.clip, [a, b] = region(c);
   const n = Math.max(1, Math.round((b - a) / ST.res));
   const availW = Math.max(120, main.clientWidth - LABEL_W - 2);
-  const cellW = Math.max(16, Math.floor(availW / n));
-  const rowH = clamp(Math.floor((main.clientHeight - HEAD_H - 2) / 16), 13, 30);
+  // 손가락으로 누를 수 있게 터치 화면에서는 칸을 더 크게 (넘치면 두 손가락으로 밀어 봐요)
+  const cellW = Math.max(U.isTouch ? 26 : 16, Math.floor(availW / n));
+  const rowH = clamp(Math.floor((main.clientHeight - HEAD_H - 2) / 16), U.isTouch ? 20 : 13, U.isTouch ? 40 : 30);
   geo = { a, b, n, cellW, rowH, W: n * cellW, H: HEAD_H + rowH * 16 };
   reindex();
 }
@@ -185,6 +189,8 @@ function bind() {
     const mode = cellNotes(hit.i, hit.j).length ? 'erase' : 'paint';
     const done = new Set();
     let changed = false;
+    // 손가락으로 찍힌 칸을 누르면 바로 지우지 않고 기다린다: 길게 누르면 지우는 대신 세기를 바꾼다
+    hold = e.pointerType !== 'mouse' && mode === 'erase' ? { hit, skip: false } : null;
     const apply = at => {
       const k = at.i + ':' + at.j;
       if (done.has(k)) return;
@@ -203,12 +209,23 @@ function bind() {
       draw();
       U.touch({ clip: c.id });
     };
-    apply(hit);
-    const move = ev => { const at = cellAt(ev); if (at) apply(at); };
-    const up = () => {
+    if (!hold) apply(hit);
+    const move = ev => {
+      const at = cellAt(ev);
+      if (!at) return;
+      if (hold && hold.hit) {
+        if (at.i === hold.hit.i && at.j === hold.hit.j) return;
+        if (!hold.skip) apply(hold.hit);
+        hold.hit = null;
+      }
+      apply(at);
+    };
+    const up = ev => {
       cvGrid.removeEventListener('pointermove', move);
       cvGrid.removeEventListener('pointerup', up);
       cvGrid.removeEventListener('pointercancel', up);
+      if (hold && hold.hit && !hold.skip && ev.type === 'pointerup') apply(hold.hit);
+      hold = null;
       if (changed) U.commit(mode === 'paint' ? '스텝 찍기' : '스텝 지우기');
     };
     cvGrid.addEventListener('pointermove', move);
@@ -217,6 +234,7 @@ function bind() {
   });
   cvGrid.addEventListener('contextmenu', e => {
     e.preventDefault();
+    if (hold) hold.skip = true;
     const hit = cellAt(e);
     if (!hit) return;
     const list = cellNotes(hit.i, hit.j);

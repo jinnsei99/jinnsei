@@ -167,7 +167,10 @@ function moveSlot(dx, dy) {
 let midi = null;
 const midiHeld = new Map();
 async function connectMidi(ask) {
-  if (!navigator.requestMIDIAccess) { if (ask) U.toast('이 브라우저는 MIDI 장치를 지원하지 않아요. 크롬이나 엣지를 써 보세요.', 'error'); return false; }
+  if (!navigator.requestMIDIAccess) {
+    if (ask) U.toast(U.isIOS ? '아이패드·아이폰의 브라우저는 MIDI 장치를 지원하지 않아요. 패드 화면의 패드와 건반으로 쳐 주세요.' : '이 브라우저는 MIDI 장치를 지원하지 않아요. 크롬이나 엣지를 써 보세요.', 'error');
+    return false;
+  }
   if (!ask) {
     try {
       const st = await navigator.permissions.query({ name: 'midi' });

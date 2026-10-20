@@ -50,9 +50,9 @@ function build(root) {
 
   // 루프
   refs.loop = btn({ icon: 'loop', cls: 'tg', toggle: true, on: p.loop.on, title: '루프 (Ctrl+L)', info: ['어레인지먼트 루프', '켜면 루프 구간을 계속 반복해요. 눈금자의 루프 막대를 끌어 구간을 바꿔요.'], onclick: () => { pr().loop.on = !pr().loop.on; U.commit('루프'); } });
-  refs.lstart = numBox({ cls: 'pos sm', label: '루프 시작', get: () => pr().loop.start, set: (v, f) => { const L = pr().loop, len = L.end - L.start; L.start = v; L.end = v + len; f ? U.commit('루프 위치') : U.touch(); }, fmt: v => U.fmtPos(v, pr().sig), parse: s => U.parsePos(s, pr().sig, true), min: 0, max: 4096, step: 1, range: 900 });
+  refs.lstart = numBox({ cls: 'pos sm lpos', label: '루프 시작', get: () => pr().loop.start, set: (v, f) => { const L = pr().loop, len = L.end - L.start; L.start = v; L.end = v + len; f ? U.commit('루프 위치') : U.touch(); }, fmt: v => U.fmtPos(v, pr().sig), parse: s => U.parsePos(s, pr().sig, true), min: 0, max: 4096, step: 1, range: 900 });
   info(refs.lstart, '루프 시작', '루프 구간이 시작하는 위치');
-  refs.llen = numBox({ cls: 'pos sm', label: '루프 길이', get: () => pr().loop.end - pr().loop.start, set: (v, f) => { const L = pr().loop; L.end = L.start + Math.max(0.25, v); f ? U.commit('루프 길이') : U.touch(); }, fmt: v => U.fmtLen(v, pr().sig), parse: s => U.parsePos(s, pr().sig, false), min: 0.25, max: 1024, step: 1, range: 900 });
+  refs.llen = numBox({ cls: 'pos sm lpos', label: '루프 길이', get: () => pr().loop.end - pr().loop.start, set: (v, f) => { const L = pr().loop; L.end = L.start + Math.max(0.25, v); f ? U.commit('루프 길이') : U.touch(); }, fmt: v => U.fmtLen(v, pr().sig), parse: s => U.parsePos(s, pr().sig, false), min: 0.25, max: 1024, step: 1, range: 900 });
   info(refs.llen, '루프 길이', '마디. 박. 16분음표');
 
   // 오른쪽

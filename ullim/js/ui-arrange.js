@@ -5,7 +5,7 @@ const { h, ui, icon, info, clamp } = U;
 const A = U.act;
 const pr = () => U.project;
 const HEAD_W = 196;
-const EDGE = 6;
+const EDGE = U.isTouch ? 14 : 6;  // 클립 양 끝을 잡는 폭 (손가락이면 넓게)
 
 const view = ui.arr = { ppb: U.pref('arrPpb', 14), x0: 0, gridMul: 1, snap: true };
 ui.arrSel = [];          // [{t, a}]
@@ -37,6 +37,13 @@ function build(el) {
   root.addEventListener('pointerdown', () => { ui.focus = 'arrange'; });
   bodyEl.addEventListener('wheel', onWheel, { passive: false });
   rulerCv.addEventListener('wheel', onWheel, { passive: false });
+  // 두 손가락: 밀면 앞뒤·위아래로, 가로로 벌리면 확대
+  const touchNav = {
+    pan: (dx, dy) => { view.x0 = Math.max(0, view.x0 - dx / view.ppb); bodyEl.scrollTop -= dy; draw(); },
+    zoom: z => { if (z.fx !== 1) zoomAt(z.fx, z.x); }
+  };
+  U.gestures.pan(bodyEl, touchNav);
+  U.gestures.pan(rulerCv, touchNav);
   new ResizeObserver(() => { measure(); draw(); }).observe(bodyEl);
   render();
 }
