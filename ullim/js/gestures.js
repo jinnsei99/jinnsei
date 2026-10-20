@@ -10,9 +10,27 @@
 const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const coarse = !!(window.matchMedia && matchMedia('(any-pointer: coarse)').matches);
 U.isIOS = ios;
-U.isTouch = coarse || ios;
-document.documentElement.classList.toggle('touch', U.isTouch);
+U.autoTouch = coarse || ios;   // 이 기기가 손가락 화면인지 (자동일 때 따른다)
 document.documentElement.classList.toggle('ios', ios);
+
+/* 화면 버전: 'auto'(기기에 맞게) | 'desktop'(컴퓨터 버전) | 'touch'(아이패드 버전).
+   U.isTouch는 크기·배치를 손가락에 맞출지이고, 손가락 조작 자체(길게 누르기 등)는 어느 버전에서든 손가락이면 돼요 */
+const MODES = ['auto', 'desktop', 'touch'];
+function applyMode() {
+  U.isTouch = U.uiMode === 'touch' ? true : U.uiMode === 'desktop' ? false : U.autoTouch;
+  document.documentElement.classList.toggle('touch', U.isTouch);
+}
+U.uiMode = MODES.includes(U.pref('uiMode', 'auto')) ? U.pref('uiMode', 'auto') : 'auto';
+applyMode();
+U.setUIMode = function (mode) {
+  if (!MODES.includes(mode)) return;
+  const was = U.isTouch;
+  U.uiMode = mode;
+  U.setPref('uiMode', mode);
+  applyMode();
+  U.emit('uimode', { mode, touch: U.isTouch, changed: was !== U.isTouch });
+};
+U.uiModeName = () => (U.isTouch ? '아이패드 버전' : '컴퓨터 버전');
 
 const now = () => performance.now();
 const LONG_MS = 500;   // 이만큼 가만히 누르면 메뉴

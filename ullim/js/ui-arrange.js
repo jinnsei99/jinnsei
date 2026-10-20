@@ -5,7 +5,7 @@ const { h, ui, icon, info, clamp } = U;
 const A = U.act;
 const pr = () => U.project;
 const HEAD_W = 196;
-const EDGE = U.isTouch ? 14 : 6;  // 클립 양 끝을 잡는 폭 (손가락이면 넓게)
+const edgeW = () => (U.isTouch ? 14 : 6);  // 클립 양 끝을 잡는 폭 (아이패드 버전이면 넓게)
 
 const view = ui.arr = { ppb: U.pref('arrPpb', 14), x0: 0, gridMul: 1, snap: true };
 ui.arrSel = [];          // [{t, a}]
@@ -491,6 +491,7 @@ function hitClip(t, x) {
     const a = t.arr[i];
     const x0 = xOf(a.pos), x1 = xOf(a.pos + a.dur);
     if (x >= x0 - 1 && x <= x1 + 1) {
+      const EDGE = edgeW();
       const zone = x - x0 < EDGE && x1 - x0 > EDGE * 3 ? 'l' : x1 - x < EDGE && x1 - x0 > EDGE * 2 ? 'r' : 'body';
       return { a, zone, b };
     }

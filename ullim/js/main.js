@@ -141,6 +141,10 @@ function renderStatus() {
     re.disabled = !U.canRedo();
     right.append(un, re);
   }
+  const md = h('button', { class: 'st-mode', type: 'button', text: U.uiModeName() });
+  info(md, '화면 버전', '컴퓨터 버전(마우스·키보드)과 아이패드 버전(손가락) 중에서 골라요. 자동이면 이 기기에 맞춰요.');
+  md.addEventListener('click', () => modeMenu(md));
+  right.append(md);
   const mc = U.input.midiCount();
   const midi = h('button', { class: 'st-midi', type: 'button', text: mc ? 'MIDI ' + mc : 'MIDI 연결' });
   info(midi, 'MIDI 장치', mc ? 'MIDI 건반 ' + mc + '개가 연결돼 있어요. 연주는 녹음 준비(●)한 트랙이나 고른 트랙으로 가요.' : 'USB MIDI 건반을 꽂고 눌러서 연결해요.');
@@ -369,9 +373,21 @@ U.importAudioTo = async function (trackId, slot, pos) {
 };
 
 /* ================= 환경설정 · 도움말 ================= */
+/* ================= 화면 버전 (컴퓨터 · 아이패드) ================= */
+function modeItems() {
+  return [
+    { label: '자동 (이 기기는 ' + (U.autoTouch ? '아이패드' : '컴퓨터') + ' 버전)', checked: U.uiMode === 'auto', action: () => U.setUIMode('auto') },
+    { label: '컴퓨터 버전 (마우스·키보드)', checked: U.uiMode === 'desktop', action: () => U.setUIMode('desktop') },
+    { label: '아이패드 버전 (손가락)', checked: U.uiMode === 'touch', action: () => U.setUIMode('touch') }
+  ];
+}
+function modeMenu(anchor) { U.menu([{ header: '화면 버전' }, ...modeItems()], anchor); }
+
 function prefsDialog() {
   const skin = U.pref('skin', 'auto');
   const body = h('div', { class: 'xp' });
+  body.append(h('label', { class: 'fld' }, h('span', { text: '화면 버전' }),
+    U.select([['auto', '자동 (이 기기는 ' + (U.autoTouch ? '아이패드' : '컴퓨터') + ' 버전)'], ['desktop', '컴퓨터 버전 (마우스·키보드)'], ['touch', '아이패드 버전 (손가락)']], U.uiMode, v => U.setUIMode(v), { label: '화면 버전' })));
   body.append(h('label', { class: 'fld' }, h('span', { text: '화면 밝기' }), U.select([['auto', '시스템 설정 따르기'], ['dark', '어둡게'], ['light', '밝게']], skin, v => { U.setPref('skin', v); applySkin(); })));
   body.append(h('label', { class: 'fld' }, h('span', { text: '녹음 퀀타이즈' }), U.select([['0', '끄기'], ['0.25', '1/16'], ['0.5', '1/8'], ['1', '1/4']], String(U.pref('recQuant', 0)), v => U.setPref('recQuant', +v))));
   const ctx = U.engine.ctx;
@@ -416,7 +432,8 @@ function helpDialog() {
       h('li', { text: '두 손가락으로 밀면 피아노 롤·어레인지먼트·스텝 시퀀서가 넘어가고, 벌리거나 오므리면 확대·축소돼요.' }),
       h('li', { text: '패드 화면에서 드럼·루프 패드 트랙은 패드로, 신스 트랙은 건반으로 쳐요. 스케일을 고르면 키에 맞는 음만 칸으로 나오고, 코드를 켜면 한 손가락으로 코드를 쳐요.' }),
       h('li', { text: '클립은 길게 눌러 "복사"한 뒤 빈 칸을 길게 눌러 "붙여넣기"로 옮겨요. 스텝 시퀀서의 찍힌 칸을 길게 누르면 세기가 바뀌어요.' }),
-      h('li', { text: '메뉴 › 앱으로 설치하기로 홈 화면에 두면 전체 화면으로 열리고, 인터넷이 없어도 돼요.' })));
+      h('li', { text: '메뉴 › 앱으로 설치하기로 홈 화면에 두면 전체 화면으로 열리고, 인터넷이 없어도 돼요.' }),
+      h('li', { text: '컴퓨터 버전(작은 조절기, 마우스·키보드)과 아이패드 버전(큰 버튼, 손가락)은 아래 상태 줄의 버튼이나 메뉴 › 화면 버전에서 직접 골라요. 어느 버전이든 손가락 조작은 돼요.' })));
   U.dialog({ title: '도움말', body: h('div', { class: 'help' }, U.isTouch ? touch : null, guide, U.isTouch ? null : touch, h('h3', { text: '단축키' }), tbl), width: '560px', actions: [{ label: '닫기', primary: true }] });
 }
 function aboutDialog() {
@@ -450,6 +467,7 @@ U.appMenu = function (anchor) {
     { label: '씬 넣기', action: () => A.insertScene(ui.scene + 1) },
     { label: '씬으로 곡 만들기…', action: () => U.songDialog() },
     { sep: true },
+    { label: '화면 버전: ' + U.uiModeName() + (U.uiMode === 'auto' ? ' (자동)' : ''), sub: modeItems() },
     { label: '환경설정…', action: prefsDialog },
     { label: '도움말 · 단축키', key: '?', action: helpDialog },
     window.claude ? null : { label: '앱으로 설치하기…', action: installApp },
@@ -509,7 +527,8 @@ function installApp() {
 
 /* ================= 반응형 ================= */
 function checkNarrow() {
-  const n = window.innerWidth < 860;
+  // 컴퓨터 버전을 직접 고르면 세로 아이패드에서도 컴퓨터와 같은 화면 (휴대폰처럼 아주 좁을 때만 아래 탭)
+  const n = window.innerWidth < (U.uiMode === 'desktop' ? 600 : 860);
   if (n !== ui.narrow) {
     ui.narrow = n;
     document.body.classList.toggle('narrow', n);
@@ -532,6 +551,13 @@ function wire() {
     }
     U.inval('transport', 'session', 'arrange', 'detail', 'status', 'pads');
     if (!inf.load) autosave();
+  });
+  // 화면 버전을 바꾸면 크기·배치가 바뀌니 모두 다시 그린다
+  U.on('uimode', m => {
+    U.closeMenu && U.closeMenu();
+    checkNarrow();
+    U.inval('all');
+    U.toast(m.mode === 'auto' ? '자동으로 바꿨어요. 이 기기에서는 ' + U.uiModeName() + '이에요.' : U.uiModeName() + '으로 바꿨어요.');
   });
   U.on('project', inf => {
     ui.roll.sel = new Set();
