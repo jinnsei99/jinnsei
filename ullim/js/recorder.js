@@ -21,8 +21,10 @@ async function start(mode, slot) {
   if (!tracks.length || cur) return false;
   if (!supported()) { U.toast('이 브라우저에서는 오디오를 녹음할 수 없어요.', 'error'); return false; }
   let s;
+  U.audioSession('play-and-record');   // 사파리: 녹음하는 동안만 마이크를 함께 쓰는 방식으로
   try { s = await getStream(); }
   catch (e) {
+    U.audioSession('playback');
     U.toast(window.claude ? 'Claude 안에서는 마이크를 쓸 수 없어요. 녹음한 파일을 끌어다 놓아 주세요.' : '마이크를 쓸 수 없어요. 브라우저의 마이크 권한을 확인해 주세요.', 'error');
     return false;
   }
@@ -43,6 +45,7 @@ async function stop() {
   const e = U.engine;
   const endT = e.ctx.currentTime;
   await new Promise(res => { c.rec.onstop = res; c.rec.stop(); });
+  U.audioSession('playback');
   if (!c.chunks.length || c.startT == null) return;
   let buf;
   try {

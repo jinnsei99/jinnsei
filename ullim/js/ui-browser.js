@@ -180,9 +180,12 @@ function renderList() {
     info(row, it.label, (it.infoText || it.sub || '') + (it.load ? ' 두 번 누르거나 Enter로 넣고, 끌어서 원하는 곳에 놓아요.' : ''));
     row.addEventListener('pointerdown', e => {
       if (e.button !== 0) return;
+      // 손가락은 목록을 밀어 넘기려고 대는 일이 많아서, 떼었을 때(click) 고르고 들려준다
+      if (e.pointerType === 'touch') return;
       select(i);
       if (it.drag) U.dragStart(e, it.drag, it.label);
     });
+    row.addEventListener('click', () => { if (U.isTouch && st.sel !== i) select(i); });
     row.addEventListener('dblclick', () => { if (it.load) it.load(); });
     row.addEventListener('contextmenu', e => {
       e.preventDefault();

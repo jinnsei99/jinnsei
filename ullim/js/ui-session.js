@@ -145,7 +145,7 @@ function slot(t, i) {
   const el = h('div', { class: 'slot' + (c ? ' full' : ' empty') + (sel ? ' sel' : ''), dataset: { t: t.id, s: i } });
   if (c) {
     el.style.setProperty('--c', U.colorOf(c.color));
-    const l = h('button', { class: 'launch', type: 'button', 'aria-label': '클립 재생' }, icon('play'));
+    const l = h('button', { 'data-nolongpress': '', class: 'launch', type: 'button', 'aria-label': '클립 재생' }, icon('play'));
     info(l, '클립 띄우기', '눌러서 클립을 재생해요. 런치 퀀타이즈에 맞춰 다음 박자 경계에서 시작해요.');
     l.addEventListener('pointerdown', e => {
       e.stopPropagation();
@@ -163,13 +163,15 @@ function slot(t, i) {
     el.append(l, name, prog);
     info(el, c.name || '클립', '눌러서 고르면 아래 클립 뷰에 내용이 보여요. 끌어서 다른 칸이나 어레인지먼트로 옮기고, Alt를 누르고 끌면 복사해요.');
     el.addEventListener('pointerdown', e => {
-      if (e.button !== 0) return;
+      if (e.button !== 0 || e.pointerType === 'touch') return;
       selectSlot(t, i, true);
       U.dragStart(e, { type: 'clip', from: { t: t.id, s: i } }, c.name || '클립');
     });
+    // 손가락: 밀어서 넘기다가 고르지 않게 떼었을 때 고른다 (옮기기는 길게 눌러 복사·붙여넣기)
+    el.addEventListener('click', e => { if (U.lastPointer === 'touch' && !e.target.closest('.launch')) selectSlot(t, i, true); });
   } else {
     const armed = t.arm && t.type === 'midi';
-    const l = h('button', { class: 'launch stopsq' + (armed ? ' armed' : ''), type: 'button', 'aria-label': armed ? '여기에 녹음' : '트랙 정지' }, icon(armed ? 'rec' : 'stop'));
+    const l = h('button', { 'data-nolongpress': '', class: 'launch stopsq' + (armed ? ' armed' : ''), type: 'button', 'aria-label': armed ? '여기에 녹음' : '트랙 정지' }, icon(armed ? 'rec' : 'stop'));
     info(l, armed ? '여기에 녹음' : '트랙 정지', armed ? '누르면 이 칸에 새 클립을 녹음하기 시작해요.' : '이 트랙에서 재생 중인 클립을 멈춰요.');
     l.addEventListener('pointerdown', e => {
       e.stopPropagation();
@@ -180,7 +182,8 @@ function slot(t, i) {
     });
     if (t.slots.some(Boolean) || armed) el.append(l);
     info(el, '빈 슬롯', t.type === 'midi' ? '두 번 눌러 빈 MIDI 클립을 만들어요. 브라우저의 클립이나 샘플을 끌어다 놓아도 돼요.' : '브라우저에서 오디오 샘플을 끌어다 놓으세요.');
-    el.addEventListener('pointerdown', e => { if (e.button === 0) selectSlot(t, i, false); });
+    el.addEventListener('pointerdown', e => { if (e.button === 0 && e.pointerType !== 'touch') selectSlot(t, i, false); });
+    el.addEventListener('click', e => { if (U.lastPointer === 'touch' && !e.target.closest('.launch')) selectSlot(t, i, false); });
     el.addEventListener('dblclick', () => { if (t.type === 'midi') A.createClip(t.id, i); });
   }
   el.addEventListener('contextmenu', e => { e.preventDefault(); selectSlot(t, i, !!c); slotMenu(t, i, { x: e.clientX, y: e.clientY }); });
@@ -215,7 +218,7 @@ function sceneCell(i) {
   const p = pr();
   const sc = p.scenes[i];
   const el = h('div', { class: 'scene' + (ui.scene === i ? ' sel' : '') });
-  const l = h('button', { class: 'launch', type: 'button', 'aria-label': '씬 재생' }, icon('play'));
+  const l = h('button', { 'data-nolongpress': '', class: 'launch', type: 'button', 'aria-label': '씬 재생' }, icon('play'));
   info(l, '씬 띄우기', '이 줄의 클립을 모든 트랙에서 한꺼번에 띄워요. 빈 칸인 트랙은 멈춰요.');
   l.addEventListener('pointerdown', e => { e.stopPropagation(); if (e.button) return; U.ensureAudio(); U.engine.launchScene(i); ui.scene = i; markSel(); });
   const name = h('span', { class: 'sc-name', text: (sc.name ? sc.name : String(i + 1)) });
@@ -375,6 +378,7 @@ function trackMenu(t, at) {
     { label: '이름 바꾸기', key: 'F2', action: () => U.ask('트랙 이름', '이름', t.name || U.trackLabel(p, t)).then(v => { if (v != null) A.renameTrack(t.id, v); }) },
     { label: '색', sub: U.colorMenu(t.color, c => A.setTrackColor(t.id, c)) },
     playable ? { label: '트랙 복제', key: U.MOD + '+D', action: () => A.duplicateTrack(t.id) } : null,
+    t.type === 'midi' && U.instrumentOf(t) ? { label: '손가락으로 연주 (패드 화면)', key: 'P', action: () => { ui.padTrack = t.id; U.setView('pads'); } } : null,
     { sep: true },
     { label: 'MIDI 트랙 넣기', action: () => A.addTrack('midi') },
     { label: '오디오 트랙 넣기', action: () => A.addTrack('audio') },
@@ -383,6 +387,7 @@ function trackMenu(t, at) {
     t.type !== 'master' ? { label: '트랙 지우기', danger: true, key: 'Del', action: () => A.deleteTrack(t.id) } : null
   ], at);
 }
+let clipBoard = null;   // 메뉴의 복사로 담아 둔 클립 (손가락으로는 끌어서 옮기기 어려워서)
 function slotMenu(t, i, at) {
   const c = t.slots[i];
   const items = [];
@@ -392,12 +397,15 @@ function slotMenu(t, i, at) {
       { label: '이름 바꾸기', key: 'F2', action: () => U.ask('클립 이름', '이름', c.name).then(v => { if (v != null) A.clipProp({ t: t.id, s: i }, x => { x.name = v; }, '클립 이름'); }) },
       { label: '색', sub: U.colorMenu(c.color, ci => A.clipProp({ t: t.id, s: i }, x => { x.color = ci; }, '클립 색')) },
       { label: '복제', key: U.MOD + '+D', action: () => A.duplicateClip(t.id, i) },
+      { label: '복사', action: () => { clipBoard = U.cloneClip(c); U.toast('클립을 복사했어요. 빈 칸을 길게 누르거나 오른쪽 클릭해 붙여넣어요.'); } },
       { label: '어레인지먼트 재생 위치에 넣기', action: () => A.sessionToArr({ t: t.id, s: i }, t.id, pr().pos) },
       { sep: true },
       { label: '지우기', key: 'Del', danger: true, action: () => A.deleteSlot(t.id, i) }
     );
   } else {
     if (t.type === 'midi') items.push({ label: '빈 MIDI 클립 만들기', key: '더블클릭', action: () => A.createClip(t.id, i) });
+    const fits = clipBoard && clipBoard.type === t.type;
+    items.push({ label: '붙여넣기', disabled: !fits, action: () => A.putClip(t.id, i, U.cloneClip(clipBoard), '클립 붙여넣기') });
     items.push({ label: '오디오 파일 가져와 넣기…', action: () => U.importAudioTo(t.id, i) });
   }
   items.push({ sep: true }, { label: '씬 넣기', action: () => A.insertScene(i) });

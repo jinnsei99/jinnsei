@@ -451,7 +451,8 @@ function menu(items, at) {
         const sub = h('div', { class: 'menu sub', role: 'menu' });
         build(it.sub, sub);
         row.append(sub);
-        row.addEventListener('click', e => { e.stopPropagation(); row.classList.toggle('open'); });
+        row.addEventListener('click', e => { e.stopPropagation(); row.classList.toggle('open'); placeSub(sub); });
+        row.addEventListener('pointerenter', () => requestAnimationFrame(() => placeSub(sub)));
       } else row.addEventListener('click', e => { e.stopPropagation(); closeMenu(); if (it.action) it.action(); });
       root.append(row);
     }
@@ -479,9 +480,19 @@ function menu(items, at) {
   });
   return el;
 }
+/* 하위 메뉴가 화면 오른쪽·아래로 넘치면 왼쪽·위로 붙인다 (아이패드 세로 화면 등) */
+function placeSub(sub) {
+  sub.style.left = sub.style.right = sub.style.top = '';
+  const r = sub.getBoundingClientRect();
+  if (!r.width) return;
+  if (r.right > window.innerWidth - 4) { sub.style.left = 'auto'; sub.style.right = '100%'; }
+  if (r.bottom > window.innerHeight - 4) sub.style.top = Math.round(window.innerHeight - 4 - r.bottom - 4) + 'px';
+}
 document.addEventListener('pointerdown', e => { if (openMenu && !openMenu.contains(e.target)) closeMenu(); }, true);
 window.addEventListener('blur', closeMenu);
 window.addEventListener('resize', closeMenu);
+// 메뉴 밖에 포커스가 있어도 Esc로 닫는다 (손가락으로 연 메뉴를 키보드로 닫을 때 등)
+window.addEventListener('keydown', e => { if (e.key === 'Escape' && openMenu) { e.preventDefault(); e.stopPropagation(); closeMenu(); } }, true);
 function colorMenu(cur, onPick) {
   return U.COLORS.map((c, i) => ({ label: '색 ' + (i + 1), swatch: c, checked: i === cur, action: () => onPick(i) }));
 }

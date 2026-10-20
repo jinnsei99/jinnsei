@@ -586,7 +586,7 @@ function hitNote(x, y) {
     if (n.p !== p) continue;
     const x0 = xOf(n.s), x1 = x0 + Math.max(3, n.d * R.ppb);
     if (x >= x0 - 1 && x <= x1 + 1) {
-      const edge = Math.min(6, (x1 - x0) / 3);
+      const edge = Math.min(U.isTouch ? 14 : 6, (x1 - x0) / 3);
       return { n, zone: x1 - x < edge ? 'r' : x - x0 < edge && x1 - x0 > 12 ? 'l' : 'body' };
     }
   }
@@ -709,6 +709,23 @@ function bindRoll() {
   cvKeys.addEventListener('wheel', wheel, { passive: false });
   cvVel.addEventListener('wheel', wheel, { passive: false });
   cvRuler.addEventListener('wheel', wheel, { passive: false });
+  // 두 손가락: 밀면 스크롤, 가로로 벌리면 시간 확대, 세로로 벌리면 줄 높이
+  U.gestures.pan(gridWrap, {
+    pan: (dx, dy) => { R.x0 = Math.max(-2, R.x0 - dx / R.ppb); R.scrollY -= dy; drawAll(); },
+    zoom: z => {
+      if (z.fx !== 1) {
+        const x = clamp(z.x - KEYS_W, 0, W), b = bOf(x);
+        R.ppb = clamp(R.ppb * z.fx, 4, 900);
+        R.x0 = b - x / R.ppb;
+      }
+      if (z.fy !== 1 && R.fold === 'none') {
+        const y = clamp(z.y - RULER_H, 0, H), row = (R.scrollY + y) / R.rowH;
+        R.rowH = clamp(R.rowH * z.fy, 6, 30);
+        R.scrollY = row * R.rowH - y;
+      }
+      drawAll();
+    }
+  });
   // 건반 미리 듣기
   cvKeys.addEventListener('pointerdown', e => {
     const r = cvKeys.getBoundingClientRect();
@@ -1034,7 +1051,8 @@ function bindWave() {
     if (y > 16) return;
     const c = clip();
     const [a, z] = U.clipRegion(c);
-    const mode = Math.abs(x - xOfW(a)) < 6 ? 'a' : Math.abs(x - xOfW(z)) < 6 ? 'z' : x > xOfW(a) && x < xOfW(z) ? 'move' : null;
+    const grab = U.isTouch ? 14 : 6;
+    const mode = Math.abs(x - xOfW(a)) < grab ? 'a' : Math.abs(x - xOfW(z)) < grab ? 'z' : x > xOfW(a) && x < xOfW(z) ? 'move' : null;
     if (!mode) return;
     cvWave.setPointerCapture(e.pointerId);
     const b0 = (x / wv.ppb) + wv.x0;
@@ -1050,6 +1068,16 @@ function bindWave() {
     const up = () => { cvWave.removeEventListener('pointermove', move); cvWave.removeEventListener('pointerup', up); changed('루프 구간'); };
     cvWave.addEventListener('pointermove', move);
     cvWave.addEventListener('pointerup', up);
+  });
+  U.gestures.pan(cvWave, {
+    pan: dx => { wv.x0 = Math.max(0, wv.x0 - dx / wv.ppb); drawWaveEditor(); },
+    zoom: z => {
+      if (z.fx === 1) return;
+      const b = z.x / wv.ppb + wv.x0;
+      wv.ppb = clamp(wv.ppb * z.fx, 2, 800);
+      wv.x0 = Math.max(0, b - z.x / wv.ppb);
+      drawWaveEditor();
+    }
   });
   cvWave.addEventListener('wheel', e => {
     e.preventDefault();

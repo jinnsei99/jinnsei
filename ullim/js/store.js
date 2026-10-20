@@ -213,6 +213,39 @@ async function offer(filename, blob) {
     }
   }
   if (window.claude) { U.toast('이 화면에서는 파일을 받을 수 없어요.', 'error'); return 'failed'; }
+  // 아이패드·아이폰: 공유 화면으로 '파일에 저장'·AirDrop·다른 앱으로 보낸다
+  if (U.isIOS && navigator.canShare && window.File) {
+    const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' });
+    let ok = false;
+    try { ok = navigator.canShare({ files: [file] }); } catch (e) { ok = false; }
+    if (ok) return shareDialog(file, blob);
+  }
+  return saveLink(blob, filename);
+}
+/* 렌더가 끝난 뒤에는 '사용자가 누른 순간'이 지나서 공유 화면을 바로 못 띄우니, 버튼을 한 번 더 누르게 한다 */
+function shareDialog(file, blob) {
+  return new Promise(res => {
+    let done = false, busy = false;
+    const fin = v => { if (!done) { done = true; res(v); } };
+    const kb = Math.max(1, Math.round(file.size / 1024));
+    U.dialog({
+      title: '파일이 준비됐어요', width: '400px',
+      body: U.h('div', { class: 'xp' },
+        U.h('p', { text: file.name + ' · ' + (kb >= 1024 ? U.round(kb / 1024, 1) + ' MB' : kb + ' KB') }),
+        U.h('p', { class: 'hint', text: '공유 화면에서 "파일에 저장"을 고르면 파일 앱에 남아요. AirDrop이나 다른 음악 앱으로 바로 보낼 수도 있어요.' })),
+      onclose: () => { if (!busy) fin('declined'); },
+      actions: [
+        { label: '그냥 받기', action: () => { busy = true; fin(saveLink(blob, file.name)); } },
+        { label: '저장·공유', primary: true, action: () => {
+          busy = true;
+          navigator.share({ files: [file], title: file.name }).then(() => fin('saved'),
+            err => fin(err && err.name === 'AbortError' ? 'declined' : saveLink(blob, file.name)));
+        } }
+      ]
+    });
+  });
+}
+function saveLink(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

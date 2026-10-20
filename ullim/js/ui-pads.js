@@ -18,13 +18,18 @@ const AUDIO_TYPES = 'audio/*,.wav,.mp3,.ogg,.flac,.m4a,.aif,.aiff';
 /* ================= 찾기 도우미 ================= */
 const isPadInst = d => !!d && (d.kind === 'looppad' || d.kind === 'drums');
 function padTracks() { return pr().tracks.filter(t => isPadInst(U.instrumentOf(t))); }
-/* 패드 화면의 트랙: 고른 트랙이 루프 패드면 그것, 아니면 첫 루프 패드, 그다음 드럼 머신 */
+/* 손가락으로 칠 수 있는 트랙: 패드 트랙과 신스·샘플러 트랙(건반) */
+function playTracks() { return pr().tracks.filter(t => t.type === 'midi' && U.instrumentOf(t)); }
+const isKeysTrack = t => !!t && !isPadInst(U.instrumentOf(t));
+/* 패드 화면의 트랙: 고른 트랙이 루프 패드면 그것, 아니면 첫 루프 패드, 그다음 드럼 머신.
+   패드 트랙이 없거나 신스 트랙을 골라 두었으면 건반으로 친다 */
 function curTrack() {
-  const list = padTracks();
-  let t = ui.padTrack ? list.find(x => x.id === ui.padTrack) : null;
+  const all = playTracks();
+  let t = ui.padTrack ? all.find(x => x.id === ui.padTrack) : null;
   if (!t) {
+    const list = padTracks();
     const s = U.selTrack(), lp = x => U.instrumentOf(x).kind === 'looppad';
-    t = list.includes(s) && lp(s) ? s : list.find(lp) || (list.includes(s) ? s : list[0]) || null;
+    t = list.includes(s) && lp(s) ? s : list.find(lp) || (list.includes(s) ? s : list[0]) || (all.includes(s) ? s : all[0]) || null;
   }
   ui.padTrack = t ? t.id : null;
   return t;
@@ -70,7 +75,7 @@ function release(id) {
   U.engine.liveOff(x.tid, x.p);
   return true;
 }
-function releaseAll() { for (const id of [...held.keys()]) release(id); }
+function releaseAll() { for (const id of [...held.keys()]) release(id); if (U.touchKeys) U.touchKeys.releaseAll(); }
 /* 누르는 동안 패드를 치고, 손을 떼면 놓는다 (여러 손가락으로 동시에 눌러도 따로따로) */
 function pointerPress(e, t, i) {
   const id = 'p' + e.pointerId;
@@ -103,7 +108,7 @@ function stopAll(t) {
 function viewActive() { return ui.view === 'pads' && !(ui.narrow && ui.pane !== 'main'); }
 /* 글자 키가 칠 패드 트랙: 패드 화면이면 그 트랙, 컴퓨터 건반이 켜져 있으면 건반이 가는 루프 패드 트랙 */
 function kbTarget() {
-  if (viewActive()) { const t = curTrack(); return t ? { t, d: U.instrumentOf(t) } : null; }
+  if (viewActive()) { const t = curTrack(); return t && !isKeysTrack(t) ? { t, d: U.instrumentOf(t) } : null; }
   if (!ui.keyboard) return null;
   for (const id of U.input.liveTargets()) {
     const t = U.trackById(pr(), id), d = t && U.instrumentOf(t);
@@ -120,6 +125,8 @@ function keyDown(e) {
     if (U.padKeyOk(e.code)) { if (!e.repeat) assignKey(d, ui.padWait, e.code, true); return true; }
     return false;
   }
+  // 패드 화면이 건반이면 글자 키는 건반 (A~K 흰 건반, Z/X 옥타브)
+  if (viewActive() && isKeysTrack(curTrack())) return U.touchKeys.keyDown(e) || (U.padKeyOk(e.code) && e.code !== 'KeyP');
   const tg = kbTarget();
   if (!tg) return false;
   let i = -1;
@@ -129,7 +136,7 @@ function keyDown(e) {
   if (!e.repeat) press(e.code, tg.t, i, e.shiftKey);
   return true;
 }
-function keyUp(e) { return release(e.code); }
+function keyUp(e) { return release(e.code) || (U.touchKeys ? U.touchKeys.keyUp(e) : false); }
 
 /* ================= 키 지정 ================= */
 function waitFor(t, i) {
@@ -359,7 +366,9 @@ function editor(t, d, o) {
   name.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' || e.key === 'Escape') name.blur(); });
   name.addEventListener('change', () => A.setDeviceData(d.id, data => { data.pads[i].name = name.value.trim(); }, '패드 이름'));
   const big = o.compact ? btn({ icon: 'pads', cls: 'ghost sm', title: '패드 화면에서 크게', info: ['패드 화면', '패드를 크게 띄우고 글자 키로 치는 화면이에요. P를 눌러도 가요.'], onclick: () => { ui.padTrack = t.id; U.setView('pads'); } }) : null;
-  box.append(h('div', { class: 'pe2-head' }, h('span', { class: 'pe2-n', text: String(i + 1) }), name, h('span', { class: 'pe2-note', text: U.noteName(36 + i) }), big));
+  // 손가락으로는 패드를 길게 눌러도 메뉴가 뜨지 않으니(누르는 동안이 연주라서) 여기서 연다
+  const more = U.isTouch && !o.compact ? btn({ text: '⋯', cls: 'ghost sm pe2-more', title: '패드 메뉴', onclick: () => padMenu(more, t, d, i) }) : null;
+  box.append(h('div', { class: 'pe2-head' }, h('span', { class: 'pe2-n', text: String(i + 1) }), name, h('span', { class: 'pe2-note', text: U.noteName(36 + i) }), big, more));
   box.append(keyRow(t, d, i));
   if (d.kind === 'drums') {
     box.append(h('p', { class: 'hint', text: '드럼 소리(종류·튜닝·디케이)는 장치 칸의 드럼 머신에서 바꿔요.' }),
@@ -504,8 +513,10 @@ function render() {
   U.clear(root);
   R = { pads: [], track: null, dev: null, ed: null, side: null };
   const t = curTrack();
+  if (U.touchKeys) U.touchKeys.releaseAll();
   root.append(toolbar(t));
   if (!t) { root.append(emptyState()); return; }
+  if (isKeysTrack(t)) { R.track = t; root.append(h('div', { class: 'pv-body pv-keys' }, U.touchKeys.view(t))); return; }
   const d = U.instrumentOf(t);
   R.track = t;
   R.dev = d;
@@ -541,11 +552,12 @@ function drawSide() {
 function toolbar(t) {
   const bar = h('div', { class: 'pv-bar' });
   const d = t && U.instrumentOf(t);
-  const list = padTracks();
-  if (list.length) {
-    bar.append(pick(list.map(x => [x.id, U.trackLabel(pr(), x)]), t.id, v => { ui.padTrack = v; U.selectTrack(v); render(); },
-      { cls: 'sm pv-track', label: '패드 트랙', info: ['패드 트랙', '패드 화면에서 칠 트랙이에요. 루프 패드나 드럼 머신이 든 트랙을 고를 수 있어요.'] }));
+  const list = playTracks();
+  if (list.length && t) {
+    bar.append(pick(list.map(x => [x.id, U.trackLabel(pr(), x) + (isKeysTrack(x) ? ' · 건반' : ' · 패드')]), t.id, v => { ui.padTrack = v; U.selectTrack(v); render(); },
+      { cls: 'sm pv-track', label: '칠 트랙', info: ['칠 트랙', '손가락으로 칠 트랙이에요. 드럼 머신·루프 패드는 패드 16개로, 신스·샘플러는 건반으로 쳐요.'] }));
   }
+  if (isKeysTrack(t)) return keysBar(bar, t);
   const kitB = btn({ icon: 'pads', text: d ? d.preset || U.devName(d) : '키트', cls: 'sm pv-kit', title: '키트', info: ['키트', '이 트랙의 패드를 다른 키트로 바꾸거나 새 루프 패드 트랙을 만들어요.'], onclick: () => kitMenu(kitB, t) });
   bar.append(kitB);
   if (!t) return bar;
@@ -559,7 +571,22 @@ function toolbar(t) {
   const vel = U.numBox({ cls: 'sm pv-vel', label: '세기', get: () => ui.padVel, set: (v, f) => { ui.padVel = v; if (f) U.setPref('padVel', v); }, fmt: v => '세기 ' + Math.round(v), parse: s => parseInt(String(s).replace(/[^\d]/g, ''), 10), min: 1, max: 127, step: 1, def: 110, range: 300 });
   info(vel, '세기', '마우스·터치·키보드로 칠 때의 세기(벨로시티)예요. 끌거나 두 번 눌러 입력해요.');
   const stop = btn({ icon: 'stop', text: '모두 멈춤', cls: 'sm', info: ['모두 멈춤', '이 트랙에서 울리거나 되풀이하는 패드를 모두 멈춰요. 재생을 멈춰도 반복 패드는 멈춰요.'], onclick: () => stopAll(t) });
-  bar.append(arm, sep(), keys, lay, sep(), rep, rate, vel, h('span', { class: 'cb-flex' }), stop);
+  bar.append(...[arm, sep(), keys, lay, sep(), rep, rate, vel, h('span', { class: 'cb-flex' }), bigBtn(), stop].filter(Boolean));
+  return bar;
+}
+/* 아래 클립·장치 칸을 접어 패드·건반을 크게 (손가락으로 칠 때) */
+function bigBtn() {
+  if (ui.narrow) return null;
+  return btn({ icon: 'detail', cls: 'tg sm', toggle: true, on: !ui.detailOpen, title: '연주 칸 크게', info: ['연주 칸 크게', '아래 클립·장치 칸을 접어서 패드와 건반을 크게 써요. 다시 누르면 펼쳐요.'], onclick: () => { U.toggleDetail(); U.inval('pads'); } });
+}
+/* 건반일 때의 도구 막대: 녹음 준비, 건반·스케일, 코드, 옥타브, 세기 */
+function keysBar(bar, t) {
+  const sep = () => h('span', { class: 'pv-sep' });
+  const arm = btn({ icon: 'rec', cls: 'tg sm pv-arm', toggle: true, on: !!t.arm, title: '녹음 준비', info: ['녹음 준비', '켜 두고 ● 녹음(F9)이나 세션 녹음을 누르면 건반으로 친 것이 클립으로 남아요.'], onclick: () => A.toggleTrackFlag(t.id, 'arm') });
+  const vel = U.numBox({ cls: 'sm pv-vel', label: '세기', get: () => ui.padVel, set: (v, f) => { ui.padVel = v; if (f) U.setPref('padVel', v); }, fmt: v => '세기 ' + Math.round(v), parse: s => parseInt(String(s).replace(/[^\d]/g, ''), 10), min: 1, max: 127, step: 1, def: 110, range: 300 });
+  info(vel, '세기', '건반을 칠 때의 세기(벨로시티)예요. 끌거나 두 번 눌러 입력해요.');
+  const stop = btn({ icon: 'stop', text: '모두 멈춤', cls: 'sm', info: ['모두 멈춤', '이 트랙에서 울리는 음을 모두 멈춰요.'], onclick: () => { U.touchKeys.releaseAll(); stopAll(t); } });
+  bar.append(...[arm, sep(), ...U.touchKeys.controls(t, render), sep(), vel, h('span', { class: 'cb-flex' }), bigBtn(), stop].filter(Boolean));
   return bar;
 }
 function emptyState() {
@@ -573,7 +600,7 @@ function padEl(t, d, i) {
   const pd = pads(d)[i];
   const wait = ui.padWait === i && ui.padWaitT === t.id;
   const meta = d.kind === 'looppad' && pd ? MODE_SHORT[pd.mode] + (pd.sync ? ' · ' + fmtBeats(pd.beats) : '') : U.noteName(36 + i);
-  const el = h('button', { type: 'button', class: 'lp' + (padEmpty(d, i) ? ' empty' : '') + (selIdx(d) === i ? ' sel' : '') + (wait ? ' assign' : ''), 'aria-label': '패드 ' + (i + 1) + ' ' + padName(d, i) + (k ? ', ' + U.keyLabel(k) + ' 키' : '') },
+  const el = h('button', { type: 'button', 'data-nolongpress': '', class: 'lp' + (padEmpty(d, i) ? ' empty' : '') + (selIdx(d) === i ? ' sel' : '') + (wait ? ' assign' : ''), 'aria-label': '패드 ' + (i + 1) + ' ' + padName(d, i) + (k ? ', ' + U.keyLabel(k) + ' 키' : '') },
     h('span', { class: 'lp-top' }, h('span', { class: 'lp-num', text: String(i + 1) }), h('span', { class: 'lp-key' + (k || wait ? '' : ' none'), text: wait ? '?' : k ? U.keyLabel(k) : '—' })),
     h('span', { class: 'lp-name', text: padName(d, i) }),
     h('span', { class: 'lp-meta', text: meta }));
@@ -660,7 +687,10 @@ U.renderer('pads', () => { if (ui.view === 'pads') render(); });
 U.on('select', s => {
   if (!s || !s.track || s.track === ui.padTrack) return;
   const t = U.trackById(pr(), s.track);
-  if (t && isPadInst(U.instrumentOf(t))) { ui.padTrack = t.id; if (ui.view === 'pads') U.inval('pads'); }
+  if (!t || t.type !== 'midi' || !U.instrumentOf(t)) return;
+  // 패드 트랙을 고르면 언제나 따라가고, 신스 트랙은 지금 건반으로 치고 있을 때만 따라간다
+  const now = ui.padTrack && U.trackById(pr(), ui.padTrack);
+  if (!isKeysTrack(t) || !now || isKeysTrack(now)) { ui.padTrack = t.id; if (ui.view === 'pads') U.inval('pads'); }
 });
 window.addEventListener('resize', () => { if (R.ed && ui.view === 'pads') R.ed.draw(); });
 
