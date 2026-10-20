@@ -107,7 +107,10 @@ function renderDetail() {
   const tabs = U.seg([['clip', '클립', '고른 클립의 음표나 오디오를 편집해요. Shift+Tab으로 바꿔요.'], ['device', '장치', '고른 트랙의 악기와 이펙트예요. Shift+Tab으로 바꿔요.']], ui.detail, v => { U.setDetail(v); }, 'dt-tabs');
   const title = h('span', { class: 'dt-title', text: ui.detail === 'clip' ? (r ? (r.clip.name || (r.clip.type === 'audio' ? '오디오 클립' : 'MIDI 클립')) + ' — ' + U.trackLabel(pr(), r.track) : '클립 없음') : (t ? U.trackLabel(pr(), t) : '') });
   const fold = btn({ icon: 'detail', cls: 'ghost sm', title: '아래 칸 접기', info: ['아래 칸 접기', '클립·장치 칸을 접거나 펼쳐요. 경계선을 두 번 눌러도 돼요.'], onclick: () => U.toggleDetail() });
-  els.dtHead.append(tabs, title, h('span', { class: 'cb-flex' }), fold);
+  // 건반 악기 트랙이면 악기 소리를 여기서 바로 바꾼다 (클립을 고치다가도). 드럼·루프 패드는 장치의 키트 메뉴로 바꾼다
+  const st = ui.detail === 'clip' ? r && r.track : t, sti = st && U.instrumentOf(st);
+  const pick = st && st.type === 'midi' && !(sti && (sti.kind === 'drums' || sti.kind === 'looppad')) ? h('span', { class: 'snd-pickers' }, h('span', { class: 'snd-l', text: '소리' }), ...U.soundPicker(st)) : null;
+  els.dtHead.append(...[tabs, title, pick, h('span', { class: 'cb-flex' }), fold].filter(Boolean));
   if (!ui.detailOpen && !ui.narrow) return;
   if (ui.detail === 'clip') U.clipView.render(els.dtBody);
   else U.deviceView.render(els.dtBody);
@@ -421,6 +424,7 @@ function helpDialog() {
       h('li', { text: '씬을 다 만들었으면 "곡 만들기"(세션 뷰 오른쪽 아래)로 인트로부터 아웃트로까지 어레인지먼트에 한 번에 늘어놓아요.' }),
       h('li', { text: '클립을 누르면 아래에 피아노 롤이 열려요. 빈 곳을 두 번 눌러 음을 넣고, 끌어서 옮겨요.' }),
       h('li', { text: '트랙 이름을 누르고 아래 칸을 "장치"로 바꾸면 악기와 이펙트의 노브를 돌릴 수 있어요.' }),
+      h('li', { text: '악기 소리를 바꾸려면 아래 칸 위쪽의 "소리" 버튼을 눌러요. 피아노·기타·현악·관악·말렛·오르간·콰이어·가야금과 신스까지 60가지 중에서 누를 때마다 바뀌고 한 음 들려줘요. ◀ ▶로 하나씩 넘겨도 돼요. Acoustic·Ensemble 장치 안에서는 악기 버튼으로 종류만 바꿀 수 있어요.' }),
       h('li', { text: '왼쪽 브라우저에서 사운드·드럼·샘플을 트랙이나 빈 칸에 끌어다 놓아요.' }),
       h('li', { text: 'P를 누르면 패드 화면이에요. 로봇 보컬 찹 패드를 Z·X·C·V, A·S·D·F … 글자 키로 두드려 보세요. "키 지정"을 켜면 패드마다 원하는 글자를 줄 수 있어요.' }),
       h('li', { text: 'Tab으로 어레인지먼트 뷰로 가서 클립을 시간 순서로 배치하고, 메뉴의 "오디오 내보내기"로 WAV를 받아요.' })));

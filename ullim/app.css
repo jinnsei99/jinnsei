@@ -493,6 +493,22 @@ body.no-detail .dt-body, body.no-detail .infoview { display: none; }
 
 /* 장치 뷰 */
 .chain-title { position: absolute; left: 8px; top: 6px; display: none; }
+/* 악기 안에서 종류 고르기 (Acoustic · Ensemble) · 소리 고르기 창 */
+.insts { display: flex; flex-direction: column; gap: 3px; width: 400px; }
+.insts-row { display: flex; align-items: flex-start; gap: 3px; }
+.insts-g { flex: none; width: 56px; padding-top: 4px; color: var(--fg-3); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.insts-bs { display: flex; flex-wrap: wrap; gap: 3px; flex: 1 1 auto; min-width: 0; }
+.inst-b { min-height: 20px; padding: 0 7px; border: 1px solid var(--line-2); border-radius: 4px; background: var(--panel); color: var(--fg-2); font: 11px var(--font-kr); white-space: nowrap; }
+.inst-b:hover { color: var(--fg); border-color: var(--fg-3); }
+.inst-b[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.snd-panel { display: flex; flex-direction: column; gap: 6px; }
+.snd-panel .insts-g { width: 62px; padding-top: 7px; font-size: 11px; }
+.snd-panel .inst-b { min-height: 28px; padding: 0 10px; font-size: 12.5px; }
+.snd-pickers { display: inline-flex; align-items: center; gap: 3px; min-width: 0; flex: 0 1 auto; }
+.snd-l { flex: none; margin: 0 2px 0 4px; color: var(--fg-3); font-size: 11px; }
+.snd-pick { min-width: 0; max-width: 180px; }
+.snd-pick span { overflow: hidden; text-overflow: ellipsis; }
+.snd-step { flex: none; padding: 0 5px; font-size: 9px; }
 .chain { display: flex; align-items: stretch; gap: 0; height: 100%; padding: 8px 8px 8px 4px; overflow-x: auto; overflow-y: hidden; }
 .drop-gap { flex: none; width: 6px; border-radius: 3px; }
 .drop-gap.last { flex: 1 0 40px; }
@@ -746,6 +762,12 @@ html.touch .m-item { min-height: 42px; padding: 0 12px 0 6px; font-size: 13.5px;
 html.touch .menu { min-width: 220px; padding: 6px; }
 html.touch .m-key { font-size: 11.5px; }
 html.touch .dt-head { height: 42px; }
+html.touch .insts { width: 470px; gap: 4px; }
+html.touch .insts-g { padding-top: 9px; }
+html.touch .snd-panel .insts-g { padding-top: 13px; }
+html.touch .inst-b { min-height: 32px; padding: 0 10px; font-size: 12.5px; }
+html.touch .snd-panel .inst-b { min-height: 40px; padding: 0 14px; font-size: 14px; }
+html.touch .snd-step { min-width: 34px; font-size: 11px; }
 html.touch .pr-bar { height: 42px; gap: 6px; }
 html.touch .infoview { display: none; }
 html.touch .detail, html.touch body.no-browser .detail { grid-template-columns: minmax(0, 1fr); }
