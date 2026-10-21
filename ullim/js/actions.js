@@ -115,7 +115,13 @@ function removeInstrument(t) {
   const inst = U.instrumentOf(t);
   if (!inst) return;
   const grp = inst.grp;
-  t.devices = t.devices.filter(d => d !== inst && !(grp && d.grp === grp));
+  const gone = t.devices.filter(d => d === inst || (grp && d.grp === grp));
+  t.devices = t.devices.filter(d => !gone.includes(d));
+  for (const d of gone) dropAuto(t, d.id);
+}
+/* 트랙에서 빠진 장치의 자동화도 지운다 */
+function dropAuto(t, devId) {
+  for (const k of Object.keys(t.auto)) if (k.startsWith('dev:' + devId + ':')) delete t.auto[k];
 }
 /* 사운드 프리셋: 악기와 그 프리셋의 이펙트를 함께 바꾼다 */
 A.loadSound = function (trackId, sound) {
@@ -157,7 +163,7 @@ A.removeDevice = function (trackId, devId) {
   const t = T(trackId);
   if (!t) return;
   t.devices = t.devices.filter(d => d.id !== devId);
-  for (const k of Object.keys(t.auto)) if (k.startsWith('dev:' + devId + ':')) delete t.auto[k];
+  dropAuto(t, devId);
   commit('장치 지우기');
 };
 A.moveDevice = function (trackId, devId, toIndex, toTrackId) {
@@ -170,6 +176,8 @@ A.moveDevice = function (trackId, devId, toIndex, toTrackId) {
   if (dst === t && toIndex > i) toIndex--;
   if (devType(d.kind) === 'instrument' && dst !== t) removeInstrument(dst);
   dst.devices.splice(insertIndex(dst, d.kind, toIndex), 0, d);
+  // 다른 트랙으로 옮기면 그 장치의 자동화도 따라간다
+  if (dst !== t) for (const k of Object.keys(t.auto)) if (k.startsWith('dev:' + d.id + ':')) { dst.auto[k] = t.auto[k]; delete t.auto[k]; }
   commit('장치 옮기기');
 };
 A.toggleDevice = function (devId) {
