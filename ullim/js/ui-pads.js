@@ -586,7 +586,7 @@ function keysBar(bar, t) {
   const vel = U.numBox({ cls: 'sm pv-vel', label: '세기', get: () => ui.padVel, set: (v, f) => { ui.padVel = v; if (f) U.setPref('padVel', v); }, fmt: v => '세기 ' + Math.round(v), parse: s => parseInt(String(s).replace(/[^\d]/g, ''), 10), min: 1, max: 127, step: 1, def: 110, range: 300 });
   info(vel, '세기', '건반을 칠 때의 세기(벨로시티)예요. 끌거나 두 번 눌러 입력해요.');
   const stop = btn({ icon: 'stop', text: '모두 멈춤', cls: 'sm', info: ['모두 멈춤', '이 트랙에서 울리는 음을 모두 멈춰요.'], onclick: () => { U.touchKeys.releaseAll(); stopAll(t); } });
-  bar.append(...[arm, sep(), ...U.touchKeys.controls(t, render), sep(), vel, h('span', { class: 'cb-flex' }), bigBtn(), stop].filter(Boolean));
+  bar.append(...[arm, sep(), ...U.soundPicker(t), sep(), ...U.touchKeys.controls(t, render), sep(), vel, h('span', { class: 'cb-flex' }), bigBtn(), stop].filter(Boolean));
   return bar;
 }
 function emptyState() {

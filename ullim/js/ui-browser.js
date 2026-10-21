@@ -72,10 +72,9 @@ function items() {
   const head = name => out.push({ head: name });
   switch (st.cat) {
     case 'sounds': {
-      const tags = [...new Set(U.SOUNDS.map(s => s.tags[0]))];
-      for (const tag of tags) {
+      for (const [tag, list] of U.soundGroups()) {
         head(tag);
-        for (const s of U.SOUNDS.filter(x => x.tags[0] === tag)) out.push({
+        for (const s of list) out.push({
           label: s.name, sub: U.DEV[s.kind].name, icon: 'sound',
           drag: { type: 'sound', item: s }, load: () => A.loadSound(loadTarget('midi'), s),
           preview: () => previewDev(U.makeDevice(s.kind, { p: s.p, data: s.data }), s.tags[0])
@@ -97,7 +96,7 @@ function items() {
       });
       break;
     case 'inst':
-      for (const kind of ['polysynth', 'fm', 'drums', 'looppad', 'sampler']) out.push({
+      for (const kind of ['acoustic', 'ensemble', 'polysynth', 'fm', 'drums', 'looppad', 'sampler']) out.push({
         label: U.DEV[kind].name, sub: U.DEV[kind].info, icon: kind === 'drums' ? 'drum' : kind === 'looppad' ? 'pads' : 'synth', drag: { type: 'device', kind },
         load: () => A.addDevice(loadTarget('midi'), kind), preview: kind === 'sampler' ? null : () => previewDev(U.makeDevice(kind), kind === 'drums' ? 'drums' : kind === 'looppad' ? 'loopkit' : '패드')
       });
@@ -264,7 +263,14 @@ const LEAD = [{ p: 69, s: 0, d: 0.45 }, { p: 72, s: 0.5, d: 0.45 }, { p: 76, s: 
 const BEAT = [36, 42, 38, 42, 36, 36, 38, 46].map((p, i) => ({ p, s: i * 0.5, d: 0.25, v: 110 })).concat([{ p: 42, s: 0.25, d: 0.2, v: 70 }]);
 const PADS8 = [0, 1, 2, 3, 4, 5, 6, 7].map(i => ({ p: 36 + i, s: i * 0.5, d: 0.4, v: 110 })); // 패드 1~8을 8분음표로
 function previewDev(dev, tag) {
-  const notes = tag === 'drums' ? BEAT : tag === 'loopkit' ? PADS8 : tag === '베이스' ? BASS : tag === '리드' || tag === '플럭' ? LEAD : tag === '보컬' ? [{ p: 57, s: 0, d: 1.5 }] : CHORD;
+  let notes = tag === 'drums' ? BEAT : tag === 'loopkit' ? PADS8 : tag === '베이스' ? BASS : tag === '리드' || tag === '플럭' ? LEAD : tag === '보컬' ? [{ p: 57, s: 0, d: 1.5 }] : CHORD;
+  // 진짜 악기는 그 악기의 음역으로 옮겨서 들려준다 (베이스는 베이스 줄, 혼자 부는 악기는 멜로디)
+  const m = U.instMeta(dev.kind, dev.p.inst);
+  if (m) {
+    const base = m.low ? BASS : m.solo ? LEAD : CHORD;
+    const shift = m.low ? 0 : 12 * Math.round((m.demo - (m.solo ? 72 : 60)) / 12);
+    notes = base.map(n => Object.assign({}, n, { p: n.p + shift }));
+  }
   U.engine.previewDevice(dev, notes);
 }
 function previewTpl(tpl) {

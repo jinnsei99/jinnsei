@@ -1134,6 +1134,7 @@ class Engine {
     const t0 = this.ctx.currentTime + 0.05;
     return inst.ready.then(() => {
       if (pv.inst !== inst) return;
+      if (inst.prepare) inst.prepare(notes);
       const t = Math.max(t0, this.ctx.currentTime + 0.02);
       for (const n of notes) inst.playNote(n.p, n.v || 100, t + n.s * 60 / this.bpm, n.d * 60 / this.bpm);
     });

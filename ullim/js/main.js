@@ -107,7 +107,10 @@ function renderDetail() {
   const tabs = U.seg([['clip', '클립', '고른 클립의 음표나 오디오를 편집해요. Shift+Tab으로 바꿔요.'], ['device', '장치', '고른 트랙의 악기와 이펙트예요. Shift+Tab으로 바꿔요.']], ui.detail, v => { U.setDetail(v); }, 'dt-tabs');
   const title = h('span', { class: 'dt-title', text: ui.detail === 'clip' ? (r ? (r.clip.name || (r.clip.type === 'audio' ? '오디오 클립' : 'MIDI 클립')) + ' — ' + U.trackLabel(pr(), r.track) : '클립 없음') : (t ? U.trackLabel(pr(), t) : '') });
   const fold = btn({ icon: 'detail', cls: 'ghost sm', title: '아래 칸 접기', info: ['아래 칸 접기', '클립·장치 칸을 접거나 펼쳐요. 경계선을 두 번 눌러도 돼요.'], onclick: () => U.toggleDetail() });
-  els.dtHead.append(tabs, title, h('span', { class: 'cb-flex' }), fold);
+  // 건반 악기 트랙이면 악기 소리를 여기서 바로 바꾼다 (클립을 고치다가도). 드럼·루프 패드는 장치의 키트 메뉴로 바꾼다
+  const st = ui.detail === 'clip' ? r && r.track : t, sti = st && U.instrumentOf(st);
+  const pick = st && st.type === 'midi' && !(sti && (sti.kind === 'drums' || sti.kind === 'looppad')) ? h('span', { class: 'snd-pickers' }, h('span', { class: 'snd-l', text: '소리' }), ...U.soundPicker(st)) : null;
+  els.dtHead.append(...[tabs, title, pick, h('span', { class: 'cb-flex' }), fold].filter(Boolean));
   if (!ui.detailOpen && !ui.narrow) return;
   if (ui.detail === 'clip') U.clipView.render(els.dtBody);
   else U.deviceView.render(els.dtBody);
@@ -141,6 +144,10 @@ function renderStatus() {
     re.disabled = !U.canRedo();
     right.append(un, re);
   }
+  const md = h('button', { class: 'st-mode', type: 'button', text: U.uiModeName() });
+  info(md, '화면 버전', '컴퓨터 버전(마우스·키보드)과 아이패드 버전(손가락) 중에서 골라요. 자동이면 이 기기에 맞춰요.');
+  md.addEventListener('click', () => modeMenu(md));
+  right.append(md);
   const mc = U.input.midiCount();
   const midi = h('button', { class: 'st-midi', type: 'button', text: mc ? 'MIDI ' + mc : 'MIDI 연결' });
   info(midi, 'MIDI 장치', mc ? 'MIDI 건반 ' + mc + '개가 연결돼 있어요. 연주는 녹음 준비(●)한 트랙이나 고른 트랙으로 가요.' : 'USB MIDI 건반을 꽂고 눌러서 연결해요.');
@@ -369,9 +376,21 @@ U.importAudioTo = async function (trackId, slot, pos) {
 };
 
 /* ================= 환경설정 · 도움말 ================= */
+/* ================= 화면 버전 (컴퓨터 · 아이패드) ================= */
+function modeItems() {
+  return [
+    { label: '자동 (이 기기는 ' + (U.autoTouch ? '아이패드' : '컴퓨터') + ' 버전)', checked: U.uiMode === 'auto', action: () => U.setUIMode('auto') },
+    { label: '컴퓨터 버전 (마우스·키보드)', checked: U.uiMode === 'desktop', action: () => U.setUIMode('desktop') },
+    { label: '아이패드 버전 (손가락)', checked: U.uiMode === 'touch', action: () => U.setUIMode('touch') }
+  ];
+}
+function modeMenu(anchor) { U.menu([{ header: '화면 버전' }, ...modeItems()], anchor); }
+
 function prefsDialog() {
   const skin = U.pref('skin', 'auto');
   const body = h('div', { class: 'xp' });
+  body.append(h('label', { class: 'fld' }, h('span', { text: '화면 버전' }),
+    U.select([['auto', '자동 (이 기기는 ' + (U.autoTouch ? '아이패드' : '컴퓨터') + ' 버전)'], ['desktop', '컴퓨터 버전 (마우스·키보드)'], ['touch', '아이패드 버전 (손가락)']], U.uiMode, v => U.setUIMode(v), { label: '화면 버전' })));
   body.append(h('label', { class: 'fld' }, h('span', { text: '화면 밝기' }), U.select([['auto', '시스템 설정 따르기'], ['dark', '어둡게'], ['light', '밝게']], skin, v => { U.setPref('skin', v); applySkin(); })));
   body.append(h('label', { class: 'fld' }, h('span', { text: '녹음 퀀타이즈' }), U.select([['0', '끄기'], ['0.25', '1/16'], ['0.5', '1/8'], ['1', '1/4']], String(U.pref('recQuant', 0)), v => U.setPref('recQuant', +v))));
   const ctx = U.engine.ctx;
@@ -405,6 +424,7 @@ function helpDialog() {
       h('li', { text: '씬을 다 만들었으면 "곡 만들기"(세션 뷰 오른쪽 아래)로 인트로부터 아웃트로까지 어레인지먼트에 한 번에 늘어놓아요.' }),
       h('li', { text: '클립을 누르면 아래에 피아노 롤이 열려요. 빈 곳을 두 번 눌러 음을 넣고, 끌어서 옮겨요.' }),
       h('li', { text: '트랙 이름을 누르고 아래 칸을 "장치"로 바꾸면 악기와 이펙트의 노브를 돌릴 수 있어요.' }),
+      h('li', { text: '악기 소리를 바꾸려면 아래 칸 위쪽의 "소리" 버튼을 눌러요. 피아노·기타·현악·관악·말렛·오르간·콰이어·가야금과 신스까지 60가지 중에서 누를 때마다 바뀌고 한 음 들려줘요. ◀ ▶로 하나씩 넘겨도 돼요. Acoustic·Ensemble 장치 안에서는 악기 버튼으로 종류만 바꿀 수 있어요.' }),
       h('li', { text: '왼쪽 브라우저에서 사운드·드럼·샘플을 트랙이나 빈 칸에 끌어다 놓아요.' }),
       h('li', { text: 'P를 누르면 패드 화면이에요. 로봇 보컬 찹 패드를 Z·X·C·V, A·S·D·F … 글자 키로 두드려 보세요. "키 지정"을 켜면 패드마다 원하는 글자를 줄 수 있어요.' }),
       h('li', { text: 'Tab으로 어레인지먼트 뷰로 가서 클립을 시간 순서로 배치하고, 메뉴의 "오디오 내보내기"로 WAV를 받아요.' })));
@@ -416,7 +436,8 @@ function helpDialog() {
       h('li', { text: '두 손가락으로 밀면 피아노 롤·어레인지먼트·스텝 시퀀서가 넘어가고, 벌리거나 오므리면 확대·축소돼요.' }),
       h('li', { text: '패드 화면에서 드럼·루프 패드 트랙은 패드로, 신스 트랙은 건반으로 쳐요. 스케일을 고르면 키에 맞는 음만 칸으로 나오고, 코드를 켜면 한 손가락으로 코드를 쳐요.' }),
       h('li', { text: '클립은 길게 눌러 "복사"한 뒤 빈 칸을 길게 눌러 "붙여넣기"로 옮겨요. 스텝 시퀀서의 찍힌 칸을 길게 누르면 세기가 바뀌어요.' }),
-      h('li', { text: '메뉴 › 앱으로 설치하기로 홈 화면에 두면 전체 화면으로 열리고, 인터넷이 없어도 돼요.' })));
+      h('li', { text: '메뉴 › 앱으로 설치하기로 홈 화면에 두면 전체 화면으로 열리고, 인터넷이 없어도 돼요.' }),
+      h('li', { text: '컴퓨터 버전(작은 조절기, 마우스·키보드)과 아이패드 버전(큰 버튼, 손가락)은 아래 상태 줄의 버튼이나 메뉴 › 화면 버전에서 직접 골라요. 어느 버전이든 손가락 조작은 돼요.' })));
   U.dialog({ title: '도움말', body: h('div', { class: 'help' }, U.isTouch ? touch : null, guide, U.isTouch ? null : touch, h('h3', { text: '단축키' }), tbl), width: '560px', actions: [{ label: '닫기', primary: true }] });
 }
 function aboutDialog() {
@@ -450,6 +471,7 @@ U.appMenu = function (anchor) {
     { label: '씬 넣기', action: () => A.insertScene(ui.scene + 1) },
     { label: '씬으로 곡 만들기…', action: () => U.songDialog() },
     { sep: true },
+    { label: '화면 버전: ' + U.uiModeName() + (U.uiMode === 'auto' ? ' (자동)' : ''), sub: modeItems() },
     { label: '환경설정…', action: prefsDialog },
     { label: '도움말 · 단축키', key: '?', action: helpDialog },
     window.claude ? null : { label: '앱으로 설치하기…', action: installApp },
@@ -509,7 +531,8 @@ function installApp() {
 
 /* ================= 반응형 ================= */
 function checkNarrow() {
-  const n = window.innerWidth < 860;
+  // 컴퓨터 버전을 직접 고르면 세로 아이패드에서도 컴퓨터와 같은 화면 (휴대폰처럼 아주 좁을 때만 아래 탭)
+  const n = window.innerWidth < (U.uiMode === 'desktop' ? 600 : 860);
   if (n !== ui.narrow) {
     ui.narrow = n;
     document.body.classList.toggle('narrow', n);
@@ -532,6 +555,13 @@ function wire() {
     }
     U.inval('transport', 'session', 'arrange', 'detail', 'status', 'pads');
     if (!inf.load) autosave();
+  });
+  // 화면 버전을 바꾸면 크기·배치가 바뀌니 모두 다시 그린다
+  U.on('uimode', m => {
+    U.closeMenu && U.closeMenu();
+    checkNarrow();
+    U.inval('all');
+    U.toast(m.mode === 'auto' ? '자동으로 바꿨어요. 이 기기에서는 ' + U.uiModeName() + '이에요.' : U.uiModeName() + '으로 바꿨어요.');
   });
   U.on('project', inf => {
     ui.roll.sel = new Set();

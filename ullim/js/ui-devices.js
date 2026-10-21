@@ -7,6 +7,68 @@ const pr = () => U.project;
 let root = null, chainEl = null, panels = [];
 const visuals = new Set();
 
+/* ================= 트랙 소리 고르기 =================
+   모든 사운드 프리셋 중에서 이 트랙의 악기 소리를 바꾼다. ◀ ▶로 하나씩 넘기며 들어 본다 */
+const NOT_PICKABLE = new Set(['빈 샘플러']);
+/* 소리 고르기 창과 ◀ ▶가 쓰는 순서: 묶음 순서대로 펼친 목록 */
+const pickGroups = () => U.soundGroups(U.SOUNDS.filter(s => !NOT_PICKABLE.has(s.name)));
+const isCurSound = (d, s) => !!d && d.kind === s.kind && d.preset === s.name;
+function demoPitch(s) {
+  if (s.kind === 'acoustic' || s.kind === 'ensemble') return U.instDemo(s.kind, s.p && s.p.inst);
+  return s.tags.includes('베이스') ? 40 : 60;
+}
+/* 고른 소리를 바로 한 음 들려준다 (미리 듣기라 녹음에는 남지 않는다) */
+function audition(t, p) {
+  U.ensureAudio();
+  const e = U.engine;
+  e.liveOn(t.id, p, 100, true);
+  setTimeout(() => e.liveOff(t.id, p), 650);
+}
+function chooseSound(t, s) {
+  A.loadSound(t.id, s);
+  audition(t, demoPitch(s));
+}
+/* 묶음별 버튼 창. 누르면 바로 바꾸고 한 음 들려준다. 닫을 때까지 열려 있어 여러 소리를 이어서 들어 볼 수 있다 */
+function soundPanel(t) {
+  const body = h('div', { class: 'snd-panel' });
+  const btns = [];
+  for (const [g, list] of pickGroups()) {
+    const bs = h('div', { class: 'insts-bs' });
+    for (const s of list) {
+      const b = h('button', { type: 'button', class: 'inst-b', text: s.name, title: U.DEV[s.kind].name });
+      b.addEventListener('click', () => { chooseSound(t, s); mark(); });
+      btns.push([b, s]);
+      bs.append(b);
+    }
+    body.append(h('div', { class: 'insts-row' }, h('span', { class: 'insts-g', text: g }), bs));
+  }
+  const mark = () => {
+    const tr = U.trackById(pr(), t.id), d = tr && U.instrumentOf(tr);
+    for (const [b, s] of btns) b.setAttribute('aria-pressed', isCurSound(d, s) ? 'true' : 'false');
+  };
+  mark();
+  const dlg = U.dialog({ title: '소리 고르기 · ' + U.trackLabel(pr(), t), body, width: '760px' });
+  const on = btns.find(([b]) => b.getAttribute('aria-pressed') === 'true');
+  if (on) on[0].scrollIntoView({ block: 'nearest' });
+  return dlg;
+}
+function soundPicker(t) {
+  const d = U.instrumentOf(t);
+  const b = btn({ text: (d ? d.preset || U.devName(d) : '악기 없음') + ' ▾', cls: 'sm snd-pick', title: '소리 고르기', info: ['소리 고르기', '이 트랙의 악기 소리를 바꿔요. 창에서 누를 때마다 바뀌고 한 음 들려줘요. ◀ ▶로 하나씩 넘길 수도 있어요. 되돌리기로 돌아가요.'], onclick: () => soundPanel(t) });
+  const step = k => {
+    const list = pickGroups().flatMap(([, l]) => l);
+    const tr = U.trackById(pr(), t.id), cur = tr && U.instrumentOf(tr);
+    let i = list.findIndex(s => isCurSound(cur, s));
+    if (i < 0 && cur) i = list.findIndex(s => s.name === cur.preset);
+    chooseSound(t, list[i < 0 ? (k > 0 ? 0 : list.length - 1) : (i + k + list.length) % list.length]);
+  };
+  const prev = btn({ text: '◀', cls: 'sm snd-step', title: '앞 소리', onclick: () => step(-1) });
+  const next = btn({ text: '▶', cls: 'sm snd-step', title: '다음 소리', onclick: () => step(1) });
+  return [b, prev, next];
+}
+U.soundPicker = soundPicker;
+U.soundPanel = soundPanel;
+
 function render(el) {
   root = el;
   U.clear(root);
@@ -130,6 +192,25 @@ function canvasBox(w, hh, cls) {
   return cv;
 }
 const VIS = {
+  /* 악기 안에서 종류 고르기 (Acoustic · Ensemble): 누르면 바꾸고 한 음 들려준다 */
+  insts(t, d) {
+    const spec = U.DEV[d.kind];
+    const el = h('div', { class: 'insts', role: 'group', 'aria-label': '악기 종류' });
+    const btns = [];
+    let grp = null, row = null;
+    for (const [id, label, g] of spec.types) {
+      if (g !== grp) { grp = g; row = h('div', { class: 'insts-bs' }); el.append(h('div', { class: 'insts-row' }, h('span', { class: 'insts-g', text: g }), row)); }
+      const b = h('button', { type: 'button', class: 'inst-b', text: label, 'aria-pressed': d.p.inst === id ? 'true' : 'false' });
+      info(b, label, '눌러서 이 악기로 바꾸고 한 음 들어 봐요.');
+      b.addEventListener('click', () => {
+        if (d.p.inst !== id) { d.preset = label; A.setParam(d.id, 'inst', id, true); }
+        audition(t, U.instDemo(d.kind, id));
+      });
+      btns.push([b, id]);
+      row.append(b);
+    }
+    return { el, draw: () => { for (const [b, id] of btns) b.setAttribute('aria-pressed', d.p.inst === id ? 'true' : 'false'); } };
+  },
   adsr(t, d, pre) {
     pre = pre || '';
     const cv = canvasBox(150, 58);

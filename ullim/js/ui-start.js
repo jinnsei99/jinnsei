@@ -23,9 +23,24 @@ function newProjectDialog(first) {
   grid.append(card('빈 프로젝트', '120 BPM', '빈 트랙 네 개로 처음부터 시작해요.', () => U.newProjectFlow(), 'blank'));
   body.append(grid);
   body.append(h('p', { class: 'hint', text: '장르 프로젝트는 세션 뷰의 씬(인트로·빌드업·드롭…)과 어레인지먼트의 곡 구조가 함께 들어 있어요. 고친 내용은 자동으로 저장돼요.' }));
-  if (first) body.append(h('p', { class: 'hint', text: U.isTouch
-    ? '아래(또는 위)의 패드 화면에서 드럼은 패드로, 신스는 건반으로 손가락으로 쳐요. 길게 누르면 메뉴, 두 번 탭하면 만들기·지우기, 두 손가락으로 밀고 벌리면 스크롤·확대예요.'
-    : 'P는 패드 화면(글자 키로 두드리기), M은 컴퓨터 건반, Space는 재생이에요. 메뉴 › 도움말에서 단축키를 볼 수 있어요.' }));
+  if (first) {
+    const tip = h('p', { class: 'hint' });
+    const setTip = () => {
+      tip.textContent = U.isTouch
+        ? '아래(또는 위)의 패드 화면에서 드럼은 패드로, 신스는 건반으로 손가락으로 쳐요. 길게 누르면 메뉴, 두 번 탭하면 만들기·지우기, 두 손가락으로 밀고 벌리면 스크롤·확대예요.'
+        : 'P는 패드 화면(글자 키로 두드리기), M은 컴퓨터 건반, Space는 재생이에요. 메뉴 › 도움말에서 단축키를 볼 수 있어요.';
+    };
+    setTip();
+    body.append(tip);
+    // 처음 온 사람이 화면 버전을 바로 고르게 (나중에는 아래 상태 줄이나 메뉴에서)
+    const modes = [['desktop', '컴퓨터 버전', '마우스와 키보드로 쓰기 좋게, 조절기를 작게 많이 보여요.'], ['touch', '아이패드 버전', '손가락으로 누르기 좋게, 버튼과 칸을 크게 보여요.']];
+    const seg = U.seg(modes, U.isTouch ? 'touch' : 'desktop', v => {
+      U.setUIMode(v);
+      [...seg.children].forEach((b, i) => b.setAttribute('aria-pressed', modes[i][0] === v ? 'true' : 'false'));
+      setTip();
+    }, 'np-modes');
+    body.append(h('div', { class: 'np-mode' }, h('span', { text: '화면' }), seg, h('span', { class: 'hint', text: '나중에도 아래 상태 줄이나 메뉴 › 화면 버전에서 바꿀 수 있어요.' })));
+  }
   dlg = U.dialog({ title: first ? '울림 스튜디오에 오신 걸 환영해요' : '새 프로젝트', body, width: '680px', actions: [{ label: first ? '둘러보기' : '닫기' }] });
 }
 

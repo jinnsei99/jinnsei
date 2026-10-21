@@ -65,7 +65,7 @@ const SOUNDS = [
   { name: '와블 베이스', kind: 'polysynth', tags: ['베이스'], p: { w1: 'sawtooth', w2: 'square', o2: -1, l2: 0.5, d2: 0, ft: 'lp12', cut: 8000, fenv: 0, a: 0.003, s: 1, r: 0.08, mono: true, vol: -10 }, fx: [FX('autofilter', { ft: 'lp24', cut: 260, res: 0.5, lamt: 0.85, lsync: true, ldiv: '1/8', drive: 8 })] },
   { name: 'FM 베이스', kind: 'fm', tags: ['베이스'], p: { algo: 'stack', cr: 1, ar: 1, al: 0.55, aa: 0.001, ad: 0.18, as: 0.25, br: 2, bl: 0.2, bd: 0.1, bs: 0, a: 0.002, d: 0.5, s: 0.75, r: 0.06, cut: 3500, vol: -8 } },
   { name: '플럭', kind: 'polysynth', tags: ['플럭'], p: { w1: 'sawtooth', w2: 'square', o2: 1, l1: 0.7, l2: 0.35, d2: 4, ft: 'lp24', cut: 520, res: 0.25, fenv: 0.65, fa: 0.001, fd: 0.22, fs: 0, fr: 0.2, a: 0.001, d: 0.4, s: 0, r: 0.25, vel: 0.6, vol: -10 }, fx: [FX('delay', { mix: 0.2 }), FX('reverb', { mix: 0.2 })] },
-  { name: '마림바', kind: 'fm', tags: ['플럭', '키'], p: { algo: 'para', cr: 1, ar: 4, al: 0.35, ad: 0.07, as: 0, br: 10, bl: 0.05, bd: 0.03, bs: 0, a: 0.001, d: 0.6, s: 0, r: 0.3, vol: -8 } },
+  { name: 'FM 마림바', kind: 'fm', tags: ['플럭', '키'], p: { algo: 'para', cr: 1, ar: 4, al: 0.35, ad: 0.07, as: 0, br: 10, bl: 0.05, bd: 0.03, bs: 0, a: 0.001, d: 0.6, s: 0, r: 0.3, vol: -8 } },
   { name: '전자 피아노', kind: 'fm', tags: ['키'], p: { algo: 'para', cw: 'sine', cr: 1, ar: 1, al: 0.32, aa: 0.002, ad: 1.1, as: 0.12, arl: 0.5, br: 14, bl: 0.1, ba: 0.001, bd: 0.1, bs: 0, brl: 0.08, a: 0.002, d: 2.2, s: 0.18, r: 0.45, cut: 9000, vel: 0.7, vol: -8 }, fx: [FX('chorus', { mix: 0.25, rate: 0.6 })] },
   { name: '벨', kind: 'fm', tags: ['키'], p: { algo: 'para', cr: 1, ar: 3.5, al: 0.45, ad: 2.2, as: 0.15, br: 7, bl: 0.12, bd: 0.8, bs: 0.1, a: 0.001, d: 3, s: 0, r: 2, vol: -11 }, fx: [FX('reverb', { mix: 0.3 })] },
   { name: '오르간', kind: 'polysynth', tags: ['키'], p: { w1: 'sine', w2: 'sine', o2: 1, d2: 0, l1: 0.8, l2: 0.5, ft: 'lp12', cut: 6000, fenv: 0, a: 0.005, d: 0.1, s: 1, r: 0.06, lamp: 0.15, lrate: 6.5, vol: -10 }, fx: [FX('chorus', { mode: 'vibrato', rate: 6, depth: 0.25 })] },
@@ -88,8 +88,59 @@ SOUNDS.push(
   { name: '신스 스탭', kind: 'polysynth', tags: ['코드'], p: { w1: 'sawtooth', w2: 'square', o2: 1, d2: 3, l1: 0.8, l2: 0.35, ft: 'lp12', cut: 1500, res: 0.22, fenv: 0.5, fa: 0.001, fd: 0.16, fs: 0, fr: 0.12, a: 0.001, d: 0.28, s: 0, r: 0.18, vel: 0.5, vol: -11 }, fx: [FX('delay', { mix: 0.16, divl: '1/8D' }), FX('reverb', { mix: 0.18 })] },
   { name: '로파이 건반', kind: 'fm', tags: ['키'], p: { algo: 'para', cw: 'sine', cr: 1, ar: 1, al: 0.25, aa: 0.002, ad: 1.2, as: 0.1, arl: 0.4, br: 14, bl: 0.06, bd: 0.08, bs: 0, a: 0.004, d: 2, s: 0.2, r: 0.5, cut: 5200, vel: 0.6, vol: -9 }, fx: [FX('chorus', { mode: 'vibrato', rate: 0.9, depth: 0.18 }), FX('sat', { type: 'crush', bits: 10, drive: 2, out: -3, mix: 0.35 }), FX('eq', { b6on: true, b6f: 6500 })] }
 );
+/* 진짜 악기 소리 (Acoustic · Ensemble). 이름이 장치 칸의 악기 버튼 이름과 같으면 버튼과 함께 표시된다 */
+const AC = (name, tags, p, fx) => ({ name, kind: 'acoustic', tags, p, fx });
+const EN = (name, tags, p, fx) => ({ name, kind: 'ensemble', tags, p, fx });
+const ROOM = (mix, decay) => FX('reverb', { mix, decay: decay || 1.8 });
+SOUNDS.push(
+  AC('그랜드 피아노', ['피아노'], { inst: 'grand' }, [ROOM(0.18, 2.2)]),
+  AC('업라이트 피아노', ['피아노'], { inst: 'upright' }, [ROOM(0.12, 1.4)]),
+  AC('하우스 피아노', ['피아노', '하우스'], { inst: 'grand', tone: 0.8, decay: 0.7, body: 0.3 }, [FX('eq', { b1on: true, b1f: 160 }), FX('comp', { thr: -22, ratio: 3, att: 0.005, rel: 0.12, makeup: -5 }), ROOM(0.2, 1.8)]),
+  AC('로파이 피아노', ['피아노', '로파이'], { inst: 'upright', tone: 0.3, decay: 0.8 }, [FX('chorus', { mode: 'vibrato', rate: 0.8, depth: 0.15 }), FX('sat', { type: 'crush', bits: 10, drive: 2, out: -3, mix: 0.3 }), FX('eq', { b6on: true, b6f: 5000 })]),
+  AC('나일론 기타', ['기타'], { inst: 'nylon' }, [ROOM(0.15)]),
+  AC('통기타', ['기타'], { inst: 'steel' }, [ROOM(0.12)]),
+  AC('일렉 기타', ['기타'], { inst: 'electric' }, [FX('chorus', { mix: 0.3, rate: 0.6 }), ROOM(0.15)]),
+  AC('크런치 기타', ['기타'], { inst: 'electric', tone: 0.6 }, [FX('sat', { type: 'tube', drive: 16, out: -11 }), FX('eq', { b1on: true, b1f: 100, b6on: true, b6f: 6500 }), ROOM(0.12)]),
+  AC('뮤트 기타', ['기타'], { inst: 'mute' }, [ROOM(0.1, 1.2)]),
+  AC('베이스 기타', ['베이스'], { inst: 'bass' }),
+  EN('현악 합주', ['현악'], { inst: 'strings' }, [ROOM(0.3, 3)]),
+  EN('바이올린', ['현악'], { inst: 'violin' }, [ROOM(0.25, 2.5)]),
+  EN('첼로', ['현악'], { inst: 'cello' }, [ROOM(0.25, 2.5)]),
+  AC('피치카토 현', ['현악'], { inst: 'pizz' }, [ROOM(0.25, 2.5)]),
+  AC('하프', ['현악'], { inst: 'harp' }, [ROOM(0.3, 3)]),
+  EN('브라스 섹션', ['관악'], { inst: 'brass' }, [ROOM(0.18, 2)]),
+  EN('트럼펫', ['관악'], { inst: 'trumpet' }, [ROOM(0.18, 2)]),
+  EN('플루트', ['관악'], { inst: 'flute' }, [ROOM(0.25, 2.5)]),
+  EN('클라리넷', ['관악'], { inst: 'clarinet' }, [ROOM(0.2, 2)]),
+  AC('마림바', ['말렛·벨'], { inst: 'marimba' }, [ROOM(0.15)]),
+  AC('비브라폰', ['말렛·벨'], { inst: 'vibes' }, [ROOM(0.2, 2.5)]),
+  AC('글로켄슈필', ['말렛·벨'], { inst: 'glock' }, [ROOM(0.25, 2.5)]),
+  AC('오르골', ['말렛·벨'], { inst: 'musicbox' }, [ROOM(0.3, 3)]),
+  AC('종', ['말렛·벨'], { inst: 'bell' }, [ROOM(0.3, 4)]),
+  EN('재즈 오르간', ['오르간'], { inst: 'organ_jazz' }, [ROOM(0.12)]),
+  EN('록 오르간', ['오르간'], { inst: 'organ_rock' }, [ROOM(0.15)]),
+  EN('교회 오르간', ['오르간'], { inst: 'organ_church' }, [ROOM(0.4, 5)]),
+  EN('아코디언', ['오르간'], { inst: 'accordion' }, [ROOM(0.12)]),
+  EN('하모니카', ['오르간'], { inst: 'harmonica' }, [ROOM(0.15)]),
+  EN('콰이어 아', ['콰이어'], { inst: 'choir_a' }, [ROOM(0.35, 3.5)]),
+  EN('콰이어 우', ['콰이어'], { inst: 'choir_u' }, [ROOM(0.35, 3.5)]),
+  AC('가야금', ['월드'], { inst: 'gayageum' }, [ROOM(0.2, 2.2)]),
+  AC('칼림바', ['월드'], { inst: 'kalimba' }, [ROOM(0.2)]),
+  AC('스틸 드럼', ['월드'], { inst: 'steeldrum' }, [ROOM(0.15)])
+);
 U.SOUNDS = SOUNDS;
 U.sound = name => SOUNDS.find(x => x.name === name) || SOUNDS[0];
+/* 묶음(첫 태그) 순서. 브라우저와 소리 고르기 창이 이 순서로 보여 준다 */
+const GROUP_ORDER = ['피아노', '키', '기타', '베이스', '현악', '관악', '말렛·벨', '오르간', '콰이어', '월드', '패드', '코드', '플럭', '리드', '보컬', 'FX', '샘플러'];
+U.soundGroups = list => {
+  const groups = new Map();
+  for (const s of list || SOUNDS) {
+    if (!groups.has(s.tags[0])) groups.set(s.tags[0], []);
+    groups.get(s.tags[0]).push(s);
+  }
+  const rank = g => { const i = GROUP_ORDER.indexOf(g); return i < 0 ? GROUP_ORDER.length : i; };
+  return [...groups].sort((a, b) => rank(a[0]) - rank(b[0]));
+};
 
 /* ================= 이펙트 프리셋 ================= */
 const FX_PRESETS = {
@@ -260,6 +311,9 @@ function soundDevices(s) {
   const devs = [U.makeDevice(s.kind, { p: s.p, data: s.data })];
   devs[0].preset = s.name;
   for (const f of s.fx || []) devs.push(U.makeDevice(f.kind, { p: f.p }));
+  // 악기와 그 이펙트를 한 묶음으로: 나중에 소리를 바꾸면 이 이펙트도 함께 빠진다
+  const grp = U.uid('g');
+  for (const d of devs) d.grp = grp;
   return devs;
 }
 function kitDevice(k) {
