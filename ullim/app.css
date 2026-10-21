@@ -114,14 +114,14 @@ input, textarea { user-select: text; -webkit-user-select: text; }
   height: 100%;
   display: grid;
   grid-template-areas: "ctrl" "main" "split" "detail" "status";
-  grid-template-rows: var(--ctrl-h) minmax(0, 1fr) var(--split-h) var(--detail-h) var(--status-h);
+  grid-template-rows: minmax(var(--ctrl-h), auto) minmax(0, 1fr) var(--split-h) var(--detail-h) var(--status-h);
   gap: 0;
   border-radius: 6px;
   overflow: hidden;
   background: var(--line);
   box-shadow: 0 0 0 1px var(--line);
 }
-body.no-detail .app { grid-template-rows: var(--ctrl-h) minmax(0, 1fr) var(--split-h) 30px var(--status-h); }
+body.no-detail .app { grid-template-rows: minmax(var(--ctrl-h), auto) minmax(0, 1fr) var(--split-h) 30px var(--status-h); }
 .panes { display: none; grid-area: panes; }
 .ctrl { grid-area: ctrl; }
 .main { grid-area: main; }
@@ -230,7 +230,7 @@ body.no-detail .app { grid-template-rows: var(--ctrl-h) minmax(0, 1fr) var(--spl
   background: var(--panel-2); box-shadow: var(--shadow);
   font-size: 12px;
 }
-.menu.sub { position: absolute; left: 100%; top: -4px; display: none; max-height: 50vh; }
+.menu.sub { position: fixed; display: none; max-height: 50vh; }
 .m-item { position: relative; display: flex; align-items: center; gap: 6px; width: 100%; min-height: 26px; padding: 0 8px 0 4px; border: 0; border-radius: 4px; background: none; text-align: left; color: var(--fg); }
 .m-item:hover, .m-item:focus { background: var(--panel-3); }
 .m-item.open > .menu.sub { display: block; }
@@ -245,7 +245,7 @@ body.no-detail .app { grid-template-rows: var(--ctrl-h) minmax(0, 1fr) var(--spl
 .m-head { padding: 6px 8px 2px 24px; color: var(--fg-3); font-size: 10.5px; letter-spacing: 0.04em; }
 
 /* 대화상자 */
-.dlg-back { position: fixed; inset: 0; z-index: 90; background: rgba(0, 0, 0, 0.45); display: grid; place-items: center; padding: 16px; }
+.dlg-back { position: fixed; inset: 0; z-index: 90; background: rgba(0, 0, 0, 0.45); display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; padding: 16px; }
 .dlg { width: min(460px, 100%); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; border: 1px solid var(--line-2); border-radius: 10px; background: var(--panel); box-shadow: var(--shadow); font: 13px/1.5 var(--font-kr); }
 .dlg-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 4px 16px; }
 .dlg-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
@@ -258,7 +258,7 @@ body.no-detail .app { grid-template-rows: var(--ctrl-h) minmax(0, 1fr) var(--spl
 .fld .dd, .fld .inp { height: 30px; font-size: 13px; }
 .fld-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .chk { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; cursor: pointer; }
-.chk input { width: 16px; height: 16px; accent-color: var(--accent); }
+.chk input { width: 16px; height: 16px; flex: none; accent-color: var(--accent); }
 .hint { color: var(--fg-3); font-size: 11.5px; margin: 6px 0; line-height: 1.45; }
 .xp-prog { position: relative; height: 22px; margin-top: 10px; border-radius: 4px; background: var(--sunk); overflow: hidden; }
 .xp-bar { position: absolute; inset: 0; background: var(--accent); opacity: 0.35; transform: scaleX(0); transform-origin: left; transition: transform 0.15s; }
@@ -285,7 +285,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; }
 body.file-over .app { box-shadow: 0 0 0 3px var(--accent); }
 
 /* ================= 컨트롤 바 ================= */
-.ctrl { display: flex; align-items: center; gap: 6px; padding: 0 8px; background: var(--panel); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.ctrl { display: flex; flex-wrap: wrap; align-items: center; align-content: center; gap: 4px 6px; padding: 4px 8px; background: var(--panel); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.ctrl > .cb-group:last-child { margin-left: auto; }
+/* 폭이 모자라면 덜 쓰는 것부터 숨긴다 (루프 구간 숫자는 어레인지먼트의 루프 막대로도 바꿀 수 있다). 그래도 넘치면 두 줄이 된다 */
+@media (max-width: 1360px) { .ctrl .lpos { display: none; } }
+@media (max-width: 1240px) { .ctrl .tap, .ctrl .logo-t { display: none; } }
 .ctrl::-webkit-scrollbar { display: none; }
 .cb-group { display: flex; align-items: center; gap: 4px; padding-right: 8px; border-right: 1px solid var(--line-2); flex: none; }
 .cb-group:last-child { border-right: 0; padding-right: 0; }
@@ -778,6 +782,7 @@ html.touch .slot .launch, html.touch .scene .launch { width: 30px; height: 30px;
 html.touch .slot .launch .ic, html.touch .scene .launch .ic { width: 15px; height: 15px; }
 html.touch .act, html.touch .solo, html.touch .arm { min-width: 32px; height: 30px; }
 html.touch .act.sm, html.touch .solo.sm, html.touch .arm.sm { min-width: 28px; height: 26px; }
+html.touch .lane-head .num.mini, html.touch .lane-head .dd { height: 28px; font-size: 11px; }
 html.touch .dbbox { height: 26px; min-width: 52px; }
 html.touch .br-item { padding: 9px 12px; }
 html.touch .arr-scroll { height: 20px; }

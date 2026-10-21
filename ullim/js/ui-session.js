@@ -273,7 +273,7 @@ function strip(t) {
       const letter = U.returnLetter(p, r);
       const k = U.knob({
         spec: sendSpec(letter), size: 'xs', title: '센드 ' + letter,
-        get: () => { const a = U.engine && U.engine.autoNow(t.id, 'send:' + r.id); return a != null ? a / P0() : U.dbToPos(t.sends[i]) / P0(); },
+        get: () => { const a = U.engine && U.engine.autoNow(t.id, 'send:' + r.id); return a != null ? a / P0() : U.dbToPos(t.sends[i] != null ? t.sends[i] : U.OFF_DB) / P0(); },
         set: (v, f) => A.setMixer(t.id, 'send', U.round(U.posToDb(v * P0()), 1), f, i),
         auto: () => !!t.auto['send:' + r.id],
         map: { k: 'send', tr: t.id, r: r.id }

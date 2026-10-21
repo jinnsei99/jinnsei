@@ -994,8 +994,10 @@ class Engine {
     if (on === this.recording) return;
     if (!on) { this.finishRecording('arr'); this.recording = false; this.emit('transport'); return; }
     this.recording = true;
-    if (!this.playing) this.play(this.project.pos);
-    const from = this.beatAt(this.ctx.currentTime);
+    // 멈춘 상태에서 시작하면 재생이 조금 뒤(앞당겨 예약)에 시작하니, 지금 시각이 아니라 시작 위치부터 녹음한다
+    const was = this.playing;
+    if (!was) this.play(this.project.pos);
+    const from = Math.max(0, was ? this.beatAt(this.ctx.currentTime) : this.anchorB);
     for (const t of this.armedMidi()) {
       const n = this.nodes.get(t.id);
       n.rec = { arr: true, from: Math.floor(from / this.barLen()) * this.barLen(), notes: [], open: new Map() };

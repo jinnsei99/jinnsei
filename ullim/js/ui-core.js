@@ -261,6 +261,7 @@ function knob(o) {
   function draw() {
     const v = o.get();
     const n = U.toNorm(spec, v);
+    if (!isFinite(n)) return;   // 지운 리턴처럼 막 사라진 대상을 다시 그리기 전 한 프레임
     const a = ARC0 + ARC * n;
     const a0 = bip ? ARC0 + ARC * U.toNorm(spec, 0) : ARC0;
     const lo = Math.min(a0, a), hi = Math.max(a0, a);
@@ -468,6 +469,12 @@ function menu(items, at) {
   if (y + r.height > window.innerHeight - 4) y = Math.max(4, (at instanceof Element ? at.getBoundingClientRect().top - r.height - 2 : y - r.height));
   el.style.left = x + 'px';
   el.style.top = y + 'px';
+  // 하위 메뉴의 처음 자리 (마우스를 올리거나 누르면 placeSub가 넘치지 않게 고친다)
+  for (const sub of el.querySelectorAll('.menu.sub')) {
+    const q = sub.parentElement.getBoundingClientRect();
+    sub.style.left = Math.round(q.right - 2) + 'px';
+    sub.style.top = Math.round(q.top - 4) + 'px';
+  }
   const first = el.querySelector('.m-item:not([disabled])');
   if (first) first.focus({ preventScroll: true });
   el.addEventListener('keydown', e => {
@@ -480,13 +487,17 @@ function menu(items, at) {
   });
   return el;
 }
-/* 하위 메뉴가 화면 오른쪽·아래로 넘치면 왼쪽·위로 붙인다 (아이패드 세로 화면 등) */
+/* 하위 메뉴는 화면 기준(fixed)으로 둔다. 부모 메뉴가 스크롤 상자라서 그 안에 두면 잘려 보이지 않는다.
+   항목 오른쪽에 붙이고, 화면 오른쪽·아래로 넘치면 왼쪽·위로 옮긴다 (아이패드 세로 화면 등) */
 function placeSub(sub) {
-  sub.style.left = sub.style.right = sub.style.top = '';
-  const r = sub.getBoundingClientRect();
-  if (!r.width) return;
-  if (r.right > window.innerWidth - 4) { sub.style.left = 'auto'; sub.style.right = '100%'; }
-  if (r.bottom > window.innerHeight - 4) sub.style.top = Math.round(window.innerHeight - 4 - r.bottom - 4) + 'px';
+  const w = sub.offsetWidth, hh = sub.offsetHeight;
+  if (!w) return;
+  const r = sub.parentElement.getBoundingClientRect();
+  let x = r.right - 2, y = r.top - 4;
+  if (x + w > window.innerWidth - 4) x = Math.max(4, r.left - w + 2);
+  if (y + hh > window.innerHeight - 4) y = Math.max(4, window.innerHeight - 4 - hh);
+  sub.style.left = Math.round(x) + 'px';
+  sub.style.top = Math.round(y) + 'px';
 }
 document.addEventListener('pointerdown', e => { if (openMenu && !openMenu.contains(e.target)) closeMenu(); }, true);
 window.addEventListener('blur', closeMenu);

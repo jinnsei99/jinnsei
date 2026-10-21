@@ -543,6 +543,16 @@ function checkNarrow() {
 }
 
 /* ================= 시작 ================= */
+/* 지우기·되돌리기 뒤에 화면이 없어진 트랙·클립·칸·씬을 가리키지 않게 한다 */
+function fixRefs() {
+  const p = pr();
+  if (!U.trackById(p, ui.track)) ui.track = (p.tracks[0] || p.master).id;
+  if (ui.clip && !U.clipRef(ui.clip)) ui.clip = null;
+  if (ui.slot && (!U.trackById(p, ui.slot.t) || ui.slot.s >= p.scenes.length)) ui.slot = null;
+  if (ui.padTrack && !U.trackById(p, ui.padTrack)) ui.padTrack = null;
+  ui.scene = U.clamp(ui.scene || 0, 0, Math.max(0, p.scenes.length - 1));
+  ui.arrSel = ui.arrSel.filter(x => { const t = U.trackById(p, x.t); return t && t.arr.some(a => a.id === x.a); });
+}
 function wire() {
   U.on('change', inf => {
     U.engine.sync(pr());
@@ -553,6 +563,7 @@ function wire() {
       if (inf.rec) U.inval('session');
       return;
     }
+    fixRefs();
     U.inval('transport', 'session', 'arrange', 'detail', 'status', 'pads');
     if (!inf.load) autosave();
   });
@@ -570,7 +581,8 @@ function wire() {
       // 다른 프로젝트를 열었을 때만 선택을 처음으로
       ui.clip = null; ui.slot = null; ui.timeSel = null; ui.scene = 0;
       ui.track = (pr().tracks[0] || pr().master).id;
-    } else if (!U.trackById(pr(), ui.track)) ui.track = (pr().tracks[0] || pr().master).id;
+    }
+    fixRefs();
     U.engine.sync(pr());
     U.inval('all');
   });

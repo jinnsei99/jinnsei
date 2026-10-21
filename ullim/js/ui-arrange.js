@@ -100,13 +100,15 @@ function onWheel(e) {
 }
 
 /* ================= 레인 만들기 ================= */
+/* 레인 높이: 아이패드 버전은 머리의 버튼이 커서 두 줄이 들어가게 높인다 */
+const laneH = small => U.isTouch ? (small ? 62 : 68) : (small ? 40 : 58);
 function render() {
   if (!lanesEl) return;
   const p = pr();
   const sy = bodyEl.scrollTop;
   U.clear(lanesEl);
   lanes = [];
-  for (const t of p.tracks) lanesEl.append(lane(t, 58));
+  for (const t of p.tracks) lanesEl.append(lane(t, laneH(false)));
   const dz = h('div', { class: 'lane-drop' }, icon('plus'), h('span', { text: '여기에 놓으면 새 트랙' }));
   U.dropTarget(dz, {
     accept: d => ['sound', 'kit', 'loopkit', 'device', 'sample', 'tpl', 'clip'].includes(d.type),
@@ -115,8 +117,8 @@ function render() {
   dz.addEventListener('dblclick', () => A.addTrack('midi'));
   info(dz, '새 트랙', '악기·샘플·클립을 끌어다 놓으면 새 트랙이 생겨요. 두 번 누르면 MIDI 트랙이 생겨요.');
   lanesEl.append(dz);
-  for (const t of p.returns) lanesEl.append(lane(t, 40));
-  lanesEl.append(lane(p.master, 40));
+  for (const t of p.returns) lanesEl.append(lane(t, laneH(true)));
+  lanesEl.append(lane(p.master, laneH(true)));
   bodyEl.scrollTop = sy;
   measure();
   draw();
