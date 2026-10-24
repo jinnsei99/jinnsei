@@ -131,7 +131,7 @@ SOUNDS.push(
 U.SOUNDS = SOUNDS;
 U.sound = name => SOUNDS.find(x => x.name === name) || SOUNDS[0];
 /* 묶음(첫 태그) 순서. 브라우저와 소리 고르기 창이 이 순서로 보여 준다 */
-const GROUP_ORDER = ['피아노', '키', '기타', '베이스', '현악', '관악', '말렛·벨', '오르간', '콰이어', '월드', '패드', '코드', '플럭', '리드', '보컬', 'FX', '샘플러'];
+const GROUP_ORDER = ['내 사운드', '피아노', '키', '기타', '베이스', '현악', '관악', '말렛·벨', '오르간', '콰이어', '월드', '패드', '코드', '플럭', '리드', '보컬', 'FX', '샘플러'];
 U.soundGroups = list => {
   const groups = new Map();
   for (const s of list || SOUNDS) {
@@ -308,8 +308,10 @@ U.drumPattern = drum;
 
 /* 사운드 프리셋을 장치 배열로 */
 function soundDevices(s) {
-  const devs = [U.makeDevice(s.kind, { p: s.p, data: s.data })];
-  devs[0].preset = s.name;
+  const inst = U.makeDevice(s.kind, { p: s.p, data: s.data && U.clone(s.data) });
+  inst.preset = s.name;
+  // 내 사운드는 악기 앞의 MIDI 이펙트(아르페지에이터 등)도 함께 담는다
+  const devs = (s.pre || []).map(f => U.makeDevice(f.kind, { p: f.p })).concat([inst]);
   for (const f of s.fx || []) devs.push(U.makeDevice(f.kind, { p: f.p }));
   // 악기와 그 이펙트를 한 묶음으로: 나중에 소리를 바꾸면 이 이펙트도 함께 빠진다
   const grp = U.uid('g');

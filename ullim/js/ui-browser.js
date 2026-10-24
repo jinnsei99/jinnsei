@@ -72,12 +72,13 @@ function items() {
   const head = name => out.push({ head: name });
   switch (st.cat) {
     case 'sounds': {
-      for (const [tag, list] of U.soundGroups()) {
+      for (const [tag, list] of U.soundGroups(U.allSounds())) {
         head(tag);
         for (const s of list) out.push({
           label: s.name, sub: U.DEV[s.kind].name, icon: 'sound',
           drag: { type: 'sound', item: s }, load: () => A.loadSound(loadTarget('midi'), s),
-          preview: () => previewDev(U.makeDevice(s.kind, { p: s.p, data: s.data }), s.tags[0])
+          preview: () => previewDev(U.makeDevice(s.kind, { p: s.p, data: s.data }), s.user ? s.tags[1] || '' : s.tags[0]),
+          menu: s.user ? U.mySoundItems(s) : null
         });
       }
       break;
@@ -131,7 +132,7 @@ function items() {
         head(name);
         for (const [id, g] of Object.entries(U.GEN).filter(([, g]) => g.cat === cat)) {
           const ref = 'gen:' + id;
-          out.push({ label: g.name, sub: g.bpm ? g.bpm + ' BPM · ' + (g.beats / 4) + '마디' : '', icon: 'wave', drag: { type: 'sample', ref }, load: () => loadSample(ref), preview: () => previewSample(ref) });
+          out.push({ label: g.name, sub: g.bpm ? g.bpm + ' BPM · ' + (g.beats / 4) + '마디' : '', icon: 'wave', drag: { type: 'sample', ref }, load: () => loadSample(ref), preview: () => previewSample(ref), menu: [editItem(ref, g.name, g.bpm)] });
         }
       }
       break;
@@ -142,7 +143,7 @@ function items() {
       for (const r of list) {
         const ref = 'user:' + r.hash;
         out.push({ label: r.name, sub: U.fmtTime(r.duration) + (r.loop ? ' · ' + U.round(r.bpm, 1) + ' BPM' : ''), icon: 'wave', drag: { type: 'sample', ref }, load: () => loadSample(ref), preview: () => previewSample(ref),
-          menu: [{ label: '이 브라우저에서 지우기', danger: true, action: async () => { if (await U.confirm('오디오 지우기', '"' + r.name + '"을(를) 이 브라우저에서 지울까요? 이 파일을 쓰는 클립은 소리가 나지 않아요.', '지우기', true)) { await U.store.deleteAudio(r.hash); refreshUser(); } } }] });
+          menu: [editItem(ref, r.name, r.bpm), { label: '이 브라우저에서 지우기', danger: true, action: async () => { if (await U.confirm('오디오 지우기', '"' + r.name + '"을(를) 이 브라우저에서 지울까요? 이 파일을 쓰는 클립은 소리가 나지 않아요.', '지우기', true)) { await U.store.deleteAudio(r.hash); refreshUser(); } } }] });
       }
       break;
     }
@@ -209,6 +210,10 @@ function move(d) {
   select(i);
   const row = listEl.querySelector('.br-item[data-i="' + i + '"]');
   if (row) row.scrollIntoView({ block: 'nearest' });
+}
+/* 오디오를 편집해서 '내 오디오'에 새 파일로 남긴다 */
+function editItem(ref, name, bpm) {
+  return { label: '파형 편집…', action: () => U.audioEditor.open({ ref, title: name, name, bpm, save: async () => { await refreshUser(); U.toast('편집한 오디오를 \'내 오디오\'에 새로 넣었어요.'); } }) };
 }
 async function refreshUser() {
   st.userList = (await U.store.listAudio()).sort((a, b) => b.created - a.created);

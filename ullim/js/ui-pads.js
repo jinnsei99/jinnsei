@@ -496,7 +496,13 @@ function waveBox(t, d, i, o) {
   const label = h('span', { class: 'pe2-src', text: pd.sample ? '이 패드 샘플: ' + sampleName(pd.sample) : '원본: ' + sampleName(d.data.src) });
   const smpB = btn({ text: '샘플 ▾', cls: 'sm', title: '샘플 바꾸기', onclick: () => sampleMenu(smpB, t, d, i) });
   const chopB = !pd.sample && d.data.src ? btn({ text: '자르기 ▾', cls: 'sm', title: '원본을 잘라 패드에 나누기', info: ['자르기', '원본 샘플을 소리 시작점이나 박자, 같은 길이로 잘라 패드 1부터 차례로 넣어요.'], onclick: () => chopMenu(chopB, t, d) }) : null;
-  const el = h('div', { class: 'pe2-wavebox' }, holder, h('div', { class: 'pe2-row' }, label, smpB, chopB));
+  // 이 패드에서 들리는 부분(구간)만 꺼내 편집하고, 저장하면 이 패드만의 샘플이 된다
+  const editB = pd.sample || d.data.src ? btn({ text: '파형 편집', cls: 'sm', info: ['파형 편집', '이 패드에서 들리는 부분을 자르고, 페이드·볼륨·노멀라이즈·거꾸로를 해요. 저장하면 이 패드만의 샘플이 돼요.'], onclick: () => {
+    const ref = pd.sample || d.data.src;
+    U.audioEditor.open({ ref, title: pd.name || '패드 ' + (i + 1), name: pd.name || sampleName(ref), region: [pd.start, pd.end],
+      save: nref => A.setDeviceData(d.id, data => { Object.assign(data.pads[i], { sample: nref, start: 0, end: 1 }); }, '패드 소리 편집') });
+  } }) : null;
+  const el = h('div', { class: 'pe2-wavebox' }, holder, h('div', { class: 'pe2-row' }, label, smpB, editB, chopB));
   return { el, draw };
 }
 

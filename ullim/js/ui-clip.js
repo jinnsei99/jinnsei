@@ -190,6 +190,7 @@ function audioTab(body, c) {
   body.append(row('게인', gain));
   const rev = btn({ text: '거꾸로', cls: 'tg sm', toggle: true, on: !!c.rev, info: ['거꾸로 재생', '오디오를 뒤에서부터 재생해요.'], onclick: () => { c.rev = !c.rev; changed('거꾸로'); } });
   body.append(row('', rev));
+  body.append(row('', btn({ text: '파형 편집…', cls: 'sm', info: ['파형 편집', '자르기·복사·붙여넣기·지우기, 페이드·볼륨·노멀라이즈·거꾸로를 해요.'], onclick: () => U.audioEditor.editClip(Object.assign({}, ui.clip)) })));
   lenBoxes(body, c);
 }
 function toolsTab(body, c) {
@@ -971,7 +972,8 @@ function buildWave() {
   const c = clip();
   const label = h('span', { class: 'pr-title', text: (c.name || '오디오') + ' · ' + U.trackLabel(pr(), cur.track) + ' · ' + (c.warp ? 'Warp ' + c.mode : '원래 속도') });
   const fitB = btn({ icon: 'zoomfit', cls: 'ghost sm', title: '전체 보기', onclick: () => { wv.fit = true; drawWaveEditor(); } });
-  const bar = h('div', { class: 'pr-bar' }, fitB, h('span', { class: 'cb-flex' }), label);
+  const editB = btn({ text: '파형 편집', cls: 'sm', info: ['파형 편집', '이 오디오를 자르고 붙이고, 페이드·볼륨·노멀라이즈·거꾸로를 해요. 저장하면 새 오디오가 되고 원래 소리는 되돌리기로 돌아와요.'], onclick: () => U.audioEditor.editClip(Object.assign({}, ui.clip)) });
+  const bar = h('div', { class: 'pr-bar' }, fitB, editB, h('span', { class: 'cb-flex' }), label);
   cvWave = h('canvas', { class: 'wave-cv' });
   info(cvWave, '오디오 클립', '위쪽 띠를 끌어 루프 구간을 옮기고 늘여요. 세로선은 원래 템포 기준의 박이에요. 워프와 템포는 왼쪽에서 바꿔요.');
   const wrap = h('div', { class: 'wave-wrap' }, cvWave);

@@ -513,6 +513,28 @@ body.no-detail .dt-body, body.no-detail .infoview { display: none; }
 .snd-pick { min-width: 0; max-width: 180px; }
 .snd-pick span { overflow: hidden; text-overflow: ellipsis; }
 .snd-step { flex: none; padding: 0 5px; font-size: 9px; }
+/* 내 사운드 · 소리 다듬기 */
+.snd-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.snd-top .hint { margin: 0; }
+.inst-b.mine { border-style: dashed; border-color: var(--accent); }
+.dev.shape { width: 270px; }
+.shp-body { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+.shp-row { display: grid; grid-template-columns: 58px minmax(0, 1fr) 36px; align-items: center; gap: 8px; }
+.shp-name { font-size: 11px; color: var(--fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shp-bar { position: relative; height: 18px; border-radius: 9px; background: var(--sunk); border: 1px solid var(--line-2); cursor: pointer; touch-action: none; }
+.shp-bar:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.shp-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 9px; background: color-mix(in srgb, var(--accent) 55%, transparent); pointer-events: none; }
+.shp-thumb { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--accent); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); pointer-events: none; }
+.shp-val { font: 10.5px var(--font-mono); color: var(--fg-3); text-align: right; }
+.shp-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+/* 오디오 편집 */
+.ae { display: flex; flex-direction: column; gap: 8px; }
+.ae-top, .ae-tools { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.ae-tl { width: 44px; flex: none; color: var(--fg-3); font-size: 11px; }
+.ae-time { font: 11px var(--font-mono); color: var(--fg-2); white-space: nowrap; }
+.ae-wave { position: relative; height: clamp(150px, 36vh, 320px); border: 1px solid var(--line-2); border-radius: 6px; overflow: hidden; }
+.ae-cv { display: block; touch-action: none; cursor: text; }
+.ae-hint { margin: 0 0 0 6px; }
 .chain { display: flex; align-items: stretch; gap: 0; height: 100%; padding: 8px 8px 8px 4px; overflow-x: auto; overflow-y: hidden; }
 .drop-gap { flex: none; width: 6px; border-radius: 3px; }
 .drop-gap.last { flex: 1 0 40px; }
@@ -772,6 +794,12 @@ html.touch .snd-panel .insts-g { padding-top: 13px; }
 html.touch .inst-b { min-height: 32px; padding: 0 10px; font-size: 12.5px; }
 html.touch .snd-panel .inst-b { min-height: 40px; padding: 0 14px; font-size: 14px; }
 html.touch .snd-step { min-width: 34px; font-size: 11px; }
+html.touch .dev.shape { width: 320px; }
+html.touch .shp-row { grid-template-columns: 66px minmax(0, 1fr) 40px; }
+html.touch .shp-bar { height: 30px; border-radius: 15px; }
+html.touch .shp-fill { border-radius: 15px; }
+html.touch .shp-thumb { width: 26px; height: 26px; margin: -13px 0 0 -13px; }
+html.touch .ae-tl { width: 52px; }
 html.touch .pr-bar { height: 42px; gap: 6px; }
 html.touch .infoview { display: none; }
 html.touch .detail, html.touch body.no-browser .detail { grid-template-columns: minmax(0, 1fr); }
