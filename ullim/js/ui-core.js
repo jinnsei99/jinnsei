@@ -79,6 +79,7 @@ function showClip(ref, open) {
 }
 function setDetail(which) {
   ui.detail = which;
+  U.emit('detail', which);
   inval('detail');
 }
 function toggleDetail(force) {
@@ -134,6 +135,8 @@ const ICONS = {
   scale: '<path d="M2 12.5h3v-3h3v-3h3v-3h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>',
   undo: '<path d="M5.5 3L2.5 6l3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h6.5a3.5 3.5 0 0 1 0 7H6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   pads: '<rect x="1.5" y="1.5" width="5.6" height="5.6" rx="1.2"/><rect x="8.9" y="1.5" width="5.6" height="5.6" rx="1.2" opacity=".55"/><rect x="1.5" y="8.9" width="5.6" height="5.6" rx="1.2" opacity=".55"/><rect x="8.9" y="8.9" width="5.6" height="5.6" rx="1.2"/>',
+  mixer: '<path d="M4 2v12M8 2v12M12 2v12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><rect x="2.4" y="8.5" width="3.2" height="2.6" rx=".8"/><rect x="6.4" y="4" width="3.2" height="2.6" rx=".8"/><rect x="10.4" y="10" width="3.2" height="2.6" rx=".8"/>',
+  layout: '<rect x="1.5" y="2" width="13" height="12" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 5.5h13M6 5.5V14" fill="none" stroke="currentColor" stroke-width="1.4"/>',
   capture: '<path d="M2 3.5h5M2 6.5h3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M11 2v7.5M8.3 7L11 9.7 13.7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 11.5v2h11v-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'
 };
 function icon(name, cls) {

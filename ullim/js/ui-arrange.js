@@ -101,7 +101,8 @@ function onWheel(e) {
 
 /* ================= 레인 만들기 ================= */
 /* 레인 높이: 아이패드 버전은 머리의 버튼이 커서 두 줄이 들어가게 높인다 */
-const laneH = small => U.isTouch ? (small ? 62 : 68) : (small ? 40 : 58);
+// C(작업대)의 곡 지도는 트랙이 한눈에 들어오게 낮게
+const laneH = small => U.layout() === 'c' && !ui.auto ? (U.isTouch ? (small ? 36 : 40) : (small ? 26 : 30)) : U.isTouch ? (small ? 62 : 68) : (small ? 40 : 58);
 function render() {
   if (!lanesEl) return;
   const p = pr();
@@ -126,7 +127,7 @@ function render() {
 function lane(t, hgt) {
   const cv = h('canvas', { class: 'lane-cv' });
   const head = laneHead(t);
-  const el = h('div', { class: 'lane' + (t.type === 'return' || t.type === 'master' ? ' small' : ''), style: { height: hgt + 'px', '--c': U.colorOf(t.color) }, dataset: { t: t.id } }, cv, head);
+  const el = h('div', { class: 'lane' + (t.type === 'return' || t.type === 'master' ? ' small' : '') + (hgt < 44 ? ' compact' : ''), style: { height: hgt + 'px', '--c': U.colorOf(t.color) }, dataset: { t: t.id } }, cv, head);
   const L = { t, el, cv, head, h: hgt };
   lanes.push(L);
   bindLane(L);

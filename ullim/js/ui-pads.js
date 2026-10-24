@@ -105,7 +105,7 @@ function stopAll(t) {
 }
 
 /* ================= 키보드 ================= */
-function viewActive() { return ui.view === 'pads' && !(ui.narrow && ui.pane !== 'main'); }
+function viewActive() { return U.padsShown() && !(ui.narrow && ui.pane !== 'main'); }
 /* 글자 키가 칠 패드 트랙: 패드 화면이면 그 트랙, 컴퓨터 건반이 켜져 있으면 건반이 가는 루프 패드 트랙 */
 function kbTarget() {
   if (viewActive()) { const t = curTrack(); return t && !isKeysTrack(t) ? { t, d: U.instrumentOf(t) } : null; }
@@ -145,7 +145,7 @@ function waitFor(t, i) {
   ui.padWaitT = t.id;
   const d = U.instrumentOf(t);
   if (d && d.data) d.data.sel = i;
-  if (ui.view === 'pads') render();
+  if (U.padsShown()) render();
   U.inval('detail');
   U.setInfo('키 지정', '키보드에서 패드 ' + (i + 1) + '에 줄 글자를 누르세요. 누를 때마다 다음 패드로 넘어가요. Delete는 키 지우기, Esc는 끝내기예요.');
 }
@@ -154,7 +154,7 @@ function stopWaiting() {
   ui.padKeys = false;
   ui.padWait = null;
   ui.padWaitT = null;
-  if (ui.view === 'pads') render();
+  if (U.padsShown()) render();
   U.inval('detail');
 }
 function setAssign(on) {
@@ -583,7 +583,7 @@ function toolbar(t) {
 /* 아래 클립·장치 칸을 접어 패드·건반을 크게 (손가락으로 칠 때) */
 function bigBtn() {
   if (ui.narrow) return null;
-  return btn({ icon: 'detail', cls: 'tg sm', toggle: true, on: !ui.detailOpen, title: '연주 칸 크게', info: ['연주 칸 크게', '아래 클립·장치 칸을 접어서 패드와 건반을 크게 써요. 다시 누르면 펼쳐요.'], onclick: () => { U.toggleDetail(); U.inval('pads'); } });
+  return btn({ icon: 'detail', cls: 'tg sm pv-big', toggle: true, on: !ui.detailOpen, title: '연주 칸 크게', info: ['연주 칸 크게', '아래 클립·장치 칸을 접어서 패드와 건반을 크게 써요. 다시 누르면 펼쳐요.'], onclick: () => { U.toggleDetail(); U.inval('pads'); } });
 }
 /* 건반일 때의 도구 막대: 녹음 준비, 건반·스케일, 코드, 옥타브, 세기 */
 function keysBar(bar, t) {
@@ -635,7 +635,7 @@ function padStates(inst, now) {
   return { hit, on, wait };
 }
 U.frame(() => {
-  if (!R.dev || ui.view !== 'pads' || !root || root.offsetParent === null) return;
+  if (!R.dev || !U.padsShown() || !root || root.offsetParent === null) return;
   const n = U.engine.nodes.get(R.track.id), inst = n && n.inst;
   if (!inst) return;
   const st = padStates(inst, U.engine.ctx.currentTime);
@@ -689,16 +689,16 @@ function compact(t, d) {
 }
 
 /* ================= 다시 그리기 ================= */
-U.renderer('pads', () => { if (ui.view === 'pads') render(); });
+U.renderer('pads', () => { if (U.padsShown()) render(); });
 U.on('select', s => {
   if (!s || !s.track || s.track === ui.padTrack) return;
   const t = U.trackById(pr(), s.track);
   if (!t || t.type !== 'midi' || !U.instrumentOf(t)) return;
   // 패드 트랙을 고르면 언제나 따라가고, 신스 트랙은 지금 건반으로 치고 있을 때만 따라간다
   const now = ui.padTrack && U.trackById(pr(), ui.padTrack);
-  if (!isKeysTrack(t) || !now || isKeysTrack(now)) { ui.padTrack = t.id; if (ui.view === 'pads') U.inval('pads'); }
+  if (!isKeysTrack(t) || !now || isKeysTrack(now)) { ui.padTrack = t.id; if (U.padsShown()) U.inval('pads'); }
 });
-window.addEventListener('resize', () => { if (R.ed && ui.view === 'pads') R.ed.draw(); });
+window.addEventListener('resize', () => { if (R.ed && U.padsShown()) R.ed.draw(); });
 
 U.padsView = { build, render, keyDown, keyUp, releaseAll, curTrack };
 U.padsUI = { compact, keyOf };
