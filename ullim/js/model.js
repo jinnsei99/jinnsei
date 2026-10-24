@@ -42,7 +42,7 @@ function newAudioClip(ref, info, o) {
   return {
     id: U.uid('c'), type: 'audio',
     name: o.name || info.name || '오디오', color: o.color != null ? o.color : 0,
-    ref, warp: !!info.loop, mode: info.loop ? 'beats' : 'repitch', bpm,
+    ref, warp: !!info.loop, mode: info.loop ? info.mode || 'beats' : 'repitch', bpm,
     gain: 0, trans: 0, rev: false,
     start: 0, end: len, loop: { on: !!info.loop, start: 0, end: len },
     launch: 'trigger', quant: 'global', legato: false,

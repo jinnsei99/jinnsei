@@ -62,7 +62,7 @@ function info(ref) {
   if (ref && ref.startsWith('gen:')) {
     const g = U.GEN[ref.slice(4)];
     if (g) {
-      const m = { name: g.name, bpm: g.bpm || 120, loop: !!g.beats, duration: g.beats ? g.beats * 60 / g.bpm : g.dur || null };
+      const m = { name: g.name, bpm: g.bpm || 120, loop: !!g.beats, duration: g.beats ? g.beats * 60 / g.bpm : g.dur || null, mode: g.mode };
       meta.set(ref, m);
       return m;
     }
@@ -325,6 +325,61 @@ async function renderRobot(sr, syl, each) {
   if (pk > 1e-6) for (let c = 0; c < 2; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] *= 0.6 / pk; }
   return buf;
 }
+/* LP·테이프 질감 루프: 끝과 처음이 이어져서 몇 마디든 끊김 없이 깔린다.
+   바이닐은 쉬 소리 위에 짧은 지직거림과 가끔 큰 '틱', 아주 낮은 웅웅거림. 테이프는 조금 더 밝은 쉬 소리가 천천히 출렁인다 */
+async function renderTexture(sr, kind, secs) {
+  const len = Math.round(secs * sr), F = Math.round(0.3 * sr), N = len + F;
+  const vinyl = kind === 'vinyl';
+  const rnd = U.rng(vinyl ? 3301 : 7717);
+  const g = () => (rnd() * 2 - 1) * 1.73;   // 크기 1인 흰 노이즈
+  const lp1 = fc => Math.exp(-2 * Math.PI * fc / sr);
+  const raw = [new Float32Array(N), new Float32Array(N)];
+  // 쉬 소리: 채널마다 따로 (넓게 퍼지게)
+  const hissA = lp1(vinyl ? 5500 : 9000), hissHp = lp1(vinyl ? 300 : 150), hissLv = vinyl ? 0.012 : 0.03;
+  for (let c = 0; c < 2; c++) {
+    let z = 0, lo = 0;
+    for (let i = 0; i < N; i++) {
+      z = (1 - hissA) * g() + hissA * z;
+      lo = (1 - hissHp) * z + hissHp * lo;
+      let v = (z - lo) * hissLv;
+      if (!vinyl) v *= 1 + 0.18 * Math.sin(2 * Math.PI * (0.31 * i / sr + c * 0.2)) + 0.1 * Math.sin(2 * Math.PI * 0.73 * i / sr);
+      raw[c][i] = v;
+    }
+    await new Promise(r => setTimeout(r));   // 한 번에 다 계산하지 않고 쉬어 가며 (화면이 멈추지 않게)
+  }
+  if (vinyl) {
+    // 낮은 웅웅거림(턴테이블 럼블): 양쪽에 같이
+    let r1 = 0, r2 = 0;
+    const ra = lp1(45);
+    for (let i = 0; i < N; i++) {
+      r1 = (1 - ra) * g() + ra * r1;
+      r2 = (1 - ra) * r1 + ra * r2;
+      raw[0][i] += r2 * 0.25; raw[1][i] += r2 * 0.25;
+    }
+    // 지직거림: 초당 14번쯤 작은 딸깍, 1.5초에 한 번쯤 큰 틱. 자리마다 좌우가 조금씩 다르다
+    const clicks = Math.round(secs * 14), pops = Math.round(secs * 0.7);
+    const put = (amp, tau, pan) => {
+      const at = Math.floor(rnd() * N), n = Math.ceil(tau * 6 * sr), sgn = rnd() < 0.5 ? -1 : 1;
+      const gl = Math.cos((pan + 1) * Math.PI / 4) * 1.41, gr = Math.sin((pan + 1) * Math.PI / 4) * 1.41;
+      let z = 0;
+      for (let k = 0; k < n && at + k < N; k++) {
+        z = 0.55 * z + 0.45 * (k === 0 ? 3 : g());    // 첫 샘플이 큰 짧은 노이즈 덩어리
+        const v = sgn * amp * z * Math.exp(-k / (tau * sr));
+        raw[0][at + k] += v * gl; raw[1][at + k] += v * gr;
+      }
+    };
+    for (let k = 0; k < clicks; k++) put(0.02 + 0.12 * Math.pow(rnd(), 3), 0.00025 + 0.0004 * rnd(), (rnd() - 0.5) * 1.2);
+    for (let k = 0; k < pops; k++) put(0.18 + 0.2 * rnd(), 0.0008 + 0.0012 * rnd(), (rnd() - 0.5) * 0.8);
+  }
+  // 이음매: 마지막 F만큼을 처음 F와 같은 힘으로 섞어서, 루프 끝이 처음으로 그대로 이어지게
+  const out = new AudioBuffer({ length: len, numberOfChannels: 2, sampleRate: sr });
+  for (let c = 0; c < 2; c++) {
+    const s = raw[c], o = out.getChannelData(c);
+    for (let i = 0; i < len; i++) o[i] = s[i];
+    for (let i = 0; i < F; i++) { const a = Math.PI / 2 * i / F; o[i] = s[i] * Math.sin(a) + s[len + i] * Math.cos(a); }
+  }
+  return out;
+}
 async function renderFx(sr, kind) {
   if (kind === 'riser' || kind === 'down') {
     const dur = 4;
@@ -369,5 +424,5 @@ async function renderFx(sr, kind) {
   return c2.startRendering();
 }
 
-U.media = { get, cached, info, setInfo, peaks, reversed, guessTempo, importFile, addBuffer, decode, renderHits, renderInstrument, renderVowels, renderRobot, renderFx };
+U.media = { get, cached, info, setInfo, peaks, reversed, guessTempo, importFile, addBuffer, decode, renderHits, renderInstrument, renderVowels, renderRobot, renderFx, renderTexture };
 })(window.U = window.U || {});

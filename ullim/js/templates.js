@@ -80,12 +80,24 @@ function bassline(key, prog, o) {
   });
   return { len: prog.length * bars * 4, notes };
 }
+/* 화음을 도수 묶음으로 직접 짚기: voicings[i]는 i번째 마디 화음의 스케일 도수들 (근음을 뺀 재즈 보이싱 등) */
+function voiced(key, voicings, o) {
+  const notes = [];
+  voicings.forEach((degs, ci) => {
+    const ps = degs.map(d => U.degreeToPitch(d, key.root, key.scale, o.base || 60));
+    for (const hh of hits(o.rhythm || 'x---------------')) {
+      ps.forEach((p, k) => notes.push(nt(p, ci * 4 + hh.s + (o.strum || 0) * k, hh.d * (o.gate || 0.96) - (o.strum || 0) * k, hh.c === 'X' ? 112 : o.vel || 92)));
+    }
+  });
+  return { len: voicings.length * 4, notes };
+}
 /* 멜로디: [도수, 시작 박, 길이] */
 function melody(key, list, len, base) {
   return { len, notes: list.map(([d, s, l, v]) => nt(U.degreeToPitch(d, key.root, key.scale, base || 72), s, l, v || 98)) };
 }
 const riser = { audio: 'gen:fx-riser', name: '라이저', align: 'end' };
 const impact = { audio: 'gen:fx-impact', name: '임팩트' };
+const vinyl = { audio: 'gen:tex-vinyl', name: '바이닐 노이즈' };
 const duck = depth => ['duck', { div: '1/4', depth, rel: 0.18 }];
 const glue = ['comp', { thr: -16, ratio: 3, att: 0.02, rel: 0.15, makeup: 2 }];
 
@@ -262,6 +274,43 @@ const GENRES = [];
         break: () => chords(key, prog, { size: 4, base: 57, strum: 0.05, vel: 80 }),
         outro: () => chords(key, prog, { size: 4, base: 57, strum: 0.05, vel: 76 })
       } }
+    ]
+  });
+})();
+
+/* ---------- 재즈 힙합 ---------- */
+(() => {
+  const key = { root: 2, scale: 'minor' }; // D 마이너
+  // Dm9 – Gm9 – C9 – Fmaj9. 근음은 베이스에 맡기고 3·5·7·9음을 앞 화음과 가까운 자리로 짚는다
+  const voicing = [[2, 4, 6, 8], [2, 4, 5, 7], [1, 3, 5, 7], [1, 3, 4, 6]];
+  const roots = [0, 3, -1, 2];             // D G C F
+  GENRES.push({
+    id: 'jazzhop', name: '재즈 힙합', bpm: 86, key, swing: 0.3,
+    desc: '로즈 9화음, 업라이트 베이스, 브러시 드럼, 뮤트 트럼펫과 LP 잡음',
+    roles: ['intro', 'main', 'break', 'outro'],
+    structure: [['intro', 4], ['main', 8], ['break', 4], ['main', 8], ['outro', 4]],
+    tracks: [
+      { name: '드럼', color: 1, kit: 'kjazz', vol: -4, a: -26, clips: {
+        intro: () => bars16({ y: 'x.x.x.x.x.x.x.x.', r: '....x.......x...' }, 1),
+        main: () => DR({ k: 'x.......x.x.....x......x..x.....', s: '....x.......x.......x.......x...', y: 'x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.', c: '..........o.............o....o..' }, 8),
+        break: () => bars16({ b: 'x.......x.......', r: '....x.......x...', y: 'x...x...x...x...' }, 1),
+        outro: () => bars16({ y: 'x.x.x.x.x.x.x.x.', b: 'x...............' }, 1)
+      } },
+      { name: '베이스', color: 0, sound: '붐뱁 업라이트', vol: -3, clips: {
+        main: () => bassline(key, roots, { base: 40, pattern: ['X-----x-5-------', 'X-------x---o---'] }),
+        break: () => bassline(key, roots, { base: 40, pattern: 'X---------------', vel: 88 })
+      } },
+      { name: '로즈', color: 10, sound: '로파이 로즈', vol: -5, a: -14, clips: {
+        intro: () => voiced(key, voicing, { base: 55, strum: 0.05, vel: 84 }),
+        main: () => voiced(key, voicing, { base: 55, strum: 0.03, rhythm: 'x-------..x-----' }),
+        break: () => voiced(key, voicing, { base: 55, strum: 0.05, vel: 80 }),
+        outro: () => voiced(key, voicing, { base: 55, strum: 0.06, vel: 76 })
+      } },
+      { name: '뮤트 트럼펫', color: 6, sound: '딜레이 뮤트 트럼펫', vol: -6, a: -14, clips: {
+        main: () => melody(key, [[4, 1.5, 0.5], [5, 2, 0.5], [4, 2.5, 1.5], [2, 5, 0.5], [3, 5.5, 0.5], [2, 6, 1.5],
+          [6, 8.5, 0.5], [7, 9, 0.5], [6, 9.5, 0.5], [4, 10, 1.5], [2, 12.5, 0.5], [1, 13, 0.5], [0, 13.5, 2]], 16)
+      } },
+      { name: 'LP 잡음', type: 'audio', color: 3, vol: -10, clips: { intro: vinyl, main: vinyl, break: vinyl, outro: vinyl } }
     ]
   });
 })();
