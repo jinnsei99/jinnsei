@@ -5,6 +5,7 @@ const { h, ui, icon, btn, info } = U;
 const A = U.act;
 const pr = () => U.project;
 let els = {};
+const INFO_H = 160;   // 설명 칸 처음 높이
 
 /* ================= 오디오 ================= */
 function createAudio() {
@@ -28,13 +29,17 @@ function buildLayout() {
   els.arrange = h('section', { class: 'view v-arrange', 'aria-label': '어레인지먼트 뷰' });
   els.pads = h('section', { class: 'view v-pads', 'aria-label': '패드 화면' });
   els.views = h('div', { class: 'views' }, els.session, els.arrange, els.pads);
-  els.main = h('div', { class: 'main' }, els.browser, els.views);
+  // 왼쪽 줄: 브라우저와 그 아래 설명 칸. 설명 칸은 사이 손잡이로 따로 높이를 바꾼다 (A 컴퓨터 화면에서만 보인다)
+  els.isplit = h('div', { class: 'split-i', role: 'separator', tabindex: '0', 'aria-label': '설명 칸 높이 조절', 'aria-orientation': 'horizontal' });
+  info(els.isplit, '설명 칸 높이', '끌어서 설명 칸의 높이를 바꿔요. 위의 브라우저가 그만큼 줄거나 늘어요. 두 번 누르면 접고 펴요.');
+  els.info = h('div', { class: 'infoview', 'aria-live': 'polite' }, h('div', { class: 'iv-t' }), h('div', { class: 'iv-d' }));
+  els.side = h('div', { class: 'side' }, els.browser, els.isplit, els.info);
+  els.main = h('div', { class: 'main' }, els.side, els.views);
   els.split = h('div', { class: 'split-h', role: 'separator', 'aria-label': '아래 칸 높이 조절' });
   info(els.split, '높이 조절', '끌어서 아래 클립·장치 칸의 높이를 바꿔요.');
-  els.info = h('div', { class: 'infoview', 'aria-live': 'polite' }, h('div', { class: 'iv-t' }), h('div', { class: 'iv-d' }));
   els.dtHead = h('div', { class: 'dt-head' });
   els.dtBody = h('div', { class: 'dt-body' });
-  els.detail = h('section', { class: 'detail', 'aria-label': '클립·장치 칸' }, els.info, h('div', { class: 'dt' }, els.dtHead, els.dtBody));
+  els.detail = h('section', { class: 'detail', 'aria-label': '클립·장치 칸' }, h('div', { class: 'dt' }, els.dtHead, els.dtBody));
   els.status = h('footer', { class: 'status' });
   els.panes = h('nav', { class: 'panes', 'aria-label': '화면 고르기' });
   // 디자인마다 쓰는 칸 (안 쓰는 디자인에서는 숨어 있다)
@@ -52,10 +57,48 @@ function buildLayout() {
   document.body.classList.toggle('no-browser', !ui.browserOpen);
   const dh = U.pref('detailH', 320);
   document.documentElement.style.setProperty('--detail-h', dh + 'px');
+  document.documentElement.style.setProperty('--info-h', U.pref('infoH', INFO_H) + 'px');
   U.shell.mount(els);
   U.mixerView.build(els.mixv);
   bindSplit();
+  bindInfoSplit();
   buildPanes();
+}
+/* 설명 칸 높이: 끌기 · 두 번 눌러 접고 펴기 · 위아래 화살표 */
+function bindInfoSplit() {
+  const el = els.isplit;
+  const cur = () => els.info.getBoundingClientRect().height;
+  const set = (v, save) => {
+    const room = els.side.getBoundingClientRect().height - el.getBoundingClientRect().height - 120;   // 브라우저는 120px은 남긴다
+    const hh = Math.round(U.clamp(v, 0, Math.max(0, room)));
+    document.documentElement.style.setProperty('--info-h', hh + 'px');
+    if (save) {
+      U.setPref('infoH', hh);
+      if (hh >= 40) U.setPref('infoOpenH', hh);   // 접었다 펼 때 돌아갈 높이
+    }
+    el.setAttribute('aria-valuenow', String(hh));
+    return hh;
+  };
+  el.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    el.setPointerCapture(e.pointerId);
+    const y0 = e.clientY, h0 = cur();
+    const move = ev => set(h0 + (y0 - ev.clientY));
+    const up = () => {
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+      set(cur(), true);
+    };
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+  });
+  const fold = () => set(cur() >= 40 ? 0 : U.pref('infoOpenH', INFO_H), true);
+  el.addEventListener('dblclick', fold);
+  el.addEventListener('keydown', e => {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); set(cur() + (e.key === 'ArrowUp' ? 16 : -16), true); }
+    else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); fold(); }
+  });
 }
 function bindSplit() {
   els.split.addEventListener('pointerdown', e => {
