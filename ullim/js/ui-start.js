@@ -40,6 +40,13 @@ function newProjectDialog(first) {
       setTip();
     }, 'np-modes');
     body.append(h('div', { class: 'np-mode' }, h('span', { text: '화면' }), seg, h('span', { class: 'hint', text: '나중에도 아래 상태 줄이나 메뉴 › 화면 버전에서 바꿀 수 있어요.' })));
+    // 화면 디자인도 처음에 고를 수 있게 (A 한 화면에 다 · B 단계별로 · C 곡 지도 + 탭)
+    const designs = U.designs.map(d => [d.id, d.letter + ' · ' + d.name, d.desc]);
+    const dseg = U.seg(designs, U.design, v => {
+      U.shell.setDesign(v, true);
+      [...dseg.children].forEach((b, i) => b.setAttribute('aria-pressed', designs[i][0] === v ? 'true' : 'false'));
+    }, 'np-designs');
+    body.append(h('div', { class: 'np-mode' }, h('span', { text: '디자인' }), dseg, h('span', { class: 'hint', text: 'A는 한 화면에 다, B는 단계별로, C는 곡 지도 + 단계 탭이에요. 아래 상태 줄의 디자인 단추로 언제든 바꿔요.' })));
   }
   dlg = U.dialog({ title: first ? '울림 스튜디오에 오신 걸 환영해요' : '새 프로젝트', body, width: '680px', actions: [{ label: first ? '둘러보기' : '닫기' }] });
 }

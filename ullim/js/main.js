@@ -37,12 +37,23 @@ function buildLayout() {
   els.detail = h('section', { class: 'detail', 'aria-label': '클립·장치 칸' }, els.info, h('div', { class: 'dt' }, els.dtHead, els.dtBody));
   els.status = h('footer', { class: 'status' });
   els.panes = h('nav', { class: 'panes', 'aria-label': '화면 고르기' });
-  app.append(els.ctrl, els.main, els.split, els.detail, els.status, els.panes);
+  // 디자인마다 쓰는 칸 (안 쓰는 디자인에서는 숨어 있다)
+  els.top = h('header', { class: 'shell-top', 'aria-label': '작업 단계' });          // B: 로고·단계·되돌리기
+  els.rail = h('aside', { class: 'shell-rail', 'aria-label': '트랙 목록' });         // B: 왼쪽 트랙 목록
+  els.whead = h('div', { class: 'shell-whead' });                                     // B: 단계 제목·안내
+  els.bnav = h('div', { class: 'shell-nav' });                                        // B: 이전·다음
+  els.ctabs = h('div', { class: 'shell-tabs' });                                      // C: 작업대 탭
+  els.insp = h('aside', { class: 'insp', 'aria-label': '고른 트랙' });               // A: 오른쪽 칸
+  els.mixv = h('section', { class: 'mixv', 'aria-label': '믹서' });                  // B·C: 믹서 화면
+  els.xpv = h('section', { class: 'xpv', 'aria-label': '내보내기' });                // B·C: 내보내기 화면
+  app.append(els.top, els.ctrl, els.rail, els.whead, els.main, els.split, els.detail, els.ctabs, els.mixv, els.xpv, els.insp, els.bnav, els.status, els.panes);
   document.body.append(app);
   document.body.classList.toggle('no-detail', !ui.detailOpen);
   document.body.classList.toggle('no-browser', !ui.browserOpen);
   const dh = U.pref('detailH', 320);
   document.documentElement.style.setProperty('--detail-h', dh + 'px');
+  U.shell.mount(els);
+  U.mixerView.build(els.mixv);
   bindSplit();
   buildPanes();
 }
@@ -51,21 +62,31 @@ function bindSplit() {
     e.preventDefault();
     els.split.setPointerCapture(e.pointerId);
     const y0 = e.clientY;
-    const h0 = els.detail.getBoundingClientRect().height;
+    // C(작업대)는 위쪽 곡 지도의 높이, 나머지는 아래 클립·장치 칸의 높이
+    const map = U.layout() === 'c';
+    const h0 = map ? ui.mapH : els.detail.getBoundingClientRect().height;
+    let hh = h0;
     const move = ev => {
-      const hh = U.clamp(h0 + (y0 - ev.clientY), 140, window.innerHeight - 220);
-      document.documentElement.style.setProperty('--detail-h', hh + 'px');
+      if (map) {
+        hh = U.clamp(h0 + (ev.clientY - y0), 140, window.innerHeight - 300);
+        ui.mapH = Math.round(hh);
+        document.documentElement.style.setProperty('--map-h', ui.mapH + 'px');
+      } else {
+        hh = U.clamp(h0 + (y0 - ev.clientY), 140, window.innerHeight - 220);
+        document.documentElement.style.setProperty('--detail-h', hh + 'px');
+      }
     };
     const up = () => {
       els.split.removeEventListener('pointermove', move);
       els.split.removeEventListener('pointerup', up);
-      U.setPref('detailH', Math.round(els.detail.getBoundingClientRect().height));
+      if (map) U.setPref('mapH', ui.mapH);
+      else U.setPref('detailH', Math.round(els.detail.getBoundingClientRect().height));
       U.inval('arrange-draw', 'detail');
     };
     els.split.addEventListener('pointermove', move);
     els.split.addEventListener('pointerup', up);
   });
-  els.split.addEventListener('dblclick', () => U.toggleDetail());
+  els.split.addEventListener('dblclick', () => { if (U.layout() === 'a') U.toggleDetail(); });
 }
 /* 좁은 화면: 한 번에 한 칸 */
 function buildPanes() {
@@ -89,6 +110,10 @@ function setPane(id) {
   U.inval('arrange-draw', 'detail');
 }
 U.setView = function (v) {
+  // B(스텝 가이드)·C(작업대)는 패드를 단계·탭으로 보여 주고, 세션·어레인지먼트는 곡 짜기·곡 지도에 보여 준다
+  const L = U.layout();
+  if (L === 'b') { if (v === 'pads') U.shell.setStep(1, { mode: 'play' }); else { ui.view = v; U.setPref('view', v); U.shell.setStep(3); } return; }
+  if (L === 'c') { if (v === 'pads') U.shell.setTab(1); else U.shell.setSongView(v); return; }
   if (ui.view === 'pads' && v !== 'pads') U.padsView.releaseAll();
   if (v === 'pads' && ui.view !== 'pads') ui.prevView = ui.view;
   ui.view = v;
@@ -106,12 +131,12 @@ function renderDetail() {
   const r = U.clipRef();
   const tabs = U.seg([['clip', '클립', '고른 클립의 음표나 오디오를 편집해요. Shift+Tab으로 바꿔요.'], ['device', '장치', '고른 트랙의 악기와 이펙트예요. Shift+Tab으로 바꿔요.']], ui.detail, v => { U.setDetail(v); }, 'dt-tabs');
   const title = h('span', { class: 'dt-title', text: ui.detail === 'clip' ? (r ? (r.clip.name || (r.clip.type === 'audio' ? '오디오 클립' : 'MIDI 클립')) + ' — ' + U.trackLabel(pr(), r.track) : '클립 없음') : (t ? U.trackLabel(pr(), t) : '') });
-  const fold = btn({ icon: 'detail', cls: 'ghost sm', title: '아래 칸 접기', info: ['아래 칸 접기', '클립·장치 칸을 접거나 펼쳐요. 경계선을 두 번 눌러도 돼요.'], onclick: () => U.toggleDetail() });
+  const fold = btn({ icon: 'detail', cls: 'ghost sm dt-fold', title: '아래 칸 접기', info: ['아래 칸 접기', '클립·장치 칸을 접거나 펼쳐요. 경계선을 두 번 눌러도 돼요.'], onclick: () => U.toggleDetail() });
   // 건반 악기 트랙이면 악기 소리를 여기서 바로 바꾼다 (클립을 고치다가도). 드럼·루프 패드는 장치의 키트 메뉴로 바꾼다
   const st = ui.detail === 'clip' ? r && r.track : t, sti = st && U.instrumentOf(st);
   const pick = st && st.type === 'midi' && !(sti && (sti.kind === 'drums' || sti.kind === 'looppad')) ? h('span', { class: 'snd-pickers' }, h('span', { class: 'snd-l', text: '소리' }), ...U.soundPicker(st)) : null;
   els.dtHead.append(...[tabs, title, pick, h('span', { class: 'cb-flex' }), fold].filter(Boolean));
-  if (!ui.detailOpen && !ui.narrow) return;
+  if (!U.detailShown()) return;
   if (ui.detail === 'clip') U.clipView.render(els.dtBody);
   else U.deviceView.render(els.dtBody);
 }
@@ -144,10 +169,13 @@ function renderStatus() {
     re.disabled = !U.canRedo();
     right.append(un, re);
   }
+  const dz = h('button', { class: 'st-design', type: 'button' }, icon('layout'), h('span', { text: '디자인 ' + U.shell.designName() }));
+  info(dz, '화면 디자인', 'A 컨트롤 룸(한 화면에 다), B 스텝 가이드(단계별로), C 작업대(곡 지도 + 단계 탭) 중에서 골라요.');
+  dz.addEventListener('click', () => U.shell.designMenu(dz));
   const md = h('button', { class: 'st-mode', type: 'button', text: U.uiModeName() });
   info(md, '화면 버전', '컴퓨터 버전(마우스·키보드)과 아이패드 버전(손가락) 중에서 골라요. 자동이면 이 기기에 맞춰요.');
   md.addEventListener('click', () => modeMenu(md));
-  right.append(md);
+  right.append(dz, md);
   const mc = U.input.midiCount();
   const midi = h('button', { class: 'st-midi', type: 'button', text: mc ? 'MIDI ' + mc : 'MIDI 연결' });
   info(midi, 'MIDI 장치', mc ? 'MIDI 건반 ' + mc + '개가 연결돼 있어요. 연주는 녹음 준비(●)한 트랙이나 고른 트랙으로 가요.' : 'USB MIDI 건반을 꽂고 눌러서 연결해요.');
@@ -158,8 +186,10 @@ function renderStatus() {
   const va = btn({ icon: 'arrange', cls: 'ghost sm' + (ui.view === 'arrange' ? ' on' : ''), title: '어레인지먼트 뷰 (Tab)', info: ['어레인지먼트 뷰', '시간 순서대로 곡을 배치하는 화면이에요. Tab으로 바꿔요.'], onclick: () => U.setView('arrange') });
   const vp = btn({ icon: 'pads', cls: 'ghost sm' + (ui.view === 'pads' ? ' on' : ''), title: '패드 화면 (P)', info: ['패드 화면', '루프 패드·드럼 머신의 패드 16개를 크게 띄우고 글자 키로 쳐요.'], onclick: () => U.setView('pads') });
   const vb = btn({ icon: 'browser', cls: 'ghost sm' + (ui.browserOpen ? ' on' : ''), title: '브라우저 보이기 (' + U.MOD + '+Alt+B)', onclick: () => U.toggleBrowser() });
-  const vd = btn({ icon: 'detail', cls: 'ghost sm' + (ui.detailOpen ? ' on' : ''), title: '아래 칸 보이기', onclick: () => U.toggleDetail() });
-  right.append(h('span', { class: 'st-views' }, vb, vs, va, vp, vd));
+  const vd = btn({ icon: 'detail', cls: 'ghost sm st-vd' + (ui.detailOpen ? ' on' : ''), title: '아래 칸 보이기', onclick: () => U.toggleDetail() });
+  const vi = btn({ icon: 'layout', cls: 'ghost sm st-vi' + (U.inspShown() ? ' on' : ''), title: '고른 트랙 칸 보이기', info: ['고른 트랙 칸', '오른쪽에 고른 트랙의 소리·장치·믹서를 보여 줘요.'], onclick: () => U.shell.toggleInsp() });
+  vb.classList.add('st-vb');
+  right.append(h('span', { class: 'st-views' }, vb, vs, va, vp, vd, vi));
   els.status.append(left, right);
 }
 
@@ -284,8 +314,9 @@ async function importProjectFile(file) {
   }
 }
 
-/* ================= 내보내기 대화상자 ================= */
-function exportDialog() {
+/* ================= 내보내기 ================= */
+/* 범위·샘플레이트·비트·스템을 고르는 칸과, 그대로 내보내는 run (대화상자와 내보내기 화면이 함께 쓴다) */
+function exportForm() {
   const p = pr();
   const end = U.arrangementEnd(p);
   const bar = U.barLen(p.sig);
@@ -304,50 +335,84 @@ function exportDialog() {
     body.append(h('div', { class: 'fld-2' },
       h('label', { class: 'fld' }, h('span', { text: '샘플레이트' }), U.select([['44100', '44.1 kHz'], ['48000', '48 kHz']], String(st.rate), v => { st.rate = +v; })),
       h('label', { class: 'fld' }, h('span', { text: '비트' }), U.select([['16', '16비트'], ['24', '24비트'], ['32', '32비트 float']], String(st.bits), v => { st.bits = +v; }))));
-    const stems = h('input', { type: 'checkbox', id: 'xp-stems' }); stems.checked = st.stems; stems.addEventListener('change', () => { st.stems = stems.checked; });
-    const norm = h('input', { type: 'checkbox', id: 'xp-norm' }); norm.checked = st.norm; norm.addEventListener('change', () => { st.norm = norm.checked; });
-    body.append(h('label', { class: 'chk', for: 'xp-stems' }, stems, h('span', { text: '트랙별 파일(스템)도 함께 — ZIP으로 묶어요' })));
-    body.append(h('label', { class: 'chk', for: 'xp-norm' }, norm, h('span', { text: '가장 큰 소리를 -0.3 dB에 맞추기 (노멀라이즈)' })));
+    const uid = U.uid('xp');
+    const stems = h('input', { type: 'checkbox', id: uid + 's' }); stems.checked = st.stems; stems.addEventListener('change', () => { st.stems = stems.checked; });
+    const norm = h('input', { type: 'checkbox', id: uid + 'n' }); norm.checked = st.norm; norm.addEventListener('change', () => { st.norm = norm.checked; });
+    body.append(h('label', { class: 'chk', for: uid + 's' }, stems, h('span', { text: '트랙별 파일(스템)도 함께 — ZIP으로 묶어요' })));
+    body.append(h('label', { class: 'chk', for: uid + 'n' }, norm, h('span', { text: '가장 큰 소리를 -0.3 dB에 맞추기 (노멀라이즈)' })));
     if (window.claude) body.append(h('p', { class: 'hint', text: 'Claude 안에서는 WAV를 ZIP으로 묶어서 내려받아요.' }));
     body.append(h('div', { class: 'xp-prog', hidden: true }, h('div', { class: 'xp-bar' }), h('span', { class: 'xp-t', text: '' })));
   };
   draw();
-  U.dialog({
-    title: '오디오 내보내기', body, width: '420px',
-    actions: [{ label: '취소' }, { label: '내보내기', primary: true, action: async b => {
-      b.disabled = true;
-      const prog = body.querySelector('.xp-prog');
-      prog.hidden = false;
-      const barEl = body.querySelector('.xp-bar'), txt = body.querySelector('.xp-t');
-      try {
-        let from = 0, to = end, scene = null;
-        if (st.src === 'loop') { from = p.loop.start; to = p.loop.end; }
-        if (st.src === 'scene') { from = 0; to = st.bars * bar; scene = st.scene; }
-        if (to - from <= 0) { U.toast('내보낼 내용이 없어요. 어레인지먼트에 클립을 놓거나 세션 씬을 골라 주세요.', 'error'); b.disabled = false; return false; }
-        txt.textContent = '소리를 만드는 중…';
-        const res = await U.renderOffline(p, { from, to, scene, stems: st.stems, sampleRate: st.rate, tail: st.tail }, f => { barEl.style.transform = 'scaleX(' + f.toFixed(3) + ')'; });
-        if (st.norm) U.normalizeAudio(res.files.flatMap(f => f.ch), Math.pow(10, -0.3 / 20));
-        const base = U.safeName(p.name) + (st.src === 'scene' ? ' - 씬 ' + (st.scene + 1) : st.src === 'loop' ? ' - 루프' : '');
-        txt.textContent = '파일로 묶는 중…';
-        let blob, name;
-        if (st.stems) {
-          const files = res.files.map((f, i) => ({ name: (i === 0 ? '00 ' + base + ' (믹스)' : U.safeName(f.name)) + '.wav', data: U.encodeWav(f.ch, res.sr, st.bits) }));
-          blob = await U.zip(files);
-          name = base + ' 스템.zip';
-        } else {
-          blob = U.encodeWav(res.files[0].ch, res.sr, st.bits);
-          name = base + '.wav';
-        }
-        const r = await U.store.offer(name, blob);
-        if (r === 'saved') U.toast('내보냈어요: ' + name);
-      } catch (e) {
-        console.error(e);
-        U.toast('내보내지 못했어요: ' + (e.message || e), 'error');
-        b.disabled = false;
-        return false;
+  const run = async b => {
+    b.disabled = true;
+    const prog = body.querySelector('.xp-prog');
+    prog.hidden = false;
+    const barEl = body.querySelector('.xp-bar'), txt = body.querySelector('.xp-t');
+    try {
+      let from = 0, to = end, scene = null;
+      if (st.src === 'loop') { from = p.loop.start; to = p.loop.end; }
+      if (st.src === 'scene') { from = 0; to = st.bars * bar; scene = st.scene; }
+      if (to - from <= 0) { U.toast('내보낼 내용이 없어요. 어레인지먼트에 클립을 놓거나 세션 씬을 골라 주세요.', 'error'); b.disabled = false; prog.hidden = true; return false; }
+      txt.textContent = '소리를 만드는 중…';
+      const res = await U.renderOffline(p, { from, to, scene, stems: st.stems, sampleRate: st.rate, tail: st.tail }, f => { barEl.style.transform = 'scaleX(' + f.toFixed(3) + ')'; });
+      if (st.norm) U.normalizeAudio(res.files.flatMap(f => f.ch), Math.pow(10, -0.3 / 20));
+      const base = U.safeName(p.name) + (st.src === 'scene' ? ' - 씬 ' + (st.scene + 1) : st.src === 'loop' ? ' - 루프' : '');
+      txt.textContent = '파일로 묶는 중…';
+      let blob, name;
+      if (st.stems) {
+        const files = res.files.map((f, i) => ({ name: (i === 0 ? '00 ' + base + ' (믹스)' : U.safeName(f.name)) + '.wav', data: U.encodeWav(f.ch, res.sr, st.bits) }));
+        blob = await U.zip(files);
+        name = base + ' 스템.zip';
+      } else {
+        blob = U.encodeWav(res.files[0].ch, res.sr, st.bits);
+        name = base + '.wav';
       }
-    } }]
-  });
+      const r = await U.store.offer(name, blob);
+      if (r === 'saved') U.toast('내보냈어요: ' + name);
+    } catch (e) {
+      console.error(e);
+      U.toast('내보내지 못했어요: ' + (e.message || e), 'error');
+      b.disabled = false;
+      prog.hidden = true;
+      return false;
+    }
+  };
+  return { body, run };
+}
+function exportDialog() {
+  const f = exportForm();
+  U.dialog({ title: '오디오 내보내기', body: f.body, width: '420px', actions: [{ label: '취소' }, { label: '내보내기', primary: true, action: f.run }] });
+}
+/* B·C의 내보내기 화면: 대화상자와 같은 칸을 펼쳐 둔다 */
+let xpBusy = false;
+function renderExportPanel() {
+  const el = els.xpv;
+  if (!el || el.offsetParent === null || xpBusy) return;
+  U.clear(el);
+  const can = U.store.canDownload();
+  const f = exportForm();
+  const go = btn({ icon: 'download', text: '오디오 내보내기', cls: 'primary xpv-go', onclick: async () => {
+    xpBusy = true;
+    try { await f.run(go); } finally {
+      xpBusy = false;
+      go.disabled = !can;
+      const pg = f.body.querySelector('.xp-prog');
+      if (pg) setTimeout(() => { pg.hidden = true; }, 1200);
+    }
+  } });
+  go.disabled = !can;
+  const card = (title, desc, ...kids) => h('section', { class: 'xpv-card' }, h('h3', { text: title }), h('p', { class: 'hint', text: desc }), ...kids);
+  const midi = btn({ icon: 'midi', text: 'MIDI 파일 내보내기', cls: 'wide', onclick: () => exportMidi() });
+  const pf = btn({ icon: 'file', text: '프로젝트 파일 내보내기', cls: 'wide', onclick: () => exportProjectFile() });
+  const pi = btn({ icon: 'upload', text: '프로젝트 파일 가져오기…', cls: 'wide', onclick: () => importProjectFile() });
+  midi.disabled = pf.disabled = !can;
+  el.append(h('div', { class: 'xpv-grid' },
+    card('오디오 (WAV)', '곡 전체나 루프 구간, 씬 하나를 WAV로 받아요. 트랙별 스템도 함께 받을 수 있어요.', f.body, go),
+    h('div', { class: 'xpv-side' },
+      card('MIDI 파일', '어레인지먼트의 음표를 다른 음악 앱으로 옮겨요.', midi),
+      card('프로젝트 파일', '가져온 오디오까지 담은 파일로 다른 기기나 브라우저에 옮겨요.', pf, pi),
+      can ? null : h('p', { class: 'hint', text: '이 화면에서는 파일을 받을 수 없어요.' }))));
 }
 async function exportMidi() {
   const tracks = U.arrangementNotes(pr());
@@ -389,6 +454,8 @@ function modeMenu(anchor) { U.menu([{ header: '화면 버전' }, ...modeItems()]
 function prefsDialog() {
   const skin = U.pref('skin', 'auto');
   const body = h('div', { class: 'xp' });
+  body.append(h('label', { class: 'fld' }, h('span', { text: '화면 디자인' }),
+    U.select(U.designs.map(d => [d.id, d.letter + ' · ' + d.name + ' — ' + d.tag]), U.design, v => U.shell.setDesign(v), { label: '화면 디자인' })));
   body.append(h('label', { class: 'fld' }, h('span', { text: '화면 버전' }),
     U.select([['auto', '자동 (이 기기는 ' + (U.autoTouch ? '아이패드' : '컴퓨터') + ' 버전)'], ['desktop', '컴퓨터 버전 (마우스·키보드)'], ['touch', '아이패드 버전 (손가락)']], U.uiMode, v => U.setUIMode(v), { label: '화면 버전' })));
   body.append(h('label', { class: 'fld' }, h('span', { text: '화면 밝기' }), U.select([['auto', '시스템 설정 따르기'], ['dark', '어둡게'], ['light', '밝게']], skin, v => { U.setPref('skin', v); applySkin(); })));
@@ -407,8 +474,8 @@ function applySkin() {
 function helpDialog() {
   const M = U.MOD;
   const rows = [
-    ['Space', '재생 / 정지'], ['Shift+Space', '멈춘 곳에서 이어서 재생'], ['Tab', '세션 ↔ 어레인지먼트'], ['Shift+Tab', '클립 ↔ 장치 칸'],
-    ['F9', '어레인지먼트 녹음'], ['P', '패드 화면'], ['패드에 적힌 글자', '패드 치기 (패드 화면, 또는 건반을 켠 루프 패드 트랙)'], ['Shift+패드 글자', '누르는 동안 노트 리피트'], ['M', '컴퓨터 건반 켜기/끄기'], ['A ~ K, W E T Y U', '건반 (켜졌을 때)'], ['Z / X', '옥타브 내리기 / 올리기'], ['C / V', '세기 내리기 / 올리기'],
+    ['Space', '재생 / 정지'], ['Shift+Space', '멈춘 곳에서 이어서 재생'], ['Tab', '세션 ↔ 어레인지먼트 (B: 곡 짜기, C: 곡 지도)'], ['Shift+Tab', '클립 ↔ 장치 칸 (C: 편집 ↔ 소리 탭)'],
+    ['F9', '어레인지먼트 녹음'], ['P', '패드 화면 (B: 1 만들기, C: 1 연주 탭)'], ['패드에 적힌 글자', '패드 치기 (패드 화면, 또는 건반을 켠 루프 패드 트랙)'], ['Shift+패드 글자', '누르는 동안 노트 리피트'], ['M', '컴퓨터 건반 켜기/끄기'], ['A ~ K, W E T Y U', '건반 (켜졌을 때)'], ['Z / X', '옥타브 내리기 / 올리기'], ['C / V', '세기 내리기 / 올리기'],
     ['B', '그리기 모드'], ['A', '자동화 모드 (건반이 꺼졌을 때)'], [M + '+Z', '되돌리기'], [M + '+Shift+Z', '다시 실행'], [M + '+D', '복제'], [M + '+E', '클립 나누기'],
     [M + '+L', '선택 구간을 루프로'], [M + '+U', '퀀타이즈'], [M + '+A', '모두 고르기'], [M + '+C / X / V', '음표 복사 / 잘라내기 / 붙여넣기'], ['Delete', '지우기'],
     ['↑ ↓ ← →', '음표 옮기기 (Shift: 옥타브) · 세션에서 칸 이동'], ['Enter', '고른 클립 띄우기'], ['0', '음표 켜기/끄기'], [M + '+1 / 2', '격자 좁히기 / 넓히기'],
@@ -419,6 +486,7 @@ function helpDialog() {
     h('h3', { text: '처음 쓸 때' }),
     h('ol', null,
       h('li', { text: '메뉴 › 새 프로젝트에서 장르(하우스·테크노·트랩·드럼 앤 베이스·로파이·퓨처 베이스)를 고르면 드럼·베이스·코드와 곡 구조까지 만들어져요.' }),
+      h('li', { text: '화면 배치는 세 가지 디자인 중에서 골라요. A 컨트롤 룸은 한 화면에 다, B 스텝 가이드는 만들기 → 소리 → 곡 짜기 → 믹스 → 내보내기 단계별로, C 작업대는 위에 곡 지도 + 아래 단계 탭이에요. 아래 상태 줄의 "디자인" 단추나 메뉴 › 화면 디자인에서 바꿔요.' }),
       h('li', { text: '세션 뷰에서 클립의 ▶를 눌러 부분들을 하나씩 띄워 보세요. 오른쪽 열의 ▶는 한 줄(씬)을 통째로 띄워요.' }),
       h('li', { text: '드럼 클립을 누르면 아래에 스텝 시퀀서가 열려요. 칸을 눌러 찍고, 다시 누르면 지워요.' }),
       h('li', { text: '씬을 다 만들었으면 "곡 만들기"(세션 뷰 오른쪽 아래)로 인트로부터 아웃트로까지 어레인지먼트에 한 번에 늘어놓아요.' }),
@@ -473,6 +541,7 @@ U.appMenu = function (anchor) {
     { label: '씬 넣기', action: () => A.insertScene(ui.scene + 1) },
     { label: '씬으로 곡 만들기…', action: () => U.songDialog() },
     { sep: true },
+    { label: '화면 디자인: ' + U.shell.designName(), sub: U.shell.designItems() },
     { label: '화면 버전: ' + U.uiModeName() + (U.uiMode === 'auto' ? ' (자동)' : ''), sub: modeItems() },
     { label: '환경설정…', action: prefsDialog },
     { label: '도움말 · 단축키', key: '?', action: helpDialog },
@@ -539,6 +608,7 @@ function checkNarrow() {
     ui.narrow = n;
     document.body.classList.toggle('narrow', n);
     if (!n) { ui.pane = 'main'; document.body.dataset.pane = 'main'; }
+    U.shell.apply();
     buildPanes();
     U.inval('all');
   }
@@ -566,7 +636,7 @@ function wire() {
       return;
     }
     fixRefs();
-    U.inval('transport', 'session', 'arrange', 'detail', 'status', 'pads');
+    U.inval('transport', 'session', 'arrange', 'detail', 'status', 'pads', 'mixer', 'insp', 'shell', 'xport');
     if (!inf.load) autosave();
   });
   // 화면 버전을 바꾸면 크기·배치가 바뀌니 모두 다시 그린다
@@ -597,6 +667,7 @@ function wire() {
   U.on('store', () => U.inval('status'));
   U.renderer('detail', renderDetail);
   U.renderer('status', renderStatus);
+  U.renderer('xport', renderExportPanel);
   U.renderer('views', () => { document.body.dataset.view = ui.view; });
   window.addEventListener('resize', checkNarrow);
   window.addEventListener('pagehide', () => autosave.flush());
@@ -644,10 +715,16 @@ function boot() {
   U.input.init();
   bindFileDrop();
   checkNarrow();
-  U.inval('detail', 'status');
+  U.shell.apply();
+  U.inval('detail', 'status', 'shell', 'insp', 'mixer', 'xport');
   U.engine.start();
   setupWebApp();
   pickStartProject();
+  // 전에 쓰던 사람에게 한 번: 디자인을 고를 수 있다고 알린다
+  if (U.pref('welcomed', false) && !U.pref('designIntro', false)) {
+    U.setPref('designIntro', true);
+    setTimeout(() => U.toast('화면 디자인이 세 가지가 됐어요. 메뉴 › 화면 디자인이나 아래 상태 줄의 "디자인" 단추에서 골라 보세요.'), 1200);
+  } else U.setPref('designIntro', true);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
 else boot();

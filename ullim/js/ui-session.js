@@ -261,7 +261,7 @@ function renderMixer(cols) {
   row.append(strip(p.master));
   mixEl.append(row);
 }
-function strip(t) {
+function strip(t, store) {
   const p = pr();
   const el = h('div', { class: 'strip' + (t.type === 'master' ? ' master' : '') + (ui.track === t.id ? ' sel' : ''), style: { '--c': color(t) } });
   const refs = { el, knobs: [] };
@@ -321,7 +321,7 @@ function strip(t) {
   }
   el.append(sends, h('div', { class: 'panrow' }, pan), vol, btns);
   el.addEventListener('pointerdown', () => { if (ui.track !== t.id) U.selectTrack(t.id); });
-  strips.set(t.id, refs);
+  (store || strips).set(t.id, refs);
   return el;
 }
 
@@ -353,9 +353,14 @@ function updateStates(force) {
   }
 }
 function updateMeters() {
+  if (!mixEl || !root || root.offsetParent === null || mixEl.offsetParent === null) return;
+  stripMeters(strips);
+}
+/* 믹서 줄의 미터와 자동화로 움직이는 노브·페이더 (세션 아래 믹서, 따로 띄운 믹서 화면이 함께 쓴다) */
+function stripMeters(store) {
   const e = U.engine;
-  if (!e || !mixEl || !root || root.offsetParent === null) return;
-  for (const [id, r] of strips) {
+  if (!e) return;
+  for (const [id, r] of store) {
     const n = e.nodes.get(id);
     if (n) r.fader.meter(n.meter());
     if (e.playing) {
@@ -428,5 +433,7 @@ function sceneMenu(i, at) {
 }
 
 U.renderer('session', render);
+U.mixerStrip = strip;
+U.stripMeters = stripMeters;
 U.sessionView = { build, render, selectSlot, trackMenu, slotMenu };
 })(window.U = window.U || {});

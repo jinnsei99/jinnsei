@@ -97,7 +97,7 @@ function onKeyDown(e) {
   if (e.altKey) return;
   switch (k) {
     case ' ': done(); A.togglePlay(e.shiftKey); return;
-    case 'Tab': done(); if (e.shiftKey) { U.setDetail(ui.detail === 'clip' ? 'device' : 'clip'); if (!ui.detailOpen) U.toggleDetail(true); } else U.setView(ui.view === 'session' ? 'arrange' : 'session'); return;
+    case 'Tab': done(); if (e.shiftKey) U.toggleDetailKind(); else U.toggleSongView(); return;
     case 'F9': done(); A.setRecord(!U.engine.recording); return;
     case 'F2': done(); renameSel(); return;
     case 'Escape': ui.arrSel = []; ui.timeSel = null; U.inval('arrange-draw'); return;
@@ -110,7 +110,7 @@ function onKeyDown(e) {
     case 'KeyB': done(); U.setDraw(!ui.draw); return;
     case 'KeyA': done(); U.setAutoMode(!ui.auto); return;
     case 'KeyM': done(); U.setKeyboard(!ui.keyboard); return;
-    case 'KeyP': done(); U.setView(ui.view === 'pads' ? ui.prevView || 'session' : 'pads'); return;
+    case 'KeyP': done(); U.togglePads(); return;
     case 'Digit0': if (roll) { done(); U.clipView.muteSel(); } return;
   }
   if (k.startsWith('Arrow')) {

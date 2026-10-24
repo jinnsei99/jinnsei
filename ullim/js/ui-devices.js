@@ -91,7 +91,8 @@ function render(el) {
   root.append(head, chainEl);
   root.addEventListener('pointerdown', () => { ui.focus = 'devices'; });
   // 악기가 있는 트랙은 맨 앞에 '소리 다듬기' 칸
-  if (t.type === 'midi' && U.instrumentOf(t)) chainEl.append(U.shapePanel(t));
+  // (A에서 오른쪽 '고른 트랙' 칸이 열려 있으면 그 칸에 있으니 여기서는 뺀다)
+  if (t.type === 'midi' && U.instrumentOf(t) && !U.inspShown()) chainEl.append(U.shapePanel(t));
   t.devices.forEach((d, i) => {
     chainEl.append(dropGap(t, i));
     chainEl.append(panel(t, d));
