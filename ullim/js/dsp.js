@@ -326,6 +326,37 @@ const DRUM_RECIPES = {
     env(amp.gain, 0, 1.1, 0.002, d / 4);
     return d * 1.6 + 0.05;
   },
+  /* 재즈 브러시: 철사 솔로 스네어를 톡 치는 소리. 거친 노이즈가 살짝 부드럽게 시작하고 북 가죽이 낮게 운다 */
+  brush(ctx, o, D) {
+    const mul = Math.pow(2, o.tune / 12);
+    const d = 0.06 + o.decay * 0.35;
+    const bp = filt(ctx, 'bandpass', (2400 + o.tone * 3200) * mul, 0.7);
+    const hp = filt(ctx, 'highpass', 450 * mul);
+    const amp = gainNode(ctx, 0);
+    noiseInto(ctx, bp); bp.connect(hp); hp.connect(amp); amp.connect(D);
+    amp.gain.setValueAtTime(0, 0);
+    amp.gain.linearRampToValueAtTime(1, 0.004);
+    amp.gain.setTargetAtTime(0.32, 0.004, 0.018);
+    amp.gain.setTargetAtTime(0, 0.03, d / 4);
+    const body = gainNode(ctx, 0); body.connect(D);
+    const tr = ctx.createOscillator(); tr.type = 'triangle'; tr.frequency.value = 175 * mul; tr.connect(body); tr.start(0);
+    env(body.gain, 0, 0.16, 0.002, 0.03);
+    return d * 1.6 + 0.06;
+  },
+  /* 브러시로 가죽을 둥글게 쓸기: 천천히 커졌다 사라지는 노이즈, 쓰는 동안 결이 조금씩 밝아진다 */
+  swish(ctx, o, D) {
+    const f = (3000 + o.tone * 2600) * Math.pow(2, o.tune / 12);
+    const d = 0.25 + o.decay * 0.9;
+    const bp = filt(ctx, 'bandpass', f * 0.7, 0.5);
+    bp.frequency.setValueAtTime(f * 0.7, 0);
+    bp.frequency.linearRampToValueAtTime(f * 1.2, d);
+    const amp = gainNode(ctx, 0);
+    noiseInto(ctx, bp); bp.connect(amp); amp.connect(D);
+    amp.gain.setValueAtTime(0, 0);
+    amp.gain.linearRampToValueAtTime(0.8, d * 0.45);
+    amp.gain.linearRampToValueAtTime(0, d);
+    return d + 0.05;
+  },
   snap(ctx, o, D) {
     const bp = filt(ctx, 'bandpass', 2300 * Math.pow(2, o.tune / 12), 2.5);
     const amp = gainNode(ctx, 0);
@@ -337,7 +368,7 @@ const DRUM_RECIPES = {
     return 0.2 + o.decay * 0.15;
   }
 };
-const LEVEL = { kick: 0.85, snare: 0.7, clap: 0.6, chh: 0.4, ohh: 0.4, tom: 0.7, rim: 0.55, cow: 0.4, crash: 0.45, ride: 0.4, shaker: 0.4, conga: 0.6, sub: 0.85, zap: 0.45, noise: 0.45, snap: 0.55 };
+const LEVEL = { kick: 0.85, snare: 0.7, clap: 0.6, chh: 0.4, ohh: 0.4, tom: 0.7, rim: 0.55, cow: 0.4, crash: 0.45, ride: 0.4, shaker: 0.4, conga: 0.6, sub: 0.85, zap: 0.45, noise: 0.45, snap: 0.55, brush: 1.1, swish: 0.4 };
 
 function OfflineCtx(ch, len, sr) {
   const C = window.OfflineAudioContext || window.webkitOfflineAudioContext;
@@ -349,7 +380,7 @@ function renderDrum(type, o, sr) {
   if (drumCache.has(key)) return drumCache.get(key);
   const recipe = DRUM_RECIPES[type] || DRUM_RECIPES.noise;
   // 길이를 먼저 알아야 해서 더미 컨텍스트 없이 대략값으로 잡는다
-  const est = { kick: 2, snare: 1, clap: 1, chh: 0.4, ohh: 1.6, tom: 1.4, rim: 0.3, cow: 1.2, crash: 5.5, ride: 4.3, shaker: 0.4, conga: 1, sub: 4.8, zap: 0.7, noise: 1.6, snap: 0.4 }[type] || 2;
+  const est = { kick: 2, snare: 1, clap: 1, chh: 0.4, ohh: 1.6, tom: 1.4, rim: 0.3, cow: 1.2, crash: 5.5, ride: 4.3, shaker: 0.4, conga: 1, sub: 4.8, zap: 0.7, noise: 1.6, snap: 0.4, brush: 0.8, swish: 1.3 }[type] || 2;
   const ctx = OfflineCtx(1, Math.ceil(est * sr), sr);
   const out = gainNode(ctx, LEVEL[type] || 0.6);
   out.connect(ctx.destination);

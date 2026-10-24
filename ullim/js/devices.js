@@ -206,14 +206,16 @@ def('looppad', {
 /* ---------- 악기 안에서 종류를 고르는 악기 두 가지 ----------
    [값, 이름, 묶음] — 장치 칸의 '악기' 버튼과 프리셋이 이 목록을 쓴다 */
 const ACOUSTIC_TYPES = [
-  ['grand', '그랜드 피아노', '피아노'], ['upright', '업라이트 피아노', '피아노'],
-  ['nylon', '나일론 기타', '기타·베이스'], ['steel', '통기타', '기타·베이스'], ['electric', '일렉 기타', '기타·베이스'], ['mute', '뮤트 기타', '기타·베이스'], ['bass', '베이스 기타', '기타·베이스'],
+  ['grand', '그랜드 피아노', '피아노'], ['upright', '업라이트 피아노', '피아노'], ['felt', '펠트 피아노', '피아노'],
+  ['rhodes', '로즈 피아노', '일렉 피아노'], ['wurli', '우리처', '일렉 피아노'],
+  ['nylon', '나일론 기타', '기타'], ['steel', '통기타', '기타'], ['electric', '일렉 기타', '기타'], ['jazzgtr', '재즈 기타', '기타'], ['mute', '뮤트 기타', '기타'],
+  ['bass', '베이스 기타', '베이스'], ['dbass', '업라이트 베이스', '베이스'],
   ['harp', '하프', '줄 뜯기'], ['gayageum', '가야금', '줄 뜯기'], ['pizz', '피치카토 현', '줄 뜯기'],
   ['marimba', '마림바', '말렛·벨'], ['vibes', '비브라폰', '말렛·벨'], ['glock', '글로켄슈필', '말렛·벨'], ['musicbox', '오르골', '말렛·벨'], ['kalimba', '칼림바', '말렛·벨'], ['steeldrum', '스틸 드럼', '말렛·벨'], ['bell', '종', '말렛·벨']
 ];
 def('acoustic', {
   name: 'Acoustic', type: 'instrument',
-  info: '피아노·기타·하프·가야금·마림바·종처럼 줄을 뜯거나 두드리는 악기예요. 위의 악기 버튼으로 종류를 바꿔요. 음마다 소리를 계산해 두었다가 쳐서, 처음 치는 음은 아주 잠깐 늦을 수 있어요.',
+  info: '피아노·일렉 피아노·기타·하프·가야금·마림바·종처럼 줄을 뜯거나 두드리는 악기예요. 위의 악기 버튼으로 종류를 바꿔요. 음마다 소리를 계산해 두었다가 쳐서, 처음 치는 음은 아주 잠깐 늦을 수 있어요.',
   params: [
     en('inst', '악기', ACOUSTIC_TYPES.map(x => [x[0], x[1]]), 'grand', { info: '이 장치가 흉내 낼 악기예요.' }),
     pct('tone', 'Tone', 0.5, { info: '밝기. 올리면 세게 뜯거나 단단한 채로 때린 듯 또렷해지고, 내리면 부드러워져요.' }),
@@ -233,13 +235,14 @@ def('acoustic', {
 });
 const ENSEMBLE_TYPES = [
   ['strings', '현악 합주', '현악'], ['violin', '바이올린', '현악'], ['cello', '첼로', '현악'],
-  ['brass', '브라스 섹션', '관악'], ['trumpet', '트럼펫', '관악'], ['flute', '플루트', '관악'], ['clarinet', '클라리넷', '관악'],
+  ['brass', '브라스 섹션', '관악'], ['trumpet', '트럼펫', '관악'], ['trumpet_mute', '뮤트 트럼펫', '관악'], ['flugel', '플루겔혼', '관악'],
+  ['sax_tenor', '테너 색소폰', '관악'], ['sax_alto', '알토 색소폰', '관악'], ['flute', '플루트', '관악'], ['clarinet', '클라리넷', '관악'],
   ['choir_a', '콰이어 아', '목소리'], ['choir_u', '콰이어 우', '목소리'],
   ['organ_jazz', '재즈 오르간', '오르간·리드'], ['organ_rock', '록 오르간', '오르간·리드'], ['organ_church', '교회 오르간', '오르간·리드'], ['accordion', '아코디언', '오르간·리드'], ['harmonica', '하모니카', '오르간·리드']
 ];
 def('ensemble', {
   name: 'Ensemble', type: 'instrument',
-  info: '현악·관악·콰이어·오르간처럼 누르는 동안 소리가 이어지는 악기예요. 위의 악기 버튼으로 종류를 바꿔요.',
+  info: '현악·관악(색소폰·트럼펫)·콰이어·오르간처럼 누르는 동안 소리가 이어지는 악기예요. 위의 악기 버튼으로 종류를 바꿔요.',
   params: [
     en('inst', '악기', ENSEMBLE_TYPES.map(x => [x[0], x[1]]), 'strings', { info: '이 장치가 흉내 낼 악기예요.' }),
     pct('bright', 'Bright', 0.5, { info: '밝기. 올리면 또렷하고 날카로워지고, 내리면 부드러워져요.' }),
@@ -486,7 +489,8 @@ function defaults(kind) {
 const PAD_TYPES = [
   ['kick', 'Kick'], ['snare', 'Snare'], ['clap', 'Clap'], ['chh', 'Closed Hat'], ['ohh', 'Open Hat'],
   ['tom', 'Tom'], ['rim', 'Rim'], ['cow', 'Cowbell'], ['crash', 'Crash'], ['ride', 'Ride'],
-  ['shaker', 'Shaker'], ['conga', 'Conga'], ['sub', '808 Sub'], ['zap', 'Zap'], ['noise', 'Noise Hit'], ['snap', 'Snap']
+  ['shaker', 'Shaker'], ['conga', 'Conga'], ['sub', '808 Sub'], ['zap', 'Zap'], ['noise', 'Noise Hit'], ['snap', 'Snap'],
+  ['brush', 'Brush'], ['swish', 'Brush Swish']
 ];
 function pad(type, o) {
   const name = (PAD_TYPES.find(t => t[0] === type) || [type, type])[1];

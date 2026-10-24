@@ -48,6 +48,15 @@ KITS.push(
     kick: { tune: 3, decay: 0.3, tone: 0.8 }, snare: { tune: 7, decay: 0.32, tone: 0.95 }, clap: { tune: 3, decay: 0.3, tone: 0.8, level: -3 },
     chh: { tune: 2, decay: 0.12, tone: 0.8, level: -4, choke: 1 }, ohh: { tune: 2, decay: 0.3, tone: 0.8, level: -6, choke: 1 }, ride: { tune: 2, tone: 0.8, level: -6 },
     rim: { tune: 4, level: -3 }, shaker: { level: -9 }
+  }) },
+  /* 재즈 힙합: 둥근 킥, 먼지 낀 스네어, 크로스 스틱(림), 브러시, 재즈 라이드, 손가락 스냅 */
+  { id: 'kjazz', name: '재즈 힙합 브러시', tags: ['재즈 힙합', '붐뱁'], pads: kit({
+    kick: { tune: -2, decay: 0.42, tone: 0.1 }, rim: { name: 'Cross Stick', tune: -1, decay: 0.4, level: -2 }, snare: { tune: -4, decay: 0.38, tone: 0.35, level: -1 },
+    clap: { type: 'brush', name: 'Brush', decay: 0.45, tone: 0.45 }, snap: {},
+    tl: { name: 'Low Tom', tune: -7, tone: 0.2 }, tm: { name: 'Mid Tom', tune: -2, tone: 0.2 }, th: { name: 'Hi Tom', tune: 3, tone: 0.2 },
+    chh: { tune: -3, decay: 0.22, tone: 0.15, level: -6, choke: 1 }, ohh: { tune: -3, decay: 0.4, tone: 0.15, level: -7, choke: 1 }, shaker: { tone: 0.2, level: -9 },
+    cow: { type: 'swish', name: 'Brush Swish', decay: 0.5, tone: 0.4, level: -1 }, conga: { tune: -2, tone: 0.2, level: -4 },
+    crash: { tune: -3, tone: 0.2, level: -8 }, sub: { name: '808 Sub', decay: 0.5, tone: 0.1, level: -6 }, ride: { name: 'Jazz Ride', tune: -2, decay: 0.7, tone: 0.35, level: -4 }
   }) }
 );
 U.KITS = KITS;
@@ -128,10 +137,35 @@ SOUNDS.push(
   AC('칼림바', ['월드'], { inst: 'kalimba' }, [ROOM(0.2)]),
   AC('스틸 드럼', ['월드'], { inst: 'steeldrum' }, [ROOM(0.15)])
 );
+/* 재즈 힙합: 새 악기를 그대로 쓴 소리와, 낡은 테이프·LP처럼 다듬은 소리 (뒤에 붙여서 앞 번호는 그대로) */
+const TAPE = (rate, depth) => FX('chorus', { mode: 'vibrato', rate: rate || 0.7, depth: depth || 0.16 });   // 테이프가 늘어나듯 음이 살짝 흔들린다
+const DUST = mix => FX('sat', { type: 'crush', bits: 10, drive: 2, out: -3, mix: mix || 0.3 });              // 비트를 줄여 먼지 낀 질감
+const DARK = (hi, lo) => FX('eq', Object.assign({ b6on: true, b6f: hi }, lo ? { b1on: true, b1f: lo } : {}));  // 높은 소리(와 낮은 웅웅거림)를 깎는다
+SOUNDS.push(
+  AC('펠트 피아노', ['피아노', '재즈 힙합'], { inst: 'felt' }, [ROOM(0.15, 1.6)]),
+  AC('로즈 피아노', ['키', '재즈 힙합'], { inst: 'rhodes' }, [FX('chorus', { mix: 0.25, rate: 0.5 }), ROOM(0.15, 1.8)]),
+  AC('우리처', ['키', '재즈 힙합'], { inst: 'wurli' }, [ROOM(0.12, 1.4)]),
+  AC('재즈 기타', ['기타', '재즈 힙합'], { inst: 'jazzgtr' }, [ROOM(0.15, 1.6)]),
+  AC('업라이트 베이스', ['베이스', '재즈 힙합'], { inst: 'dbass' }),
+  EN('뮤트 트럼펫', ['관악', '재즈 힙합'], { inst: 'trumpet_mute' }, [ROOM(0.22, 2.2)]),
+  EN('플루겔혼', ['관악', '재즈 힙합'], { inst: 'flugel' }, [ROOM(0.22, 2.2)]),
+  EN('테너 색소폰', ['관악', '재즈 힙합'], { inst: 'sax_tenor' }, [ROOM(0.2, 2)]),
+  EN('알토 색소폰', ['관악', '재즈 힙합'], { inst: 'sax_alto' }, [ROOM(0.2, 2)]),
+  AC('로파이 로즈', ['재즈 힙합', '키'], { inst: 'rhodes', tone: 0.4 }, [TAPE(), DUST(0.25), DARK(5200, 90), ROOM(0.18, 1.8)]),
+  AC('페이저 로즈', ['재즈 힙합', '키'], { inst: 'rhodes', tone: 0.6 }, [FX('phaser', { rate: 0.25, depth: 0.6, fb: 0.4, mix: 0.6 }), FX('chorus', { mix: 0.2, rate: 0.4 }), ROOM(0.15, 1.8)]),
+  AC('먼지 낀 우리처', ['재즈 힙합', '키'], { inst: 'wurli', tone: 0.45 }, [FX('sat', { type: 'tube', drive: 8, out: -8, mix: 0.7 }), TAPE(0.6, 0.14), DARK(4800, 100), ROOM(0.15, 1.6)]),
+  AC('로파이 펠트 피아노', ['재즈 힙합', '피아노'], { inst: 'felt', tone: 0.35 }, [TAPE(0.8, 0.15), DUST(0.3), DARK(4500), ROOM(0.2, 2)]),
+  AC('로파이 재즈 기타', ['재즈 힙합', '기타'], { inst: 'jazzgtr', tone: 0.4 }, [FX('chorus', { mix: 0.2, rate: 0.5 }), DARK(4200, 90), ROOM(0.18, 1.8)]),
+  AC('붐뱁 업라이트', ['재즈 힙합', '베이스'], { inst: 'dbass', tone: 0.45 }, [FX('comp', { thr: -20, ratio: 3, att: 0.01, rel: 0.12, makeup: 0 }), FX('sat', { type: 'tube', drive: 6, out: -5, mix: 0.5 }), DARK(2500)]),
+  AC('로파이 비브라폰', ['재즈 힙합', '말렛·벨'], { inst: 'vibes', tone: 0.35, vol: -4.5 }, [TAPE(0.7, 0.15), DUST(0.25), DARK(5000), ROOM(0.22, 2.2)]),
+  EN('딜레이 뮤트 트럼펫', ['재즈 힙합', '관악'], { inst: 'trumpet_mute' }, [FX('delay', { mode: 'stereo', divl: '1/4D', divr: '1/4', fb: 0.35, lp: 3500, hp: 300, mix: 0.25 }), ROOM(0.25, 2.6)]),
+  EN('스모키 색소폰', ['재즈 힙합', '관악'], { inst: 'sax_tenor', bright: 0.4 }, [FX('sat', { type: 'tube', drive: 6, out: -5, mix: 0.6 }), DARK(6000, 120), FX('reverb', { mix: 0.25, decay: 2.2, pre: 0.01, damp: 7000 })]),
+  EN('로파이 플루트', ['재즈 힙합', '관악'], { inst: 'flute', bright: 0.4 }, [TAPE(0.6, 0.12), DARK(6000), ROOM(0.28, 2.6)])
+);
 U.SOUNDS = SOUNDS;
 U.sound = name => SOUNDS.find(x => x.name === name) || SOUNDS[0];
 /* 묶음(첫 태그) 순서. 브라우저와 소리 고르기 창이 이 순서로 보여 준다 */
-const GROUP_ORDER = ['내 사운드', '피아노', '키', '기타', '베이스', '현악', '관악', '말렛·벨', '오르간', '콰이어', '월드', '패드', '코드', '플럭', '리드', '보컬', 'FX', '샘플러'];
+const GROUP_ORDER = ['내 사운드', '피아노', '키', '기타', '베이스', '현악', '관악', '말렛·벨', '오르간', '콰이어', '월드', '재즈 힙합', '패드', '코드', '플럭', '리드', '보컬', 'FX', '샘플러'];
 U.soundGroups = list => {
   const groups = new Map();
   for (const s of list || SOUNDS) {
