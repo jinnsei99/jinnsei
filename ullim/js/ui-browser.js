@@ -18,6 +18,14 @@ const CATS = [
   { id: 'projects', name: '프로젝트', icon: 'file', info: '저장된 프로젝트예요. 두 번 누르면 열어요.' }
 ];
 const st = { cat: U.pref('brCat', 'sounds'), q: '', preview: U.pref('preview', true), sel: null, items: [] };
+/* 묶음 열고 닫기: 사운드는 처음에 접혀 있고(내 사운드만 펼침), 다른 목록은 펼쳐 있다. 누른 대로 이 기기에 기억한다 */
+const FOLD = Object.assign({}, U.pref('brFold', {}));
+function folded(name) { const v = FOLD[st.cat + ':' + name]; return v != null ? v : st.cat === 'sounds' && name !== '내 사운드'; }
+function setFold(names, shut) {
+  for (const n of names) FOLD[st.cat + ':' + n] = shut;
+  U.setPref('brFold', Object.assign({}, FOLD));
+  renderList(true);
+}
 let root, listEl, searchEl, catEl;
 
 function build(el) {
@@ -164,18 +172,41 @@ function items() {
   }
   return out;
 }
-function renderList() {
+function renderList(keepScroll) {
   if (!listEl) return;
   if (st.cat === 'user' && !st.userList) refreshUser();
   if (st.cat === 'projects' && !st.projList) refreshProjects();
+  const sy = keepScroll ? listEl.scrollTop : 0;
   U.clear(listEl);
   const q = st.q.toLowerCase();
   let all = items();
-  // 이름·설명과 함께 묶음 이름(태그)으로도 찾는다: '재즈'로 재즈 힙합 소리를 모두 찾기
+  // 이름·설명과 함께 묶음 이름(태그)으로도 찾는다: '재즈'로 재즈 힙합 소리를 모두 찾기. 찾을 때는 접힌 묶음도 다 보여 준다
   if (q) all = all.filter(it => it.label && [it.label, it.sub, it.find].some(x => (x || '').toLowerCase().includes(q)));
+  else {
+    const out = [];
+    let head = null;
+    for (const it of all) {
+      if (it.head) { head = Object.assign({}, it, { n: 0, shut: folded(it.head) }); out.push(head); continue; }
+      if (head && !it.empty) head.n++;
+      if (!head || !head.shut) out.push(it);
+    }
+    all = out;
+  }
   st.items = all;
+  const heads = all.filter(it => it.head).map(it => it.head);
+  if (heads.length > 1) {
+    listEl.append(h('div', { class: 'br-folds' },
+      btn({ text: '모두 펴기', cls: 'ghost sm', info: ['모두 펴기', '모든 묶음을 펼쳐요.'], onclick: () => setFold(heads, false) }),
+      btn({ text: '모두 접기', cls: 'ghost sm', info: ['모두 접기', '모든 묶음을 접어서 묶음 이름만 보여요. 찾을 묶음을 눌러 펼쳐요.'], onclick: () => setFold(heads, true) })));
+  }
   all.forEach((it, i) => {
-    if (it.head) { listEl.append(h('div', { class: 'br-head', text: it.head })); return; }
+    if (it.head) {
+      const hd = h('button', { type: 'button', class: 'br-head fold' + (it.shut ? ' shut' : ''), 'aria-expanded': it.shut ? 'false' : 'true', dataset: { n: it.n }, text: it.head });
+      info(hd, it.head + ' · ' + it.n + '개', (it.shut ? '눌러서 펼쳐요.' : '눌러서 접어요.') + ' Alt를 누른 채 누르면 모든 묶음을 한꺼번에 접고 펴요.');
+      hd.addEventListener('click', e => setFold(e.altKey ? heads : [it.head], !it.shut));
+      listEl.append(hd);
+      return;
+    }
     if (it.empty) { listEl.append(h('p', { class: 'br-empty', text: it.empty })); return; }
     const row = h('div', { class: 'br-item' + (it.indent ? ' indent' : '') + (st.sel === i ? ' sel' : ''), role: 'option', dataset: { i } }, icon(it.icon || 'file'), h('span', { class: 'bi-l', text: it.label }), it.sub ? h('span', { class: 'bi-s', text: it.sub }) : null);
     info(row, it.label, (it.infoText || it.sub || '') + (it.load ? ' 두 번 누르거나 Enter로 넣고, 끌어서 원하는 곳에 놓아요.' : ''));
@@ -194,6 +225,7 @@ function renderList() {
     });
     listEl.append(row);
   });
+  if (keepScroll) listEl.scrollTop = sy;
 }
 function select(i) {
   st.sel = i;

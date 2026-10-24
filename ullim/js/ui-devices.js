@@ -36,12 +36,23 @@ function soundPanel(t) {
     const tr = U.trackById(pr(), t.id), d = tr && U.instrumentOf(tr);
     for (const [b, s] of btns) b.setAttribute('aria-pressed', isCurSound(d, s) ? 'true' : 'false');
   };
-  // 내 사운드를 저장하거나 이름을 바꾸면 다시 채운다
+  // 내 사운드를 저장하거나 이름을 바꾸면 다시 채운다.
+  // 묶음은 이름을 눌러 열고 닫는다: 처음엔 지금 소리가 든 묶음과 내 사운드만 펼치고, 누른 대로 기억한다
   const fill = () => {
     U.clear(body);
     btns = [];
+    const tr = U.trackById(pr(), t.id), cur = tr && U.instrumentOf(tr);
+    const SF = Object.assign({}, U.pref('sndFold', {}));
+    const rows = [];
+    const setShut = (r, shut, save) => {
+      r.row.classList.toggle('shut', shut);
+      r.lab.setAttribute('aria-expanded', String(!shut));
+      if (save) { SF[r.g] = shut; U.setPref('sndFold', Object.assign({}, SF)); }
+    };
     const save = btn({ icon: 'plus', text: '지금 소리를 내 사운드로 저장', cls: 'sm', onclick: () => U.saveMySound(U.trackById(pr(), t.id) || t) });
-    body.append(h('div', { class: 'snd-top' }, save, h('span', { class: 'hint', text: U.mySounds.list().length ? '내 사운드는 길게 누르거나 오른쪽 클릭으로 이름을 바꾸고 지워요.' : '악기를 다듬은 뒤 저장하면 맨 위 \'내 사운드\'에 모여요.' })));
+    const openAll = btn({ text: '모두 펴기', cls: 'ghost sm', info: ['모두 펴기', '모든 묶음을 펼쳐요.'], onclick: () => rows.forEach(r => setShut(r, false, true)) });
+    const shutAll = btn({ text: '모두 접기', cls: 'ghost sm', info: ['모두 접기', '모든 묶음을 접어서 묶음 이름만 보여요.'], onclick: () => rows.forEach(r => setShut(r, true, true)) });
+    body.append(h('div', { class: 'snd-top' }, save, openAll, shutAll, h('span', { class: 'hint', text: U.mySounds.list().length ? '내 사운드는 길게 누르거나 오른쪽 클릭으로 이름을 바꾸고 지워요.' : '악기를 다듬은 뒤 저장하면 맨 위 \'내 사운드\'에 모여요.' })));
     for (const [g, list] of pickGroups()) {
       const bs = h('div', { class: 'insts-bs' });
       for (const s of list) {
@@ -51,7 +62,13 @@ function soundPanel(t) {
         btns.push([b, s]);
         bs.append(b);
       }
-      body.append(h('div', { class: 'insts-row' }, h('span', { class: 'insts-g', text: g }), bs));
+      const lab = h('button', { type: 'button', class: 'insts-g fold', dataset: { n: list.length }, text: g });
+      const r = { g, lab, row: h('div', { class: 'insts-row' }, lab, bs) };
+      info(lab, g + ' · ' + list.length + '개', '눌러서 열고 닫아요. Alt를 누른 채 누르면 모든 묶음을 한꺼번에 열고 닫아요.');
+      lab.addEventListener('click', e => { const shut = !r.row.classList.contains('shut'); for (const x of e.altKey ? rows : [r]) setShut(x, shut, true); });
+      setShut(r, list.some(s => isCurSound(cur, s)) ? false : SF[g] != null ? SF[g] : g !== '내 사운드', false);
+      rows.push(r);
+      body.append(r.row);
     }
     mark();
   };
