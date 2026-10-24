@@ -75,7 +75,7 @@ function items() {
       for (const [tag, list] of U.soundGroups(U.allSounds())) {
         head(tag);
         for (const s of list) out.push({
-          label: s.name, sub: U.DEV[s.kind].name, icon: 'sound',
+          label: s.name, sub: U.DEV[s.kind].name, icon: 'sound', find: s.tags.join(' '),
           drag: { type: 'sound', item: s }, load: () => A.loadSound(loadTarget('midi'), s),
           preview: () => previewDev(U.makeDevice(s.kind, { p: s.p, data: s.data }), s.user ? s.tags[1] || '' : s.tags[0]),
           menu: s.user ? U.mySoundItems(s) : null
@@ -171,7 +171,8 @@ function renderList() {
   U.clear(listEl);
   const q = st.q.toLowerCase();
   let all = items();
-  if (q) all = all.filter(it => it.label && (it.label.toLowerCase().includes(q) || (it.sub || '').toLowerCase().includes(q)));
+  // 이름·설명과 함께 묶음 이름(태그)으로도 찾는다: '재즈'로 재즈 힙합 소리를 모두 찾기
+  if (q) all = all.filter(it => it.label && [it.label, it.sub, it.find].some(x => (x || '').toLowerCase().includes(q)));
   st.items = all;
   all.forEach((it, i) => {
     if (it.head) { listEl.append(h('div', { class: 'br-head', text: it.head })); return; }

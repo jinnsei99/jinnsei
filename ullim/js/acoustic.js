@@ -103,6 +103,12 @@ function* pluck(c, f, vel, tone, dmul, body, sr, rnd) {
   for (let i = 0; i < N; i++) { z = (1 - lp) * (rnd() * 2 - 1) + lp * z; buf[i] = z; }
   const m = Math.max(1, Math.round(c.pick * N));
   for (let i = N - 1; i >= m; i--) buf[i] -= buf[i - m];
+  if (c.tri) { // 손가락으로 뜯은 줄의 처음 모양(뜯은 자리가 꼭짓점인 삼각형)을 섞으면 기본음이 둥글고 또렷해진다
+    let e = 0;
+    for (let i = 0; i < N; i++) e += buf[i] * buf[i];
+    const k = Math.sqrt(e / N) / 0.29;   // 노이즈와 같은 크기로 (삼각형의 RMS는 높이의 0.29배)
+    for (let i = 0; i < N; i++) buf[i] = (1 - c.tri) * buf[i] + c.tri * k * (i < m ? i / m : (N - i) / (N - m));
+  }
   let mean = 0;
   for (let i = 0; i < N; i++) mean += buf[i];
   mean /= N;
@@ -125,8 +131,10 @@ function* pluck(c, f, vel, tone, dmul, body, sr, rnd) {
     const k = Math.max(1, Math.round(c.pickup * P));
     for (let i = x.length - 1; i >= k; i--) x[i] -= 0.85 * x[i - k];
   }
+  if (c.thump) noiseBurst(x, sr, c.thump[0] * (0.4 + 0.6 * vel), c.thump[1], c.thump[2], rnd); // 손가락이 줄을 지판에 부딪는 '퉁'
   x = addBody(x, sr, c.body, body);
   yield;
+  if (c.drop) x = warp(x, sr, s => c.drop * vel * Math.exp(-s / 0.06)); // 업라이트 베이스: 세게 뜯으면 처음에 살짝 높았다가 내려앉는다
   if (c.vibr) { // 농현: 뜯고 조금 뒤부터 음을 흔든다
     const [at, rate, depth, bend] = c.vibr;
     x = warp(x, sr, s => {
@@ -157,6 +165,51 @@ function* strike(c, f, vel, tone, dmul, body, sr, rnd) {
   yield;
   if (c.drop) x = warp(x, sr, s => c.drop * Math.exp(-s / 0.05)); // 스틸 드럼: 처음에 살짝 높았다가 내려앉는다
   return fadeTail(x, sr);
+}
+
+/* ---------- 일렉 피아노 (로즈·우리처): 해머로 때린 쇠막대의 떨림을 픽업이 듣는다 ----------
+   막대의 떨림은 때리기처럼 사인파를 더해 만들고, 픽업은 막대가 지나는 자리에 따라 다르게 듣는 비선형이라
+   세게 칠수록 배음이 늘어 소리가 으르렁거린다(바크). bias: 막대가 픽업 가운데서 비켜난 정도, drive: 세게 칠 때 떨림 폭.
+   로즈(자석 픽업)는 가운데를 지날 때 꺾이는 종 모양이라 짝수 배음이 먼저, 우리처(정전 픽업)는 한쪽으로 기운 부드러운 클리핑 */
+function* epiano(c, f, vel, tone, dmul, body, sr, rnd) {
+  const T1 = clamp(c.t60 * Math.pow(261.63 / f, c.ts) * dmul, 0.2, 16);
+  const n = Math.max(256, Math.ceil(sr * Math.min(c.max || 6, T1 + 0.06)));
+  const x = new Float32Array(n);
+  const hard = clamp(0.15 + 0.45 * tone + 0.5 * vel, 0.05, 1.1);
+  for (let k = 0; k < c.modes.length; k++) {
+    const [ratio, amp, tk] = c.modes[k];
+    resonate(x, sr, f * ratio, amp * (k ? Math.pow(hard, c.hx || 1.4) : 1), T1 * tk);
+    yield;
+  }
+  const A = c.drive * Math.pow(vel, 1.5) * (0.6 + 0.8 * tone), b = c.bias;
+  const m = Math.min(n, Math.round(sr * 0.25));
+  let ein = 0;
+  for (let i = 0; i < m; i++) ein += x[i] * x[i];
+  if (c.pickup === 'cap') {
+    const t0 = Math.tanh(b);
+    for (let i = 0; i < n; i++) x[i] = Math.tanh(A * x[i] + b) - t0;
+  } else {
+    const f0 = 1 / (1 + b * b);
+    for (let i = 0; i < n; i++) { const u = A * x[i] + b; x[i] = f0 - 1 / (1 + u * u); }
+  }
+  // 픽업을 지나기 전과 같은 힘(처음 0.25초)으로 맞춘다: 크기는 세기(Vel)가 정하고, 픽업은 배음만 바꾼다
+  let mean = 0, eout = 0;
+  for (let i = 0; i < m; i++) mean += x[i];
+  mean /= m;
+  for (let i = 0; i < m; i++) eout += (x[i] - mean) * (x[i] - mean);
+  const g = Math.sqrt(ein / Math.max(1e-12, eout));
+  for (let i = 0; i < n; i++) x[i] *= g;
+  yield;
+  if (c.click) noiseBurst(x, sr, c.click[0] * hard, c.click[1], clamp(c.click[2] - 0.3 * hard, 0, 0.95), rnd);
+  let y = dcBlock(x);
+  if (c.lp) { // 픽업과 앰프가 높은 소리를 깎는다 (Tone을 올리면 덜 깎는다)
+    const a = Math.exp(-2 * Math.PI * Math.min(sr * 0.45, c.lp * (0.5 + tone)) / sr);
+    let z = 0;
+    for (let i = 0; i < n; i++) { z = (1 - a) * y[i] + a * z; y[i] = z; }
+  }
+  y = addBody(y, sr, c.body, body);
+  yield;
+  return fadeTail(y, sr);
 }
 
 /* ---------- 피아노: 줄이 살짝 굵어서 배음이 조금씩 높아지고(비조화성), 줄 두세 가닥이 맥놀이한다 ---------- */
@@ -210,7 +263,13 @@ const AC = {
   musicbox: { fn: strike, t60: 2.1, ts: 0.4, max: 3.5, modes: [[1, 1, 1], [6.27, 0.24, 0.22], [17.55, 0.08, 0.08]], hx: 1, click: [0.08, 0.002, 0.2], damp: false, rel: 0.3, spread: 0.2, demo: 79, range: [67, 91] },
   kalimba:  { fn: strike, t60: 1.7, ts: 0.45, max: 3, modes: [[1, 1, 1], [5.92, 0.2, 0.22], [12.7, 0.06, 0.1]], hx: 1.3, click: [0.07, 0.008, 0.7], body: [[320, 2, 0.35]], damp: false, rel: 0.3, spread: 0.25, demo: 67, range: [60, 84] },
   steeldrum:{ fn: strike, t60: 1.3, ts: 0.5, max: 2.5, modes: [[1, 1, 1], [2, 0.6, 0.8], [3, 0.3, 0.55], [4.03, 0.13, 0.32], [5.1, 0.05, 0.2]], hx: 1.2, click: [0.05, 0.005, 0.5], drop: 25, damp: false, rel: 0.3, spread: 0.3, demo: 64, range: [55, 84] },
-  bell:     { fn: strike, t60: 6, ts: 0.3, max: 8, modes: [[0.5, 0.55, 1.6], [1, 1, 1], [1.19, 0.55, 0.8], [1.5, 0.38, 0.7], [2.0, 0.5, 0.6], [2.5, 0.22, 0.45], [2.66, 0.2, 0.4], [3.01, 0.14, 0.35], [4.07, 0.09, 0.25]], hx: 1.1, click: [0.04, 0.004, 0.3], damp: false, rel: 0.6, spread: 0.2, demo: 60, range: [48, 79] }
+  bell:     { fn: strike, t60: 6, ts: 0.3, max: 8, modes: [[0.5, 0.55, 1.6], [1, 1, 1], [1.19, 0.55, 0.8], [1.5, 0.38, 0.7], [2.0, 0.5, 0.6], [2.5, 0.22, 0.45], [2.66, 0.2, 0.4], [3.01, 0.14, 0.35], [4.07, 0.09, 0.25]], hx: 1.1, click: [0.04, 0.004, 0.3], damp: false, rel: 0.6, spread: 0.2, demo: 60, range: [48, 79] },
+  /* 재즈 힙합에 자주 쓰는 악기 */
+  felt:     { fn: piano, t60: 3.6, max: 4.5, B: 1.1e-4, partials: 14, strike: 1 / 7, hdecay: 0.16, beat: 3, detune: 1.6, bright: 0.42, thump: 2.6, body: [[150, 1.4, 0.32], [480, 1.6, 0.16]], damp: true, rel: 0.16, spread: 0.3, demo: 60, range: [48, 72] },
+  rhodes:   { fn: epiano, t60: 6, ts: 0.6, max: 6, modes: [[1, 1, 1], [7.1, 0.17, 0.035], [20.2, 0.05, 0.012]], hx: 1.5, drive: 1.3, bias: 0.55, click: [0.025, 0.005, 0.85], lp: 6500, body: [[190, 1, 0.18]], damp: true, rel: 0.2, spread: 0.35, demo: 60, range: [41, 77] },
+  wurli:    { fn: epiano, pickup: 'cap', t60: 3.4, ts: 0.6, max: 4.5, modes: [[1, 1, 1], [6.5, 0.11, 0.05]], hx: 1.4, drive: 2.4, bias: 0.35, click: [0.03, 0.004, 0.75], lp: 5200, body: [[340, 1, 0.2]], damp: true, rel: 0.12, spread: 0.3, demo: 60, range: [41, 77] },
+  dbass:    { fn: pluck, low: true, lvl: 6, t60: 1.9, ts: 0.3, max: 4, S: 0.45, Sv: 0.15, exc: 0.95, pick: 0.22, tri: 0.8, thump: [0.5, 0.03, 0.93], body: [[62, 1.6, 0.45], [118, 2.2, 0.35], [240, 2.5, 0.18]], drop: 14, damp: true, rel: 0.12, spread: 0, demo: 40, range: [28, 55] },
+  jazzgtr:  { fn: pluck, t60: 2.4, ts: 0.4, max: 5, S: 0.46, Sv: 0.15, exc: 0.9, pick: 0.2, tri: 0.6, pickup: 0.26, body: [[105, 2, 0.25], [210, 2.5, 0.2], [420, 3, 0.1]], damp: true, rel: 0.12, spread: 0, demo: 55, range: [40, 72] }
 };
 
 /* 계산한 소리 보관: 오래 안 쓴 것부터 버린다 */
@@ -407,7 +466,13 @@ const EN = {
   organ_rock:  { drawbars: '888800008', lp: [12, 30], q: 0.4, env: [0.004, 0.05, 1, 0.05], leslie: [0.22, 7], drive: 2.6, gain: 0.34, trim: -4.5, demo: 55 },
   organ_church:{ drawbars: '806808046', lp: [8, 22], q: 0.4, env: [0.07, 0.1, 1, 0.3], gain: 0.36, demo: 60 },
   accordion: { osc: [['square', -8, 0.5], ['square', 8, 0.5], ['sawtooth', 0, 0.25]], lp: [3, 9], q: 0.8, form: [[1100, 2, 0.4]], dry: 0.8, env: [0.03, 0.1, 0.95, 0.08], vib: [5.5, 3, 0.3], gain: 0.32, demo: 62 },
-  harmonica: { solo: true, osc: [['square', 0, 1]], lp: [3, 8], q: 0.9, form: [[1300, 2.2, 0.7]], dry: 0.6, env: [0.03, 0.1, 0.9, 0.1], vib: [5.5, 24, 0.4], noise: [0.05, 2, 1], gain: 0.3, demo: 67 }
+  harmonica: { solo: true, osc: [['square', 0, 1]], lp: [3, 8], q: 0.9, form: [[1300, 2.2, 0.7]], dry: 0.6, env: [0.03, 0.1, 0.9, 0.1], vib: [5.5, 24, 0.4], noise: [0.05, 2, 1], gain: 0.3, demo: 67 },
+  /* 재즈 힙합에 자주 쓰는 관악기: 색소폰은 리드가 떨리는 원뿔 관이라 배음이 고루 있고 숨소리가 섞인다.
+     뮤트 트럼펫(하몬 뮤트)은 낮은 소리가 빠지고 1.5 kHz 근처만 가늘게 울리고, 플루겔혼은 어둡고 둥글다 */
+  sax_tenor:   { solo: true, osc: [['sawtooth', 0, 1]], lp: [2.4, 7], q: 1, form: [[520, 2.2, 0.85], [1350, 2.8, 0.5], [2700, 3.5, 0.22]], dry: 0.4, fenv: [1.5, 0.05, 0.85], env: [0.045, 0.25, 0.85, 0.12], vib: [5.2, 12, 0.45], noise: [0.08, 7, 0.8], gain: 0.58, demo: 55 },
+  sax_alto:    { solo: true, osc: [['sawtooth', 0, 1]], lp: [2.6, 8], q: 1, form: [[650, 2.2, 0.85], [1750, 2.8, 0.5], [3100, 3.5, 0.22]], dry: 0.4, fenv: [1.5, 0.05, 0.85], env: [0.04, 0.25, 0.85, 0.12], vib: [5.4, 12, 0.4], noise: [0.08, 6, 0.8], gain: 0.535, demo: 67 },
+  trumpet_mute:{ solo: true, osc: [['sawtooth', 0, 1]], lp: [6, 16], q: 0.8, form: [[1500, 3, 1], [2700, 4, 0.5], [700, 2, 0.2]], dry: 0.06, fenv: [1.2, 0.04, 0.85], env: [0.03, 0.2, 0.85, 0.12], vib: [5.5, 8, 0.5], noise: [0.03, 6, 1], gain: 1.02, demo: 67 },
+  flugel:      { solo: true, osc: [['sawtooth', 0, 0.7], ['triangle', 0, 0.6]], lp: [1.8, 5], q: 0.9, fenv: [0.9, 0.06, 0.85], env: [0.06, 0.3, 0.88, 0.2], vib: [5.2, 10, 0.4], noise: [0.025, 5, 0.8], gain: 0.28, demo: 62 }
 };
 /* 드로바 9개(16′ 5⅓′ 8′ 4′ 2⅔′ 2′ 1⅗′ 1⅓′ 1′)는 한 옥타브 아래 음의 1·3·2·4·6·8·10·12·16번째 배음이에요 */
 const DRAW_H = [1, 3, 2, 4, 6, 8, 10, 12, 16];
