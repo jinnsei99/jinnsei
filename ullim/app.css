@@ -335,6 +335,15 @@ body[data-view="session"] .v-session, body[data-view="arrange"] .v-arrange, body
 .br-cat .ic { width: 12px; height: 12px; }
 .br-list { flex: 1 1 auto; overflow: auto; padding: 4px 0 8px; outline: none; }
 .br-head { padding: 8px 10px 3px; color: var(--fg-3); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; }
+/* 묶음 열고 닫기: 머리를 누르면 접고 편다. ▾/▸와 개수는 글자 밖(::before/::after)에 */
+.br-head.fold { display: flex; align-items: center; gap: 6px; width: 100%; margin: 0; border: 0; border-radius: 0; background: none; text-align: left; font-family: inherit; cursor: pointer; }
+.br-head.fold::before { content: "▾"; width: 10px; flex: none; font-size: 10px; color: var(--fg-3); }
+.br-head.fold.shut::before { content: "▸"; }
+.br-head.fold::after { content: attr(data-n); margin-left: auto; font: 10px var(--font-mono); color: var(--fg-3); opacity: 0.8; }
+.br-head.fold:hover { color: var(--fg); background: var(--panel-2); }
+.br-head.fold.shut { padding-block: 6px; border-bottom: 1px solid var(--line-2); }
+.br-folds { display: flex; gap: 4px; padding: 2px 8px 4px; }
+.br-folds .btn { min-height: 20px; padding: 0 6px; font-size: 11px; color: var(--fg-3); }
 .br-item { display: grid; grid-template-columns: 14px minmax(0, 1fr); column-gap: 7px; align-items: center; padding: 4px 10px; cursor: grab; color: var(--fg); }
 .br-item.indent { padding-left: 22px; }
 .br-item .ic { color: var(--fg-3); grid-row: span 2; }
@@ -533,6 +542,14 @@ html.touch .chd-n { font-size: 13.5px; }
 .snd-step { flex: none; padding: 0 5px; font-size: 9px; }
 /* 내 사운드 · 소리 다듬기 */
 .snd-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+/* 소리 고르기 창: 묶음 이름을 눌러 열고 닫기 */
+.snd-panel .insts-g.fold { width: 110px; padding: 7px 4px 0 0; border: 0; background: none; text-align: left; font-family: var(--font-kr); cursor: pointer; }
+.snd-panel .insts-g.fold::before { content: "▾ "; }
+.snd-panel .insts-row.shut .insts-g.fold::before { content: "▸ "; }
+.snd-panel .insts-g.fold::after { content: " " attr(data-n); font-family: var(--font-mono); opacity: 0.7; }
+.snd-panel .insts-g.fold:hover { color: var(--fg); }
+.snd-panel .insts-row.shut .insts-bs { display: none; }
+.snd-panel .insts-row.shut .insts-g.fold { width: auto; padding-top: 2px; }
 .snd-top .hint { margin: 0; }
 .inst-b.mine { border-style: dashed; border-color: var(--accent); }
 .dev.shape { width: 270px; }
@@ -826,6 +843,8 @@ html.touch .dt-head { height: 42px; }
 html.touch .insts { width: 560px; gap: 4px; }
 html.touch .insts-g { padding-top: 9px; }
 html.touch .snd-panel .insts-g { padding-top: 13px; }
+html.touch .snd-panel .insts-g.fold { width: 130px; min-height: 40px; font-size: 13px; }
+html.touch .snd-panel .insts-row.shut .insts-g.fold { padding-top: 8px; }
 html.touch .inst-b { min-height: 32px; padding: 0 10px; font-size: 12.5px; }
 html.touch .snd-panel .inst-b { min-height: 40px; padding: 0 14px; font-size: 14px; }
 html.touch .snd-step { min-width: 34px; font-size: 11px; }
@@ -847,6 +866,9 @@ html.touch .act.sm, html.touch .solo.sm, html.touch .arm.sm { min-width: 28px; h
 html.touch .lane-head .num.mini, html.touch .lane-head .dd { height: 28px; font-size: 11px; }
 html.touch .dbbox { height: 26px; min-width: 52px; }
 html.touch .br-item { padding: 9px 12px; }
+html.touch .br-head.fold { min-height: 40px; padding: 8px 12px; font-size: 12px; }
+html.touch .br-head.fold::before { font-size: 13px; width: 14px; }
+html.touch .br-folds .btn { min-height: 34px; padding: 0 10px; font-size: 12.5px; }
 html.touch .arr-scroll { height: 20px; }
 html.touch .arr-thumb { top: 3px; bottom: 3px; }
 html.touch .pane-b { font-size: 11.5px; }
