@@ -127,7 +127,7 @@ function items() {
       break;
     }
     case 'samples': {
-      const groups = [['loop', '루프'], ['vox', '보컬'], ['fx', '효과음'], ['oneshot', '원샷']];
+      const groups = [['loop', '루프'], ['texture', '질감 (LP·테이프)'], ['vox', '보컬'], ['fx', '효과음'], ['oneshot', '원샷']];
       for (const [cat, name] of groups) {
         head(name);
         for (const [id, g] of Object.entries(U.GEN).filter(([, g]) => g.cat === cat)) {

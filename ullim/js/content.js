@@ -243,7 +243,10 @@ const GEN = {
   'vox-robot': { name: '로봇 보컬 16음절', cat: 'vox', render: sr => U.media.renderRobot(sr, ROBOT.map(([s, p, , end]) => [s, p, end]), 0.32) },
   'fx-riser': { name: '노이즈 라이저', cat: 'fx', dur: 4, render: sr => U.media.renderFx(sr, 'riser') },
   'fx-down': { name: '다운리프터', cat: 'fx', dur: 4, render: sr => U.media.renderFx(sr, 'down') },
-  'fx-impact': { name: '임팩트', cat: 'fx', dur: 3, render: sr => U.media.renderFx(sr, 'impact') }
+  'fx-impact': { name: '임팩트', cat: 'fx', dur: 3, render: sr => U.media.renderFx(sr, 'impact') },
+  // 질감: 템포에 맞춰 늘고 줄되 잘게 썰지 않고 통째로 (쉬 소리가 끊기지 않게)
+  'tex-vinyl': { name: '바이닐 노이즈 (LP)', cat: 'texture', bpm: 90, beats: 16, mode: 'repitch', render: sr => U.media.renderTexture(sr, 'vinyl', 16 * 60 / 90) },
+  'tex-tape': { name: '테이프 히스', cat: 'texture', bpm: 90, beats: 16, mode: 'repitch', render: sr => U.media.renderTexture(sr, 'tape', 16 * 60 / 90) }
 };
 const ONESHOTS = [['kick', '킥 909', K909], ['kick', '킥 808', { decay: 0.8, tone: 0.25 }], ['snare', '스네어', { tune: 3, tone: 0.7 }], ['clap', '클랩', {}],
   ['chh', '닫힌 하이햇', { tone: 0.6 }], ['ohh', '열린 하이햇', { tone: 0.6 }], ['crash', '크래시', {}], ['sub', '808 서브', { decay: 0.7 }], ['rim', '림샷', {}], ['cow', '카우벨', {}], ['zap', '잽', {}], ['conga', '콩가', {}]];
