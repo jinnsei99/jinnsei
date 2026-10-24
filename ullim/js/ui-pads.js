@@ -583,7 +583,7 @@ function toolbar(t) {
 /* 아래 클립·장치 칸을 접어 패드·건반을 크게 (손가락으로 칠 때) */
 function bigBtn() {
   if (ui.narrow) return null;
-  return btn({ icon: 'detail', cls: 'tg sm', toggle: true, on: !ui.detailOpen, title: '연주 칸 크게', info: ['연주 칸 크게', '아래 클립·장치 칸을 접어서 패드와 건반을 크게 써요. 다시 누르면 펼쳐요.'], onclick: () => { U.toggleDetail(); U.inval('pads'); } });
+  return btn({ icon: 'detail', cls: 'tg sm pv-big', toggle: true, on: !ui.detailOpen, title: '연주 칸 크게', info: ['연주 칸 크게', '아래 클립·장치 칸을 접어서 패드와 건반을 크게 써요. 다시 누르면 펼쳐요.'], onclick: () => { U.toggleDetail(); U.inval('pads'); } });
 }
 /* 건반일 때의 도구 막대: 녹음 준비, 건반·스케일, 코드, 옥타브, 세기 */
 function keysBar(bar, t) {
