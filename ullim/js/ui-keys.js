@@ -1,5 +1,5 @@
 /* 울림 — 터치 건반: 신스·샘플러 트랙을 손가락으로 치는 건반 (패드 화면에서 그 트랙을 고르면 나와요).
-   피아노 건반과 스케일 격자(푸시처럼 위 줄이 4도 위인, 키에 맞는 음만 있는 칸) 두 가지예요.
+   피아노 건반, 스케일 격자(푸시처럼 위 줄이 4도 위인, 키에 맞는 음만 있는 칸), 코드 패드(키 안의 주요 화음) 세 가지예요.
    손가락마다 따로 울리고, 미끄러뜨리면 지나가는 음을 차례로 쳐요. 코드를 켜면 한 손가락으로 스케일 3화음을 쳐요 */
 (function (U) {
 'use strict';
@@ -7,10 +7,17 @@ const { h, ui, btn, clamp, info } = U;
 const pr = () => U.project;
 
 const KS = ui.keys = {
-  layout: U.pref('keysLayout', 'piano'),   // 'piano' | 'grid'
+  layout: U.pref('keysLayout', 'piano'),   // 'piano' | 'grid' | 'chords'
   chord: !!U.pref('keysChord', false),
+  ctype: U.pref('chordType', 'triad'),     // 코드 패드: 'triad' | 'seventh' | 'ninth'
+  smooth: U.pref('chordSmooth', true),     // 앞 화음에서 덜 움직이는 자리로
+  bass: U.pref('chordBass', false),        // 근음을 한 옥타브 아래에 더하기
+  lastTop: null,                           // 코드 패드로 마지막에 친 화음 (부드럽게 잇기용)
   oct: {}                                  // 트랙 id → 시작 옥타브 (C3 = 3)
 };
+// 코드 패드 키: 1~7은 키 안의 화음, Q~Y는 세컨더리 도미넌트
+const CHORD_CODES = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7'];
+const SEC_CODES = ['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY'];
 const KEYMAP = { KeyA: 0, KeyW: 1, KeyS: 2, KeyE: 3, KeyD: 4, KeyF: 5, KeyT: 6, KeyG: 7, KeyY: 8, KeyH: 9, KeyU: 10, KeyJ: 11, KeyK: 12, KeyO: 13, KeyL: 14, Semicolon: 16, Quote: 17 };
 const WHITE = [0, 2, 4, 5, 7, 9, 11];
 
@@ -44,6 +51,16 @@ function chordName(ps) {
   return U.NOTE_NAMES[((ps[0] % 12) + 12) % 12] + q;
 }
 const pitchesOf = p => (KS.chord ? triad(p) : [p]).filter(x => x >= 0 && x <= 127);
+/* 코드 패드: 지금 키와 화음 종류로 만든 화음 목록, 누를 때마다 자리를 잡아 음으로 */
+function chordList() { return { dia: U.chords.diatonic(key(), KS.ctype), sec: U.chords.secondary(key(), KS.ctype) }; }
+function chordPitches(id) {
+  const { dia, sec } = chordList();
+  const ch = dia.concat(sec).find(c => c.id === id);
+  if (!ch) return [];
+  const v = U.chords.voice(ch, baseOf(track) + 2, KS.smooth ? KS.lastTop : null, { smooth: KS.smooth, bass: KS.bass });
+  KS.lastTop = v.top;
+  return v.all;
+}
 function on(p) {
   const n = count.get(p) || 0;
   count.set(p, n + 1);
@@ -76,13 +93,17 @@ function lift(id) {
 function releaseAll() { for (const id of [...fingers.keys()]) lift(id); count.clear(); }
 
 /* ================= 화면 ================= */
+const LAYOUTS = { piano: ['tk-piano', '건반'], grid: ['tk-grid', '스케일 격자'], chords: ['tk-chords', '코드 패드'] };
+const drawFor = el => (KS.layout === 'grid' ? drawGrid : KS.layout === 'chords' ? drawChords : drawPiano)(el);
 function view(t) {
   releaseAll();
+  if (track !== t) KS.lastTop = null;
   track = t;
   root = h('div', { class: 'tk', 'data-nolongpress': '', style: { '--pc': U.colorOf(t.color) } });
-  const surface = h('div', { class: 'tk-surface ' + (KS.layout === 'grid' ? 'tk-grid' : 'tk-piano'), role: 'group', 'aria-label': KS.layout === 'grid' ? '스케일 격자' : '건반' });
+  const lay = LAYOUTS[KS.layout] || LAYOUTS.piano;
+  const surface = h('div', { class: 'tk-surface ' + lay[0], role: 'group', 'aria-label': lay[1] });
   root.append(surface);
-  const fill = () => { if (surface.isConnected) (KS.layout === 'grid' ? drawGrid : drawPiano)(surface); };
+  const fill = () => { if (surface.isConnected) drawFor(surface); };
   bind(surface);
   if (ro) ro.disconnect();
   if (window.ResizeObserver) {
@@ -150,9 +171,25 @@ function drawGrid(el) {
     }
   }
 }
+/* 코드 패드: 위 줄은 키 안의 화음 일곱 개(주요 3화음 표시), 아래 줄은 다음 화음으로 끌어가는 세컨더리 도미넌트 */
+function drawChords(el) {
+  U.clear(el);
+  const { dia, sec } = chordList(), k = key();
+  const pad = (c, code) => h('div', { class: 'tk-cp' + (c.primary ? ' prim' : '') + (c.sec ? ' sec' : ''), dataset: { chord: c.id } },
+    h('span', { class: 'tk-cp-k', text: code ? code.replace(/^(Digit|Key)/, '') : '' }),
+    c.primary ? h('span', { class: 'tk-cp-p', text: '주요' }) : null,
+    h('span', { class: 'tk-cp-n', text: c.name }),
+    h('span', { class: 'tk-cp-r', text: c.sec ? '→ ' + c.target : c.roman }));
+  const parent = U.chords.parentScale(k.scale) !== k.scale ? ' (' + U.scaleOf(U.chords.parentScale(k.scale)).name + '로 쌓아요)' : '';
+  el.append(
+    h('div', { class: 'tk-ch-l', text: U.scaleLabel(k.root, k.scale) + '의 화음' + parent }),
+    h('div', { class: 'tk-cr' }, ...dia.map((c, i) => pad(c, CHORD_CODES[i]))),
+    h('div', { class: 'tk-ch-l', text: '다음 화음으로 끌어가는 화음 · 세컨더리 도미넌트' }),
+    h('div', { class: 'tk-cr sec', style: { '--n': Math.max(sec.length, 4) } }, ...sec.map((c, i) => pad(c, SEC_CODES[i]))));
+}
 function keyAt(x, y) {
   const el = document.elementFromPoint(x, y);
-  const k = el && el.closest && el.closest('.tk-surface [data-p]');
+  const k = el && el.closest && el.closest('.tk-surface [data-p], .tk-surface [data-chord]');
   return k && root && root.contains(k) ? k : null;
 }
 function bind(el) {
@@ -162,7 +199,7 @@ function bind(el) {
     const prev = fingers.get(e.pointerId);
     if (prev && prev.el === k) return;
     if (!k) { lift(e.pointerId); return; }
-    press(e.pointerId, k, pitchesOf(+k.dataset.p));
+    press(e.pointerId, k, k.dataset.chord ? chordPitches(k.dataset.chord) : pitchesOf(+k.dataset.p));
   };
   el.addEventListener('pointerdown', e => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -176,7 +213,7 @@ function bind(el) {
   for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(t, e => { down.delete(e.pointerId); lift(e.pointerId); });
   el.addEventListener('contextmenu', e => e.preventDefault());
 }
-function redraw() { if (root && track) { releaseAll(); const s = root.querySelector('.tk-surface'); if (s) (KS.layout === 'grid' ? drawGrid : drawPiano)(s); } }
+function redraw() { if (root && track) { releaseAll(); const s = root.querySelector('.tk-surface'); if (s) drawFor(s); } }
 
 /* ================= 도구 막대 ================= */
 function setOct(t, d) {
@@ -188,20 +225,42 @@ let rangeLbl = null;
 /* 건반의 맨 아래 음 (스케일 격자는 그 옥타브의 근음부터) */
 const rangeText = t => U.noteName(KS.layout === 'grid' ? U.degreeToPitch(0, key().root, key().scale, baseOf(t)) : baseOf(t));
 function controls(t, rerender) {
-  const lay = U.seg([['piano', '건반', '피아노처럼 생긴 건반이에요.'], ['grid', '스케일', '키에 맞는 음만 칸으로 늘어놓아요. 오른쪽으로 한 음씩, 위 줄은 4도 위라서 아무 칸이나 쳐도 어울려요.']], KS.layout,
+  const lay = U.seg([['piano', '건반', '피아노처럼 생긴 건반이에요.'], ['grid', '스케일', '키에 맞는 음만 칸으로 늘어놓아요. 오른쪽으로 한 음씩, 위 줄은 4도 위라서 아무 칸이나 쳐도 어울려요.'],
+    ['chords', '코드 패드', '지금 키의 주요 화음을 큰 버튼으로 늘어놓아요. 누르면 화음이 통째로 울리고, 1~7 키(아래 줄은 Q~Y)로도 쳐요.']], KS.layout,
     v => { KS.layout = v; U.setPref('keysLayout', v); rerender(); }, 'tk-lay');
-  const chord = btn({ text: '코드', cls: 'tg sm', toggle: true, on: KS.chord, info: ['코드', '켜면 한 손가락으로 지금 키의 3화음을 쳐요. 스케일 격자에서는 칸마다 코드 이름이 보여요.'], onclick: () => { KS.chord = !KS.chord; U.setPref('keysChord', KS.chord); U.setPressed(chord, KS.chord); redraw(); } });
   const down = btn({ text: '−', cls: 'sm tk-oct', title: '한 옥타브 아래로', onclick: () => setOct(t, -1) });
   const up = btn({ text: '+', cls: 'sm tk-oct', title: '한 옥타브 위로', onclick: () => setOct(t, 1) });
   rangeLbl = h('span', { class: 'tk-range', text: rangeText(t) });
   info(rangeLbl, '옥타브', '건반이 시작하는 음이에요. −, + 또는 키보드의 Z, X로 옮겨요.');
-  return [lay, chord, h('span', { class: 'pv-sep' }), down, rangeLbl, up];
+  const oct = [h('span', { class: 'pv-sep' }), down, rangeLbl, up];
+  if (KS.layout === 'chords') return [lay, ...chordControls(() => { KS.lastTop = null; redraw(); })].concat(oct);
+  const chord = btn({ text: '코드', cls: 'tg sm', toggle: true, on: KS.chord, info: ['코드', '켜면 한 손가락으로 지금 키의 3화음을 쳐요. 스케일 격자에서는 칸마다 코드 이름이 보여요.'], onclick: () => { KS.chord = !KS.chord; U.setPref('keysChord', KS.chord); U.setPressed(chord, KS.chord); redraw(); } });
+  return [lay, chord].concat(oct);
+}
+/* 화음 종류 · 부드럽게 · 베이스 (코드 패드와 클립 칸의 코드 넣기가 함께 쓴다) */
+function chordControls(onChange) {
+  const type = U.seg(U.chords.TYPES, KS.ctype, v => { KS.ctype = v; U.setPref('chordType', v); onChange(); }, 'tk-ctype');
+  const smooth = btn({ text: '부드럽게', cls: 'tg sm', toggle: true, on: KS.smooth, info: ['부드럽게 잇기', '켜면 앞 화음에서 손가락을 덜 움직이는 자리(자리바꿈)로 짚어서 화음이 매끄럽게 이어져요. 끄면 늘 근음부터 쌓아요.'],
+    onclick: () => { KS.smooth = !KS.smooth; U.setPref('chordSmooth', KS.smooth); U.setPressed(smooth, KS.smooth); onChange(); } });
+  const bass = btn({ text: '베이스', cls: 'tg sm', toggle: true, on: KS.bass, info: ['베이스 음 더하기', '켜면 화음 아래 한 옥타브에 근음을 더해 두껍게 울려요. 베이스 트랙이 따로 있으면 꺼 두는 게 깔끔해요. 9화음은 늘 근음이 아래에 있어요.'],
+    onclick: () => { KS.bass = !KS.bass; U.setPref('chordBass', KS.bass); U.setPressed(bass, KS.bass); onChange(); } });
+  return [type, smooth, bass];
 }
 
 /* ================= 키보드 (아이패드 매직 키보드 등) ================= */
 function keyDown(e) {
   if (!track) return false;
   if (e.code === 'KeyZ' || e.code === 'KeyX') { if (!e.repeat) setOct(track, e.code === 'KeyZ' ? -1 : 1); return true; }
+  if (KS.layout === 'chords') {
+    const i = CHORD_CODES.indexOf(e.code), j = SEC_CODES.indexOf(e.code);
+    if (i < 0 && j < 0) return false;
+    if (e.repeat || fingers.has(e.code)) return true;
+    const { dia, sec } = chordList(), ch = i >= 0 ? dia[i] : sec[j];
+    if (!ch) return true;
+    U.ensureAudio();
+    press(e.code, root && root.querySelector('.tk-surface [data-chord="' + ch.id + '"]'), chordPitches(ch.id));
+    return true;
+  }
   const o = KEYMAP[e.code];
   if (o == null) return false;
   if (e.repeat || fingers.has(e.code)) return true;
@@ -213,5 +272,5 @@ function keyDown(e) {
 }
 function keyUp(e) { if (!fingers.has(e.code)) return false; lift(e.code); return true; }
 
-U.touchKeys = { view, controls, releaseAll, keyDown, keyUp, redraw, get track() { return track; } };
+U.touchKeys = { view, controls, chordControls, releaseAll, keyDown, keyUp, redraw, get track() { return track; } };
 })(window.U = window.U || {});
