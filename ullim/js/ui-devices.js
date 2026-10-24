@@ -11,7 +11,7 @@ const visuals = new Set();
    모든 사운드 프리셋 중에서 이 트랙의 악기 소리를 바꾼다. ◀ ▶로 하나씩 넘기며 들어 본다 */
 const NOT_PICKABLE = new Set(['빈 샘플러']);
 /* 소리 고르기 창과 ◀ ▶가 쓰는 순서: 묶음 순서대로 펼친 목록 */
-const pickGroups = () => U.soundGroups(U.SOUNDS.filter(s => !NOT_PICKABLE.has(s.name)));
+const pickGroups = () => U.soundGroups(U.allSounds().filter(s => !NOT_PICKABLE.has(s.name)));
 const isCurSound = (d, s) => !!d && d.kind === s.kind && d.preset === s.name;
 function demoPitch(s) {
   if (s.kind === 'acoustic' || s.kind === 'ensemble') return U.instDemo(s.kind, s.p && s.p.inst);
@@ -31,23 +31,33 @@ function chooseSound(t, s) {
 /* 묶음별 버튼 창. 누르면 바로 바꾸고 한 음 들려준다. 닫을 때까지 열려 있어 여러 소리를 이어서 들어 볼 수 있다 */
 function soundPanel(t) {
   const body = h('div', { class: 'snd-panel' });
-  const btns = [];
-  for (const [g, list] of pickGroups()) {
-    const bs = h('div', { class: 'insts-bs' });
-    for (const s of list) {
-      const b = h('button', { type: 'button', class: 'inst-b', text: s.name, title: U.DEV[s.kind].name });
-      b.addEventListener('click', () => { chooseSound(t, s); mark(); });
-      btns.push([b, s]);
-      bs.append(b);
-    }
-    body.append(h('div', { class: 'insts-row' }, h('span', { class: 'insts-g', text: g }), bs));
-  }
+  let btns = [];
   const mark = () => {
     const tr = U.trackById(pr(), t.id), d = tr && U.instrumentOf(tr);
     for (const [b, s] of btns) b.setAttribute('aria-pressed', isCurSound(d, s) ? 'true' : 'false');
   };
-  mark();
-  const dlg = U.dialog({ title: '소리 고르기 · ' + U.trackLabel(pr(), t), body, width: '760px' });
+  // 내 사운드를 저장하거나 이름을 바꾸면 다시 채운다
+  const fill = () => {
+    U.clear(body);
+    btns = [];
+    const save = btn({ icon: 'plus', text: '지금 소리를 내 사운드로 저장', cls: 'sm', onclick: () => U.saveMySound(U.trackById(pr(), t.id) || t) });
+    body.append(h('div', { class: 'snd-top' }, save, h('span', { class: 'hint', text: U.mySounds.list().length ? '내 사운드는 길게 누르거나 오른쪽 클릭으로 이름을 바꾸고 지워요.' : '악기를 다듬은 뒤 저장하면 맨 위 \'내 사운드\'에 모여요.' })));
+    for (const [g, list] of pickGroups()) {
+      const bs = h('div', { class: 'insts-bs' });
+      for (const s of list) {
+        const b = h('button', { type: 'button', class: 'inst-b' + (s.user ? ' mine' : ''), text: s.name, title: U.DEV[s.kind].name });
+        b.addEventListener('click', () => { chooseSound(t, s); mark(); });
+        if (s.user) b.addEventListener('contextmenu', e => { e.preventDefault(); U.mySoundMenu(s, { x: e.clientX, y: e.clientY }); });
+        btns.push([b, s]);
+        bs.append(b);
+      }
+      body.append(h('div', { class: 'insts-row' }, h('span', { class: 'insts-g', text: g }), bs));
+    }
+    mark();
+  };
+  fill();
+  const off = U.on('sounds', fill);
+  const dlg = U.dialog({ title: '소리 고르기 · ' + U.trackLabel(pr(), t), body, width: '760px', onclose: off });
   const on = btns.find(([b]) => b.getAttribute('aria-pressed') === 'true');
   if (on) on[0].scrollIntoView({ block: 'nearest' });
   return dlg;
@@ -80,6 +90,8 @@ function render(el) {
   const head = h('div', { class: 'chain-title' }, h('span', { class: 'ct-sw', style: { background: U.colorOf(t.color) } }), h('span', { text: U.trackLabel(pr(), t) }));
   root.append(head, chainEl);
   root.addEventListener('pointerdown', () => { ui.focus = 'devices'; });
+  // 악기가 있는 트랙은 맨 앞에 '소리 다듬기' 칸
+  if (t.type === 'midi' && U.instrumentOf(t)) chainEl.append(U.shapePanel(t));
   t.devices.forEach((d, i) => {
     chainEl.append(dropGap(t, i));
     chainEl.append(panel(t, d));
@@ -119,11 +131,12 @@ function panel(t, d) {
     if (e.button !== 0) return;
     U.dragStart(e, { type: 'devmove', track: t.id, id: d.id, kind: d.kind }, U.devName(d));
   });
-  const presets = U.FX_PRESETS[d.kind] || (spec.type === 'instrument' ? U.SOUNDS.filter(s => s.kind === d.kind).map(s => [s.name, s.p]) : []);
+  const presets = U.FX_PRESETS[d.kind] || (spec.type === 'instrument' ? U.allSounds().filter(s => s.kind === d.kind).map(s => [s.name, s.p]) : []);
   const menuB = btn({ icon: 'chevron', cls: 'ghost sm', title: '프리셋과 메뉴', onclick: () => {
     const items = [];
     if (presets.length) items.push({ header: '프리셋' }, ...presets.map(([name, p]) => ({ label: name, checked: d.preset === name, action: () => A.applyPreset(d.id, name, p) })), { sep: true });
     items.push({ label: '기본값으로', action: () => A.applyPreset(d.id, null, {}) });
+    if (spec.type === 'instrument') items.push({ label: '내 사운드로 저장…', action: () => U.saveMySound(t) });
     items.push({ label: '복제', action: () => { const n = U.cloneDevice(d); const i = t.devices.indexOf(d); t.devices.splice(i + 1, 0, n); U.commit('장치 복제'); }, disabled: spec.type === 'instrument' });
     items.push({ sep: true }, { label: '지우기', danger: true, key: 'Del', action: () => A.removeDevice(t.id, d.id) });
     U.menu(items, menuB);
@@ -595,7 +608,10 @@ function padsVisual(t, d) {
     const src = U.select([['synth', '합성 드럼'], ['sample', '샘플']], pd.src, v => A.setDeviceData(d.id, data => { data.pads[i].src = v; }, '패드 소리'), { cls: 'sm' });
     const row = h('div', { class: 'pe-row' }, src);
     if (pd.src === 'synth') row.append(U.select(U.PAD_TYPES.map(([v, l]) => [v, l]), pd.type, v => A.setDeviceData(d.id, data => { data.pads[i].type = v; data.pads[i].name = U.PAD_TYPES.find(x => x[0] === v)[1]; }, '패드 종류'), { cls: 'sm' }));
-    else row.append(h('span', { class: 'pe-sample', text: pd.sample ? (U.media.info(pd.sample).name || pd.sample) : '샘플을 끌어다 놓으세요' }));
+    else {
+      row.append(h('span', { class: 'pe-sample', text: pd.sample ? (U.media.info(pd.sample).name || pd.sample) : '샘플을 끌어다 놓으세요' }));
+      if (pd.sample) row.append(btn({ text: '편집', cls: 'sm', title: '이 패드 샘플 파형 편집', onclick: () => U.audioEditor.open({ ref: pd.sample, title: pd.name, name: U.media.info(pd.sample).name, save: nref => A.setDeviceData(d.id, data => { data.pads[i].sample = nref; }, '패드 샘플 편집') }) }));
+    }
     ed.append(row);
     const knobs = h('div', { class: 'ds-grid' });
     const pspec = {
@@ -641,7 +657,13 @@ function sampleVisual(t, d) {
       U.inval('browser');
     } catch (e) { U.toast('이 파일을 읽지 못했어요. WAV, MP3, OGG 같은 오디오 파일을 골라 주세요.', 'error'); }
   } });
-  wrap.append(cv, h('div', { class: 'smp-bar' }, name, load));
+  const editB = btn({ text: '편집', cls: 'sm', title: '파형 편집', info: ['파형 편집', '이 샘플을 자르고 붙이고, 페이드·볼륨·노멀라이즈·거꾸로를 해요. 저장하면 새 샘플이 되고 되돌리기로 원래 샘플에 돌아와요.'], onclick: () => {
+    const ref = d.data && d.data.sample;
+    if (!ref) { U.toast('먼저 샘플을 넣어 주세요.'); return; }
+    const nm = U.media.info(ref).name;
+    U.audioEditor.open({ ref, title: nm, name: nm, save: nref => A.setDeviceData(d.id, data => { data.sample = nref; }, '샘플 편집') });
+  } });
+  wrap.append(cv, h('div', { class: 'smp-bar' }, name, editB, load));
   info(cv, '샘플', '브라우저의 샘플이나 오디오 파일을 여기에 끌어다 놓으세요. 위쪽의 노란 표시를 끌어 시작·끝·루프 위치를 바꿔요.');
   U.dropTarget(wrap, { accept: x => x.type === 'sample', drop: x => A.setDeviceData(d.id, data => { data.sample = x.ref; }, '샘플 넣기') });
   const draw = () => {

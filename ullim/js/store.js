@@ -84,25 +84,20 @@ async function cloudIndex() {
   const d = snap.exists ? snap.data() : null;
   return (d && d.projects) || {};
 }
-async function cloudSave(pr, json) {
+/* 긴 JSON 글을 조각으로 나눠 문서 하나(+ parts)에 쓰고 읽는다 */
+async function cloudPutJson(docId, json, updated) {
   const parts = [];
   for (let i = 0; i < json.length; i += CHUNK) parts.push(json.slice(i, i + CHUNK));
-  const pid = 'p_' + pr.id;
-  await queue(pid, async () => {
-    const ref = col().doc(pid);
+  await queue(docId, async () => {
+    const ref = col().doc(docId);
     for (let i = 1; i < parts.length; i++) {
       await retry(() => ref.collection('parts').doc(String(i)).set({ b: parts[i] }));
     }
-    await retry(() => ref.set({ n: parts.length, b: parts[0] || '', updated: pr.updated }));
-  });
-  await queue('index', async () => {
-    const idx = await cloudIndex();
-    idx[pr.id] = { name: pr.name, updated: pr.updated, bpm: pr.bpm };
-    await retry(() => col().doc('index').set({ projects: idx }));
+    await retry(() => ref.set({ n: parts.length, b: parts[0] || '', updated }));
   });
 }
-async function cloudLoad(id) {
-  const ref = col().doc('p_' + id);
+async function cloudGetJson(docId) {
+  const ref = col().doc(docId);
   const snap = await retry(() => ref.get());
   if (!snap.exists) return null;
   const d = snap.data();
@@ -111,7 +106,19 @@ async function cloudLoad(id) {
     const ps = await retry(() => ref.collection('parts').doc(String(i)).get());
     json += ps.exists ? ps.data().b : '';
   }
-  return JSON.parse(json);
+  return json;
+}
+async function cloudSave(pr, json) {
+  await cloudPutJson('p_' + pr.id, json, pr.updated);
+  await queue('index', async () => {
+    const idx = await cloudIndex();
+    idx[pr.id] = { name: pr.name, updated: pr.updated, bpm: pr.bpm };
+    await retry(() => col().doc('index').set({ projects: idx }));
+  });
+}
+async function cloudLoad(id) {
+  const json = await cloudGetJson('p_' + id);
+  return json == null ? null : JSON.parse(json);
 }
 async function cloudDelete(id) {
   const ref = col().doc('p_' + id);
@@ -190,6 +197,19 @@ async function deleteProject(id) {
   mem.projects.delete(id);
   if (S.mode === 'cloud') return cloudDelete(id);
   return tx('projects', 'readwrite', os => os.delete(id)).catch(() => {});
+}
+
+/* ================= 내 사운드 =================
+   Claude 계정으로 열었으면 계정에 두어 다른 기기에서도 쓴다. 이 브라우저 사본은 mysounds.js가 따로 둔다 */
+async function loadSounds() {
+  await S.ready;
+  if (S.mode !== 'cloud') return null;
+  try { const json = await cloudGetJson('sounds'); return json == null ? null : JSON.parse(json); } catch (e) { console.warn(e); return null; }
+}
+async function saveSounds(list) {
+  await S.ready;
+  if (S.mode !== 'cloud') return;
+  try { await cloudPutJson('sounds', JSON.stringify(list), Date.now()); } catch (e) { console.warn(e); }
 }
 
 /* ================= 파일 건네기 ================= */
@@ -297,6 +317,7 @@ U.store = {
   get ready() { return S.ready; },
   listProjects, saveProject, loadProject, deleteProject,
   putAudio, getAudio, listAudio, deleteAudio,
+  loadSounds, saveSounds,
   offer, canDownload, pickFile
 };
 })(window.U = window.U || {});

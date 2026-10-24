@@ -512,7 +512,13 @@ function colorMenu(cur, onPick) {
 function dialog(o) {
   const back = h('div', { class: 'dlg-back' });
   const box = h('div', { class: 'dlg', role: 'dialog', 'aria-modal': 'true', 'aria-label': o.title, style: o.width ? { width: 'min(' + o.width + ', 100%)' } : null });
-  const close = () => { back.remove(); document.removeEventListener('keydown', key, true); if (o.onclose) o.onclose(); };
+  // o.canClose가 false를 돌려주면 닫지 않는다 (편집 중인 것을 버릴지 먼저 묻는 창 등). close(true)는 묻지 않고 닫는다
+  let closed = false;
+  const close = force => {
+    if (closed || (force !== true && o.canClose && o.canClose() === false)) return;
+    closed = true;
+    back.remove(); document.removeEventListener('keydown', key, true); if (o.onclose) o.onclose();
+  };
   const head = h('div', { class: 'dlg-head' }, h('h2', { text: o.title }), btn({ icon: 'close', cls: 'ghost', title: '닫기', onclick: close }));
   const body = h('div', { class: 'dlg-body' }, o.body);
   box.append(head, body);

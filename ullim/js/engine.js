@@ -1150,6 +1150,7 @@ class Engine {
     s.connect(pv.out);
     s.start();
     pv.src = s;
+    return s;
   }
   stopPreview() {
     const pv = this.pv;

@@ -1,7 +1,7 @@
 // 울림 스튜디오 서비스 워커: 한 번 열어 두면 인터넷이 없어도 열린다.
 // 인터넷이 되면 언제나 새 파일을 먼저 받고(그래서 고친 내용이 바로 보인다), 안 되면 저장해 둔 것을 쓴다.
 // 파일을 더하거나 빼면 CORE를 고치고 CACHE 숫자를 올린다.
-const CACHE = 'ullim-v5';
+const CACHE = 'ullim-v6';
 const CORE = [
   "./",
   "./index.html",
@@ -26,6 +26,7 @@ const CORE = [
   "./js/engine.js",
   "./js/export.js",
   "./js/store.js",
+  "./js/mysounds.js",
   "./js/recorder.js",
   "./js/tools.js",
   "./js/ui-core.js",
@@ -36,6 +37,8 @@ const CORE = [
   "./js/ui-clip.js",
   "./js/ui-steps.js",
   "./js/ui-devices.js",
+  "./js/ui-shape.js",
+  "./js/ui-audioedit.js",
   "./js/ui-browser.js",
   "./js/ui-keys.js",
   "./js/ui-pads.js",
