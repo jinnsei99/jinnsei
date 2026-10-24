@@ -683,7 +683,11 @@ function seg(options, cur, onPick, cls) {
   for (const [v, l, inf] of options) {
     const b = h('button', { type: 'button', class: 'seg-b', text: l, 'aria-pressed': v === cur ? 'true' : 'false' });
     if (inf) info(b, l, inf);
-    b.addEventListener('click', () => onPick(v));
+    // 누른 칸을 바로 눌린 표시로 (부르는 쪽이 화면을 다시 그리지 않아도)
+    b.addEventListener('click', () => {
+      for (const x of el.children) x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+      onPick(v);
+    });
     el.append(b);
   }
   return el;
