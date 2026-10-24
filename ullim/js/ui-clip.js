@@ -9,6 +9,7 @@ const KEYS_W = 58, RULER_H = 22, VEL_H = 54;
 const R = ui.roll = {
   ppb: 60, x0: 0, rowH: 13, scrollY: 0, grid: 'auto', tri: false, snap: true, fold: 'none',
   sel: new Set(), clipId: null, tab: U.pref('clipTab', 'notes'), tool: 'rhythm', toolParams: {},
+  chord: { clipId: null, pos: 0, prev: null },   // 코드 넣기: 다음에 넣을 자리, 앞 화음 (부드럽게 잇기)
   view: U.pref('drumView', 'steps') // 드럼·패드 클립: 'steps' 스텝 시퀀서 | 'roll' 피아노 롤
 };
 let root = null, props = null, editor = null, cvGrid, cvKeys, cvRuler, cvVel, gridWrap, W = 400, H = 200;
@@ -50,7 +51,7 @@ function openClip() {
   R.sel = new Set();
   const drums = isDrums();
   R.fold = drums ? 'notes' : 'none';
-  if (cur.clip.type === 'midi' && R.tab === 'audio') R.tab = 'notes';
+  if (cur.clip.type === 'midi' && (R.tab === 'audio' || (R.tab === 'chords' && drums))) R.tab = 'notes';
   if (cur.clip.type === 'audio' && (R.tab === 'notes' || R.tab === 'tools')) R.tab = 'audio';
   R.needFit = true;
 }
@@ -69,13 +70,16 @@ function changed(label, live) {
 function renderProps() {
   U.clear(props);
   const c = clip();
-  const tabs = c.type === 'midi' ? [['clip', '클립'], ['notes', '노트'], ['tools', 'MIDI 도구']] : [['clip', '클립'], ['audio', '오디오']];
+  const tabs = c.type !== 'midi' ? [['clip', '클립'], ['audio', '오디오']]
+    : [['clip', '클립'], ['notes', '노트']].concat(isDrums() ? [] : [['chords', '코드']], [['tools', 'MIDI 도구']]);
+  if (R.tab === 'chords' && isDrums()) R.tab = 'notes';
   props.append(U.seg(tabs, R.tab, v => { R.tab = v; U.setPref('clipTab', v); renderProps(); }, 'tabs'));
   const body = h('div', { class: 'cvp-body' });
   props.append(body);
   if (R.tab === 'clip') clipTab(body, c);
   else if (R.tab === 'notes') notesTab(body, c);
   else if (R.tab === 'audio') audioTab(body, c);
+  else if (R.tab === 'chords') chordsTab(body, c);
   else toolsTab(body, c);
 }
 const row = (label, ...kids) => h('div', { class: 'fld-row' }, h('span', { class: 'fl', text: label }), h('div', { class: 'fv' }, ...kids));
@@ -192,6 +196,66 @@ function audioTab(body, c) {
   body.append(row('', rev));
   body.append(row('', btn({ text: '파형 편집…', cls: 'sm', info: ['파형 편집', '자르기·복사·붙여넣기·지우기, 페이드·볼륨·노멀라이즈·거꾸로를 해요.'], onclick: () => U.audioEditor.editClip(Object.assign({}, ui.clip)) })));
   lenBoxes(body, c);
+}
+/* ---------- 코드 넣기: 누를 때마다 넣을 자리에 화음을 넣고 다음 자리로 넘어간다 ---------- */
+const CHORD_LENS = [['1', '1박'], ['2', '2박'], ['bar', '1마디'], ['2bar', '2마디']];
+function chordLen() {
+  const v = U.pref('chordLen', 'bar'), bar = U.barLen(pr().sig);
+  return v === 'bar' ? bar : v === '2bar' ? bar * 2 : +v || bar;
+}
+/* 처음 넣을 자리: 빈 클립이면 루프 처음, 음이 있으면 마지막 음 뒤의 마디 첫 박 */
+function chordStart(c) {
+  const [a, z] = U.clipRegion(c);
+  if (!c.notes.length) return a;
+  const bar = U.barLen(pr().sig), end = Math.max(...c.notes.map(n => n.s + n.d));
+  return Math.min(z, a + Math.max(0, Math.ceil((end - a) / bar - 1e-6)) * bar);
+}
+function chordsTab(body, c) {
+  const CH = R.chord, KS = ui.keys, k = U.clipKey(c), sig = pr().sig;
+  if (CH.clipId !== c.id) { CH.clipId = c.id; CH.pos = chordStart(c); CH.prev = null; }
+  // 화음 버튼을 맨 위에: 누를 때마다 넣을 자리에 넣고 다음 자리로
+  const [type, smooth, bass] = U.touchKeys.chordControls(() => { CH.prev = null; renderProps(); });
+  body.append(type);
+  const grid = list => h('div', { class: 'chd-grid' }, ...list.map(ch => chordBtn(c, ch)));
+  body.append(h('div', { class: 'chd-l', text: U.scaleLabel(k.root, k.scale) + '의 화음' }), grid(U.chords.diatonic(k, KS.ctype)));
+  const sec = U.chords.secondary(k, KS.ctype);
+  if (sec.length) body.append(h('div', { class: 'chd-l', text: '끌어가는 화음 · 세컨더리 도미넌트' }), grid(sec));
+  body.append(h('div', { class: 'fld-sec', text: '넣는 방법' }));
+  const pos = h('span', { class: 'chd-pos', text: U.fmtPos(CH.pos, sig) });
+  info(pos, '넣을 자리', '다음 화음이 들어갈 자리예요 (마디. 박. 16분). 피아노 롤에 주황 세로 줄로 보여요.');
+  const back = btn({ text: '처음으로', cls: 'sm', info: ['처음으로', '넣을 자리를 루프 처음으로 되돌려요. 덮어쓰기가 켜져 있으면 다시 누르는 화음이 앞 화음을 바꿔요.'], onclick: () => { CH.pos = U.clipRegion(c)[0]; CH.prev = null; pos.textContent = U.fmtPos(CH.pos, sig); drawAll(); } });
+  const over = btn({ text: '덮어쓰기', cls: 'tg sm', toggle: true, on: U.pref('chordOver', true), info: ['덮어쓰기', '켜면 넣는 자리에 이미 있던 음을 지우고 새 화음으로 바꿔요. 끄면 위에 겹쳐 넣어요.'],
+    onclick: () => { const v = !U.pref('chordOver', true); U.setPref('chordOver', v); U.setPressed(over, v); } });
+  body.append(row('넣을 자리', pos, back));
+  body.append(row('길이', U.select(CHORD_LENS, U.pref('chordLen', 'bar'), v => U.setPref('chordLen', v), { cls: 'sm', label: '한 화음 길이', info: ['한 화음 길이', '화음 하나를 넣는 길이예요. 넣고 나면 이만큼 뒤로 넘어가요.'] }), over));
+  body.append(row('짚기', smooth, bass));
+  body.append(h('p', { class: 'hint', text: '차례로 누르면 코드 진행이 돼요. 하나씩 지우려면 되돌리기(' + U.MOD + '+Z). 패드 화면의 코드 패드로 쳐서 녹음해도 돼요.' }));
+}
+function chordBtn(c, ch) {
+  const b = h('button', { type: 'button', class: 'chd-b' + (ch.primary ? ' prim' : '') + (ch.sec ? ' sec' : '') },
+    h('span', { class: 'chd-n', text: ch.name }), h('span', { class: 'chd-r', text: ch.sec ? '→ ' + ch.target : ch.roman }));
+  info(b, ch.name + (ch.sec ? '' : ' · ' + ch.roman), (ch.sec ? ch.target + '(으)로 끌어가는 화음이에요. ' : ch.primary ? '주요 3화음이에요. ' : '') + '눌러서 넣을 자리에 넣어요.');
+  b.addEventListener('click', () => insertChord(c, ch));
+  return b;
+}
+function insertChord(c, ch) {
+  const CH = R.chord, KS = ui.keys, len = chordLen(), at = CH.pos;
+  const v = U.chords.voice(ch, 62, KS.smooth ? CH.prev : null, { smooth: KS.smooth, bass: KS.bass });
+  if (U.pref('chordOver', true)) c.notes = c.notes.filter(n => n.s < at - 1e-6 || n.s >= at + len - 1e-6);
+  for (const p of v.all) c.notes.push({ p, s: at, d: U.round(len * 0.97, 4), v: 96 });
+  c.notes.sort((x, y) => x.s - y.s || x.p - y.p);
+  CH.prev = v.top;
+  CH.pos = at + len;
+  // 클립보다 길어지면 클립(루프 구간)을 늘린다
+  if (CH.pos > U.clipRegion(c)[1] + 1e-6) { if (c.loop.on) c.loop.end = CH.pos; c.end = CH.pos; R.needFit = true; }
+  R.sel = new Set();
+  // 넣은 화음을 한 번 들려준다
+  U.ensureAudio();
+  const tid = cur.track.id;
+  for (const p of v.all) U.engine.liveOn(tid, p, 96, true);
+  setTimeout(() => { for (const p of v.all) U.engine.liveOff(tid, p); }, 650);
+  changed('코드 넣기 · ' + ch.name);
+  drawAll();
 }
 function toolsTab(body, c) {
   const gens = U.TOOLS.filter(t => t.kind === 'gen'), tfs = U.TOOLS.filter(t => t.kind === 'tf');
@@ -437,6 +501,15 @@ function drawGrid() {
       g.font = '9px ' + c.mono;
       g.textBaseline = 'middle';
       g.fillText(U.noteName(n.p), x + 3, y + R.rowH / 2 + 0.5);
+    }
+  }
+  // 코드 넣기: 다음 화음이 들어갈 자리
+  if (R.tab === 'chords' && R.chord.clipId === cl.id && !drums) {
+    const x = Math.round(xOf(R.chord.pos)) + 0.5;
+    if (x >= 0 && x <= W) {
+      g.fillStyle = c.accent;
+      g.fillRect(x - 1, 0, 2, H);
+      g.beginPath(); g.moveTo(x - 6, 0); g.lineTo(x + 6, 0); g.lineTo(x, 8); g.closePath(); g.fill();
     }
   }
   if (rubber) {
