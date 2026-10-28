@@ -1183,14 +1183,19 @@ class Engine {
     }
     return this.pv;
   }
-  previewDevice(dev, notes) {
+  /* fx: 사운드에 딸린 오디오 이펙트(앰프 · 리버브 …)도 거쳐서 들려준다 (트랙에 넣었을 때와 같은 소리로) */
+  previewDevice(dev, notes, fx) {
     const pv = this.previewTrack();
     this.stopPreview();
     const C = U.DEVICE_CLASSES[dev.kind];
     if (!C) return;
     const inst = new C(this, dev);
-    inst.out.connect(pv.out);
+    const chain = (fx || []).map(f => { const F = U.DEVICE_CLASSES[f.kind]; return F && U.DEV[f.kind] && U.DEV[f.kind].type === 'audio' ? new F(this, f) : null; }).filter(Boolean);
+    let at = inst.out;
+    for (const f of chain) { at.connect(f.input); at = f.output; }
+    at.connect(pv.out);
     pv.inst = inst;
+    pv.fx = chain;
     const t0 = this.ctx.currentTime + 0.05;
     return inst.ready.then(() => {
       if (pv.inst !== inst) return;
@@ -1215,6 +1220,8 @@ class Engine {
     if (!pv) return;
     const t = this.ctx.currentTime;
     if (pv.inst) { const i = pv.inst; i.cut(t, true); setTimeout(() => i.dispose(), 400); pv.inst = null; }
+    if (pv.fx && pv.fx.length) { const fx = pv.fx; setTimeout(() => fx.forEach(f => f.dispose()), 3000); }   // 잔향 꼬리가 끝난 뒤에
+    pv.fx = null;
     if (pv.src) { U.stopAt(pv.src, t); pv.src = null; }
   }
 

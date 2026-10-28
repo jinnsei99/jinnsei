@@ -90,9 +90,14 @@ function* pluck(c, f, vel, tone, dmul, body, sr, rnd) {
   const S = clamp(c.S + (0.5 - br) * (c.Sv || 0.2), 0.06, 0.5);
   const w0 = 2 * Math.PI * f / sr;
   const H = Math.sqrt((1 - S) * (1 - S) + S * S + 2 * S * (1 - S) * Math.cos(w0));
-  const rho = Math.min(0.99998, Math.pow(10, -3 / (T * f)) / H);
-  let N = Math.floor(P - S);
-  let d = P - S - N;
+  // loop: 고리 안의 1차 저역 통과(Hz). 낮은 음도 높은 배음이 진짜 줄처럼 빨리 사라진다 (베이스·팜 뮤트).
+  // 그 필터가 늦추는 만큼 지연을 줄이고, 줄이는 만큼 손실을 덜어 음정과 길이는 그대로 둔다
+  const lpA = c.loop ? Math.exp(-2 * Math.PI * c.loop / sr) : 0;
+  const Hl = lpA ? (1 - lpA) / Math.sqrt(1 - 2 * lpA * Math.cos(w0) + lpA * lpA) : 1;
+  const Dl = lpA ? Math.atan2(lpA * Math.sin(w0), 1 - lpA * Math.cos(w0)) / w0 : 0;
+  const rho = Math.min(0.99998, Math.pow(10, -3 / (T * f)) / (H * Hl));
+  let N = Math.floor(P - S - Dl);
+  let d = P - S - Dl - N;
   if (d < 0.15) { N -= 1; d += 1; }
   N = Math.max(2, N);
   const C = (1 - d) / (1 + d);
@@ -113,12 +118,13 @@ function* pluck(c, f, vel, tone, dmul, body, sr, rnd) {
   for (let i = 0; i < N; i++) mean += buf[i];
   mean /= N;
   for (let i = 0; i < N; i++) buf[i] -= mean;
-  let ptr = 0, prev = 0, apx = 0, apy = 0;
+  let ptr = 0, prev = 0, apx = 0, apy = 0, lz = 0;
   for (let i = 0; i < n; i++) {
     const y = buf[ptr];
     out[i] = y;
-    const l = (1 - S) * y + S * prev;
+    let l = (1 - S) * y + S * prev;
     prev = y;
+    if (lpA) { lz = (1 - lpA) * l + lpA * lz; l = lz; }
     const a = C * l + apx - C * apy;
     apx = l; apy = a;
     buf[ptr] = rho * a;
@@ -127,9 +133,26 @@ function* pluck(c, f, vel, tone, dmul, body, sr, rnd) {
   }
   yield;
   let x = dcBlock(out);
+  if (c.diff) { // 자석 픽업은 줄의 자리가 아니라 움직이는 빠르기를 듣는다 (높은 배음일수록 조금씩 크게)
+    for (let i = x.length - 1; i > 0; i--) x[i] -= x[i - 1];
+    x[0] = 0;
+  }
   if (c.pickup) { // 일렉 기타 픽업: 줄의 한 점에서 듣는 빗살 필터
     const k = Math.max(1, Math.round(c.pickup * P));
-    for (let i = x.length - 1; i >= k; i--) x[i] -= 0.85 * x[i - k];
+    if (c.coil2) { // 험버커: 나란한 코일 두 개가 조금 다른 두 점에서 듣는다 (빗살이 무뎌져 소리가 굵고 둥글다)
+      const k2 = Math.max(1, Math.round(c.coil2 * P));
+      for (let i = x.length - 1; i >= Math.max(k, k2); i--) x[i] -= 0.425 * (x[i - k] + x[i - k2]);
+    } else for (let i = x.length - 1; i >= k; i--) x[i] -= 0.85 * x[i - k];
+  }
+  if (c.pu) { // 픽업 코일과 기타 줄(케이블)이 만드는 공진: 그 위는 급히 줄고 공진 자리가 살짝 솟는다. Tone을 올리면 공진이 올라간다
+    const f0 = Math.min(sr * 0.45, c.pu[0] * (0.75 + 0.5 * tone)), w = 2 * Math.PI * f0 / sr, al = Math.sin(w) / (2 * c.pu[1]);
+    const a0 = 1 + al, b0 = (1 - Math.cos(w)) / 2 / a0, b1 = (1 - Math.cos(w)) / a0, a1 = -2 * Math.cos(w) / a0, a2 = (1 - al) / a0;
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (let i = 0; i < x.length; i++) {
+      const y = b0 * x[i] + b1 * x1 + b0 * x2 - a1 * y1 - a2 * y2;
+      x2 = x1; x1 = x[i]; y2 = y1; y1 = y;
+      x[i] = y;
+    }
   }
   if (c.thump) noiseBurst(x, sr, c.thump[0] * (0.4 + 0.6 * vel), c.thump[1], c.thump[2], rnd); // 손가락이 줄을 지판에 부딪는 '퉁'
   x = addBody(x, sr, c.body, body);
@@ -251,9 +274,9 @@ const AC = {
   upright:  { fn: piano, t60: 4.8, max: 5, B: 1.2e-4, partials: 18, strike: 1 / 7.5, hdecay: 0.09, beat: 3, detune: 2.4, bright: 0.72, thump: 1.4, body: [[160, 1.5, 0.3], [520, 1.6, 0.18]], damp: true, rel: 0.14, spread: 0.3, demo: 60, range: [48, 72] },
   nylon:    { fn: pluck, t60: 2.6, ts: 0.45, max: 5, S: 0.42, Sv: 0.25, exc: 0.62, pick: 0.2, body: GTR_BODY, damp: true, rel: 0.12, spread: 0.15, demo: 55, range: [40, 69] },
   steel:    { fn: pluck, t60: 3.2, ts: 0.45, max: 6, S: 0.28, Sv: 0.25, exc: 0.38, pick: 0.13, body: GTR_BODY, damp: true, rel: 0.12, spread: 0.15, demo: 55, range: [40, 69] },
-  electric: { fn: pluck, t60: 4.2, ts: 0.4, max: 6, S: 0.24, Sv: 0.25, exc: 0.42, pick: 0.15, pickup: 0.23, damp: true, rel: 0.1, spread: 0, demo: 57, range: [40, 72] },
+  electric: { fn: pluck, t60: 4.2, ts: 0.4, max: 4, S: 0.24, Sv: 0.25, exc: 0.42, pick: 0.15, tri: 0.9, diff: true, pickup: 0.23, pu: [3200, 1.4], damp: true, rel: 0.1, spread: 0, demo: 57, range: [40, 72] },
   mute:     { fn: pluck, t60: 0.22, ts: 0.25, max: 1, S: 0.48, Sv: 0.1, exc: 0.55, pick: 0.13, body: GTR_BODY, damp: true, rel: 0.05, spread: 0, demo: 52, range: [40, 64] },
-  bass:     { fn: pluck, low: true, lvl: 6, t60: 3.6, ts: 0.3, max: 6, S: 0.4, Sv: 0.2, exc: 0.7, pick: 0.17, body: [[60, 1.5, 0.3]], damp: true, rel: 0.09, spread: 0, demo: 40, range: [28, 52] },
+  bass:     { fn: pluck, low: true, lvl: 6, t60: 3.6, ts: 0.3, max: 5, S: 0.4, Sv: 0.2, exc: 0.7, pick: 0.17, tri: 0.9, diff: true, pu: [1800, 0.8], loop: 2500, body: [[60, 1.5, 0.3]], damp: true, rel: 0.09, spread: 0, demo: 40, range: [28, 52] },
   harp:     { fn: pluck, t60: 5, ts: 0.5, max: 7, S: 0.4, Sv: 0.2, exc: 0.8, pick: 0.5, body: [[180, 1.6, 0.35], [520, 2, 0.15]], damp: false, rel: 0.5, spread: 0.5, demo: 60, range: [43, 79] },
   gayageum: { fn: pluck, lvl: 2, t60: 2.4, ts: 0.4, max: 5, S: 0.32, Sv: 0.25, exc: 0.5, pick: 0.24, body: [[150, 1.5, 0.4], [390, 2.2, 0.25], [1200, 2, 0.1]], vibr: [0.32, 5.2, 18, 6], damp: false, rel: 0.4, spread: 0.3, demo: 62, range: [50, 74] },
   pizz:     { fn: pluck, t60: 0.55, ts: 0.35, max: 1.6, S: 0.47, Sv: 0.1, exc: 0.7, pick: 0.28, body: [[280, 3, 0.5], [460, 3, 0.3], [1100, 2.5, 0.25], [2900, 2, 0.12]], damp: false, rel: 0.2, spread: 0.3, demo: 60, range: [43, 76] },
@@ -269,12 +292,26 @@ const AC = {
   rhodes:   { fn: epiano, t60: 6, ts: 0.6, max: 6, modes: [[1, 1, 1], [7.1, 0.17, 0.035], [20.2, 0.05, 0.012]], hx: 1.5, drive: 1.3, bias: 0.55, click: [0.025, 0.005, 0.85], lp: 6500, body: [[190, 1, 0.18]], damp: true, rel: 0.2, spread: 0.35, demo: 60, range: [41, 77] },
   wurli:    { fn: epiano, pickup: 'cap', t60: 3.4, ts: 0.6, max: 4.5, modes: [[1, 1, 1], [6.5, 0.11, 0.05]], hx: 1.4, drive: 2.4, bias: 0.35, click: [0.03, 0.004, 0.75], lp: 5200, body: [[340, 1, 0.2]], damp: true, rel: 0.12, spread: 0.3, demo: 60, range: [41, 77] },
   dbass:    { fn: pluck, low: true, lvl: 6, t60: 1.9, ts: 0.3, max: 4, S: 0.45, Sv: 0.15, exc: 0.95, pick: 0.22, tri: 0.8, thump: [0.5, 0.03, 0.93], body: [[62, 1.6, 0.45], [118, 2.2, 0.35], [240, 2.5, 0.18]], drop: 14, damp: true, rel: 0.12, spread: 0, demo: 40, range: [28, 55] },
-  jazzgtr:  { fn: pluck, t60: 2.4, ts: 0.4, max: 5, S: 0.46, Sv: 0.15, exc: 0.9, pick: 0.2, tri: 0.6, pickup: 0.26, body: [[105, 2, 0.25], [210, 2.5, 0.2], [420, 3, 0.1]], damp: true, rel: 0.12, spread: 0, demo: 55, range: [40, 72] }
+  jazzgtr:  { fn: pluck, t60: 2.4, ts: 0.4, max: 5, S: 0.46, Sv: 0.15, exc: 0.9, pick: 0.2, tri: 0.6, pickup: 0.26, body: [[105, 2, 0.25], [210, 2.5, 0.2], [420, 3, 0.1]], damp: true, rel: 0.12, spread: 0, demo: 55, range: [40, 72] },
+  /* 일렉 기타 (앰프에 넣어 쓰는 소리): 통이 없어 울림이 길고, 픽업 자리와 코일 공진이 소리 색을 정한다.
+     tri: 피크로 튕긴 줄 모양(삼각형) · diff: 자석 픽업은 줄의 빠르기를 듣는다 · coil2: 험버커의 둘째 코일 자리 ·
+     pu: 픽업 공진 [Hz, Q] (싱글은 높고 뾰족, 험버커는 낮고 둥글게) · loop: 높은 배음이 빨리 사라지게 (베이스·팜 뮤트) */
+  strat:    { fn: pluck, t60: 4.4, ts: 0.4, max: 4, S: 0.22, Sv: 0.22, exc: 0.42, pick: 0.12, tri: 0.95, diff: true, pickup: 0.14, pu: [4200, 1.8], damp: true, rel: 0.1, spread: 0, demo: 57, range: [40, 71] },
+  humbucker:{ fn: pluck, t60: 4.6, ts: 0.4, max: 4, S: 0.26, Sv: 0.22, exc: 0.42, pick: 0.13, tri: 0.95, diff: true, pickup: 0.15, coil2: 0.18, pu: [3000, 1.5], riff: 'power', damp: true, rel: 0.1, spread: 0, demo: 52, range: [40, 71] },
+  /* 팜 뮤트: 손날로 줄 끝을 눌러 짧고 둔하게 끊기는 소리 (메탈·펑크 리프의 '징징') */
+  palm:     { fn: pluck, t60: 0.34, ts: 0.15, max: 1.2, S: 0.45, Sv: 0.1, exc: 0.5, pick: 0.12, tri: 0.85, diff: true, loop: 1200, pickup: 0.15, coil2: 0.18, pu: [2600, 1.2], thump: [0.25, 0.012, 0.85], riff: 'palm', damp: true, rel: 0.05, spread: 0, demo: 40, range: [38, 64] },
+  /* 리드 기타: 넥 쪽 험버커에 길게 끌면 손가락 비브라토가 들어간다 */
+  egtr_lead:{ fn: pluck, t60: 5, ts: 0.35, max: 4.5, S: 0.24, Sv: 0.22, exc: 0.4, pick: 0.14, tri: 0.95, diff: true, pickup: 0.2, coil2: 0.23, pu: [2800, 1.5], vibr: [0.32, 5.6, 22, 0], solo: true, damp: true, rel: 0.12, spread: 0, demo: 69, range: [52, 84] },
+  /* 피크 베이스: 피크로 쳐서 어택이 또렷하고 가운데가 그르렁거린다 */
+  pickbass: { fn: pluck, low: true, lvl: 6, t60: 3.2, ts: 0.3, max: 4, S: 0.32, Sv: 0.2, exc: 0.55, pick: 0.13, tri: 0.8, diff: true, loop: 3500, pickup: 0.2, coil2: 0.24, pu: [2400, 1], damp: true, rel: 0.08, spread: 0, demo: 40, range: [28, 52] }
 };
 
 /* 계산한 소리 보관: 오래 안 쓴 것부터 버린다 */
 const CACHE = new Map();
-let cacheSamples = 0;
+let cacheSamples = 0, evicted = 0;
+const pwBusy = new Set();   // 미리 계산하고 있는 악기들
+const missed = [];
+let missCount = 0;
 const CACHE_CAP = 12e6;   // 약 48 MB
 const REF = new Map();    // 종류별 크기 맞춤 배율
 const qz = v => Math.round(v * 20) / 20;
@@ -293,6 +330,7 @@ function cachePut(key, buf) {
     if (k === key) continue;
     CACHE.delete(k);
     cacheSamples -= b.length;
+    evicted++;
   }
 }
 const VB = [0.4, 0.7, 0.95];  // 세기 칸: 여리게 · 보통 · 세게
@@ -354,6 +392,9 @@ class Acoustic extends U.Instrument {
     if (ab) return ab;
     const job = this.pw.job;
     if (job && job.key === sp.key) { this.pw.job = null; return this.store(sp, runAll(job.gen)); }
+    missed.push(sp.key);   // 미리 계산하지 못해 칠 때 계산한 음 (테스트에서 본다)
+    if (missed.length > 50) missed.shift();
+    missCount++;
     return this.store(sp, renderNote(...sp.a));
   }
   store(sp, x) {
@@ -406,6 +447,7 @@ class Acoustic extends U.Instrument {
   prewarmSoon() {
     if (this.eng.offline) return;
     clearTimeout(this.pw.timer);
+    pwBusy.add(this);
     this.pw.timer = setTimeout(() => this.prewarm(), 300);
   }
   prewarm() {
@@ -417,9 +459,11 @@ class Acoustic extends U.Instrument {
       for (const cl of tr.slots) if (cl && cl.notes) cl.notes.forEach(add);
       for (const a of tr.arr) if (a.clip && a.clip.notes) a.clip.notes.forEach(add);
     }
+    // 가운데 음역은 클립에 쓰인 음 다음에, 보관함이 넉넉할 때만 (여러 트랙이 함께 쓰므로 클립 음을 밀어내지 않게)
     const [lo, hi] = this.cfg().range || [48, 72];
-    for (let p = lo; p <= hi && want.size < 120; p++) want.add(p + '|2');
-    this.pw.list = [...want];
+    const list = [...want];
+    for (let p = lo; p <= hi && list.length < 120; p++) if (!want.has(p + '|2')) list.push(p + '|2|r');
+    this.pw.list = list;
     this.pwStep();
   }
   /* 한 번에 6ms쯤만 계산하고 쉰다. 긴 음도 배음·조각 단위로 나눠 계산해서 화면과 재생 예약이 밀리지 않는다 */
@@ -431,19 +475,20 @@ class Acoustic extends U.Instrument {
         if (!REF.has(inst + '|' + sr)) pw.job = { gen: refGen(inst, sr) };   // 크기 맞춤 배율부터
         else {
           if (!pw.list.length) break;
-          const [p, b] = pw.list.shift().split('|').map(Number);
-          if (p < 12 || p > 115) continue;
+          const it = pw.list.shift().split('|'), p = +it[0], b = +it[1];
+          if (p < 12 || p > 115 || (it[2] && cacheSamples > CACHE_CAP * 0.6)) continue;
           const sp = this.noteSpec(p, b);
-          if (CACHE.has(sp.key)) continue;
+          if (cacheGet(sp.key)) continue;   // 이미 있으면 방금 쓴 것으로 표시만 (다른 음을 계산하는 동안 밀려나지 않게)
           pw.job = { key: sp.key, sp, gen: noteGen(...sp.a) };
         }
       }
       const r = pw.job.gen.next();
       if (r.done) { const job = pw.job; pw.job = null; if (job.sp) this.store(job.sp, r.value); }
     }
-    if (pw.list.length || pw.job) pw.timer = setTimeout(() => this.pwStep(), 20);
+    if (pw.list.length || pw.job) { pwBusy.add(this); pw.timer = setTimeout(() => this.pwStep(), 20); }
+    else pwBusy.delete(this);
   }
-  dispose() { clearTimeout(this.pw.timer); this.pw.list = []; this.pw.job = null; super.dispose(); }
+  dispose() { clearTimeout(this.pw.timer); this.pw.list = []; this.pw.job = null; pwBusy.delete(this); super.dispose(); }
 }
 
 /* ================= 앙상블 (실시간) =================
@@ -618,6 +663,6 @@ class Ensemble extends U.Instrument {
 /* 악기 종류의 설정 (미리 듣기 음역 등): demo 대표 음 · low 베이스 줄 · solo 혼자 부는 악기 */
 U.instMeta = (kind, inst) => kind === 'acoustic' ? AC[inst] || AC.grand : kind === 'ensemble' ? EN[inst] || EN.strings : null;
 U.instDemo = (kind, inst) => (U.instMeta(kind, inst) || {}).demo || 60;
-U.acousticDSP = { render: renderNote, AC, EN, cacheSize: () => cacheSamples };
+U.acousticDSP = { render: renderNote, AC, EN, cacheSize: () => cacheSamples, evictions: () => evicted, cacheCap: CACHE_CAP, busy: () => pwBusy.size, missed: () => missed.slice(), misses: () => missCount };
 U.DEVICE_CLASSES = Object.assign(U.DEVICE_CLASSES || {}, { acoustic: Acoustic, ensemble: Ensemble });
 })(window.U = window.U || {});

@@ -275,6 +275,21 @@ const VIS = {
     }
     return { el, draw: () => { for (const [b, id] of btns) b.setAttribute('aria-pressed', d.p.inst === id ? 'true' : 'false'); } };
   },
+  /* 앰프 모델 고르기: 누르면 바로 바꾼다 */
+  amp(t, d) {
+    const el = h('div', { class: 'amp-models', role: 'group', 'aria-label': '앰프 모델' });
+    const btns = U.DEV[d.kind].models.map(([id, label, tip]) => {
+      const b = h('button', { type: 'button', class: 'inst-b amp-m', text: label, 'aria-pressed': d.p.model === id ? 'true' : 'false' });
+      info(b, label + ' 앰프', tip);
+      b.addEventListener('click', () => {
+        for (const [x, xid] of btns) x.setAttribute('aria-pressed', xid === id ? 'true' : 'false');
+        if (d.p.model !== id) A.setParam(d.id, 'model', id, true);
+      });
+      el.append(b);
+      return [b, id];
+    });
+    return { el, draw: () => { for (const [b, id] of btns) b.setAttribute('aria-pressed', d.p.model === id ? 'true' : 'false'); } };
+  },
   adsr(t, d, pre) {
     pre = pre || '';
     const cv = canvasBox(150, 58);
