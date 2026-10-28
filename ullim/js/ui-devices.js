@@ -24,9 +24,18 @@ function audition(t, p) {
   e.liveOn(t.id, p, 100, true);
   setTimeout(() => e.liveOff(t.id, p), 650);
 }
+/* 넘겨 들어 보는 중이라 '최근 쓴 소리'에는 창을 닫을 때 남은 소리만 남긴다 */
 function chooseSound(t, s) {
-  A.loadSound(t.id, s);
+  A.loadSound(t.id, s, { browse: true });
   audition(t, demoPitch(s));
+}
+const curSound = t => {
+  const tr = U.trackById(pr(), t.id), d = tr && U.instrumentOf(tr);
+  return d ? U.allSounds().find(s => isCurSound(d, s)) || null : null;
+};
+/* 소리 단추의 메뉴: 즐겨찾기 넣고 빼기 (+ 내 사운드는 이름 바꾸기·지우기) */
+function soundMenu(s, at) {
+  U.menu([{ header: s.name }, U.favs.menuItem(s)].concat(s.user ? [{ sep: true }, ...U.mySoundItems(s)] : []), at);
 }
 /* 묶음별 버튼 창. 누르면 바로 바꾸고 한 음 들려준다. 닫을 때까지 열려 있어 여러 소리를 이어서 들어 볼 수 있다 */
 function soundPanel(t) {
@@ -52,29 +61,50 @@ function soundPanel(t) {
     const save = btn({ icon: 'plus', text: '지금 소리를 내 사운드로 저장', cls: 'sm', onclick: () => U.saveMySound(U.trackById(pr(), t.id) || t) });
     const openAll = btn({ text: '모두 펴기', cls: 'ghost sm', info: ['모두 펴기', '모든 묶음을 펼쳐요.'], onclick: () => rows.forEach(r => setShut(r, false, true)) });
     const shutAll = btn({ text: '모두 접기', cls: 'ghost sm', info: ['모두 접기', '모든 묶음을 접어서 묶음 이름만 보여요.'], onclick: () => rows.forEach(r => setShut(r, true, true)) });
-    body.append(h('div', { class: 'snd-top' }, save, openAll, shutAll, h('span', { class: 'hint', text: U.mySounds.list().length ? '내 사운드는 길게 누르거나 오른쪽 클릭으로 이름을 바꾸고 지워요.' : '악기를 다듬은 뒤 저장하면 맨 위 \'내 사운드\'에 모여요.' })));
-    for (const [g, list] of pickGroups()) {
+    body.append(h('div', { class: 'snd-top' }, save, openAll, shutAll, h('span', { class: 'hint', text: '소리를 길게 누르거나 오른쪽 클릭하면 ★ 즐겨찾기에 넣어요.' + (U.mySounds.list().length ? ' 내 사운드는 거기서 이름을 바꾸고 지워요.' : '') })));
+    // 맨 위에 ★ 즐겨찾기와 최근 쓴 소리 (처음엔 펼쳐 둔다)
+    const special = U.favs.topGroups();
+    const opens = ['내 사운드'].concat(special.map(x => x[0]));
+    for (const [g, list] of special.concat(pickGroups())) {
       const bs = h('div', { class: 'insts-bs' });
       for (const s of list) {
-        const b = h('button', { type: 'button', class: 'inst-b' + (s.user ? ' mine' : ''), text: s.name, title: U.DEV[s.kind].name });
+        const b = h('button', { type: 'button', class: 'inst-b' + (s.user ? ' mine' : '') + (U.favs.isFav(s) ? ' fav' : ''), text: s.name, title: U.DEV[s.kind].name });
         b.addEventListener('click', () => { chooseSound(t, s); mark(); });
-        if (s.user) b.addEventListener('contextmenu', e => { e.preventDefault(); U.mySoundMenu(s, { x: e.clientX, y: e.clientY }); });
+        b.addEventListener('contextmenu', e => { e.preventDefault(); soundMenu(s, { x: e.clientX, y: e.clientY }); });
         btns.push([b, s]);
         bs.append(b);
       }
       const lab = h('button', { type: 'button', class: 'insts-g fold', dataset: { n: list.length }, text: g });
-      const r = { g, lab, row: h('div', { class: 'insts-row' }, lab, bs) };
+      const r = { g, lab, row: h('div', { class: 'insts-row' + (special.some(x => x[0] === g) ? ' special' : ''), dataset: { g } }, lab, bs) };
       info(lab, g + ' · ' + list.length + '개', '눌러서 열고 닫아요. Alt를 누른 채 누르면 모든 묶음을 한꺼번에 열고 닫아요.');
       lab.addEventListener('click', e => { const shut = !r.row.classList.contains('shut'); for (const x of e.altKey ? rows : [r]) setShut(x, shut, true); });
-      setShut(r, list.some(s => isCurSound(cur, s)) ? false : SF[g] != null ? SF[g] : g !== '내 사운드', false);
+      setShut(r, list.some(s => isCurSound(cur, s)) ? false : SF[g] != null ? SF[g] : !opens.includes(g), false);
       rows.push(r);
       body.append(r.row);
     }
     mark();
   };
   fill();
-  const off = U.on('sounds', fill);
-  const dlg = U.dialog({ title: '소리 고르기 · ' + U.trackLabel(pr(), t), body, width: '760px', onclose: off });
+  // 즐겨찾기를 바꾸면 다시 채우되, 보고 있던 묶음이 제자리에 있게 한다
+  const refill = () => {
+    const box = body.parentElement, top = box ? box.getBoundingClientRect().top : 0;
+    const seen = [...body.querySelectorAll('.insts-row')].find(r => r.getBoundingClientRect().bottom > top + 1);
+    const g = seen && seen.dataset.g, off = seen ? seen.getBoundingClientRect().top - top : 0;
+    fill();
+    const again = g && [...body.querySelectorAll('.insts-row')].find(r => r.dataset.g === g);
+    if (box && again) box.scrollTop += again.getBoundingClientRect().top - top - off;
+  };
+  const offs = [U.on('sounds', fill), U.on('favs', inf => { if (inf && inf.fav) refill(); })];
+  const first = curSound(t);
+  const dlg = U.dialog({
+    title: '소리 고르기 · ' + U.trackLabel(pr(), t), body, width: '760px',
+    onclose: () => {
+      offs.forEach(f => f());
+      // 창을 열었을 때와 다른 소리로 끝났으면 그 소리를 '최근 쓴 소리'에
+      const last = curSound(t);
+      if (last && last !== first) U.favs.noteRecent(last);
+    }
+  });
   const on = btns.find(([b]) => b.getAttribute('aria-pressed') === 'true');
   if (on) on[0].scrollIntoView({ block: 'nearest' });
   return dlg;
@@ -82,12 +112,15 @@ function soundPanel(t) {
 function soundPicker(t) {
   const d = U.instrumentOf(t);
   const b = btn({ text: (d ? d.preset || U.devName(d) : '악기 없음') + ' ▾', cls: 'sm snd-pick', title: '소리 고르기', info: ['소리 고르기', '이 트랙의 악기 소리를 바꿔요. 창에서 누를 때마다 바뀌고 한 음 들려줘요. ◀ ▶로 하나씩 넘길 수도 있어요. 되돌리기로 돌아가요.'], onclick: () => soundPanel(t) });
+  // ◀ ▶로 넘기다 멈춘 소리는 조금 뒤에 '최근 쓴 소리'에 남긴다
+  const keep = U.debounce(() => U.favs.noteRecent(curSound(t)), 4000);
   const step = k => {
     const list = pickGroups().flatMap(([, l]) => l);
     const tr = U.trackById(pr(), t.id), cur = tr && U.instrumentOf(tr);
     let i = list.findIndex(s => isCurSound(cur, s));
     if (i < 0 && cur) i = list.findIndex(s => s.name === cur.preset);
     chooseSound(t, list[i < 0 ? (k > 0 ? 0 : list.length - 1) : (i + k + list.length) % list.length]);
+    keep();
   };
   const prev = btn({ text: '◀', cls: 'sm snd-step', title: '앞 소리', onclick: () => step(-1) });
   const next = btn({ text: '▶', cls: 'sm snd-step', title: '다음 소리', onclick: () => step(1) });

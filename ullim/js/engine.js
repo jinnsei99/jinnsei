@@ -175,6 +175,11 @@ class Engine {
     if (!opts.noOutput) this.out.connect(ctx.destination);
     this.metroOut = gainNode(ctx, 0.6);
     if (!this.offline) this.metroOut.connect(ctx.destination);
+    // 카운트인은 메트로놈을 꺼 두어도 들리게 따로 낸다
+    this.countOut = gainNode(ctx, 0.6);
+    if (!this.offline) this.countOut.connect(ctx.destination);
+    this.counting = null;
+    this.nextStartT = null;
     this.playing = false;
     this.bpm = 120;
     this.anchorT = 0;
@@ -318,11 +323,14 @@ class Engine {
   }
 
   /* ---------- 트랜스포트 ---------- */
-  play(from) {
+  /* at: 재생을 시작할 시각 (카운트인이 끝나는 박). 없으면 바로 */
+  play(from, at) {
     const pr = this.project;
+    if (this.counting) this.cancelCountIn();
     if (this.playing) this.stop(true);
     if (from == null) from = pr.pos || 0;
-    const t = this.ctx.currentTime + 0.06;
+    if (at == null) at = this.nextStartT;
+    const t = at != null && at > this.ctx.currentTime + 0.01 ? at : this.ctx.currentTime + 0.06;
     this.anchorT = t;
     this.anchorB = from;
     this.schedB = from;
@@ -355,9 +363,12 @@ class Engine {
     this.emit('transport');
     this.emit('clips');
   }
-  /* 지금 박 + 퀀타이즈 경계 */
+  /* 지금 박 + 퀀타이즈 경계. 재생이 조금 뒤에 시작하도록 예약돼 있으면 시작 박부터 */
   nextBoundary(q, b) {
-    if (b == null) b = this.beatAt(this.ctx.currentTime + 0.005);
+    if (b == null) {
+      b = this.beatAt(this.ctx.currentTime + 0.005);
+      if (this.playing && b < this.startB) b = this.startB;
+    }
     if (!q) return b;
     return Math.ceil(b / q - 1e-6) * q;
   }
@@ -602,6 +613,14 @@ class Engine {
     const ctx = this.ctx;
     if (!this.project || ctx.state !== 'running') return;
     const now = ctx.currentTime;
+    // 카운트인이 끝나 가면 그 끝 박에 맞춰 재생·녹음을 예약한다
+    // (재생을 먼저 예약하고 알린다: 멈춘 채로 알리면 세는 동안 켜 둔 마이크가 꺼진다)
+    const ci = this.counting;
+    if (ci && now + LOOKAHEAD + 0.03 >= ci.tEnd) {
+      this.counting = null;
+      ci.go(ci.tEnd);
+      this.emit('transport');
+    }
     if (this.playing) {
       if (this.timeAt(this.schedB) < now) this.lastLateness = now - this.timeAt(this.schedB);
       const b1 = this.beatAt(now + LOOKAHEAD);
@@ -938,16 +957,54 @@ class Engine {
       this.click(t, accent);
     }
   }
-  click(t, accent) {
+  click(t, accent, out) {
     const ctx = this.ctx;
     const o = ctx.createOscillator();
     const g = gainNode(ctx, 0);
     o.frequency.value = accent ? 1760 : 1180;
-    o.connect(g); g.connect(this.metroOut);
+    o.connect(g); g.connect(out || this.metroOut);
     g.gain.setValueAtTime(0, t);
     g.gain.linearRampToValueAtTime(accent ? 0.9 : 0.55, t + 0.001);
     g.gain.setTargetAtTime(0, t + 0.002, 0.012);
     o.start(t); o.stop(t + 0.08);
+  }
+  /* ---------- 카운트인 ----------
+     멈춘 상태에서 녹음을 누르면 bars마디 동안 딸깍만 울리고, 끝나는 박에 go(그 시각)를 부른다.
+     mode: 'arr' | 'sess' (어느 녹음 버튼을 깜빡일지) */
+  startCountIn(bars, go, mode) {
+    this.cancelCountIn(true);
+    const ctx = this.ctx, sig = this.project.sig;
+    const unit = U.beatUnit(sig), bar = U.barLen(sig), spb = 60 / this.bpm;
+    const t0 = ctx.currentTime + 0.08;
+    const out = gainNode(ctx, 1);
+    out.connect(this.countOut);
+    for (let b = 0; b < bars * bar - 1e-9; b += unit) this.click(t0 + b * spb, Math.abs(b / bar - Math.round(b / bar)) < 1e-6, out);
+    this.counting = { t0, tEnd: t0 + bars * bar * spb, bars, bar, unit, bpm: this.bpm, mode: mode || 'arr', go, out };
+    // 다 울린 뒤에 떼어 낸다
+    setTimeout(() => out.disconnect(), (bars * bar * spb + 0.5) * 1000);
+    this.emit('transport');
+  }
+  /* 세던 것을 그만둔다. 이미 예약한 딸깍도 바로 끈다 */
+  cancelCountIn(quiet) {
+    const c = this.counting;
+    if (!c) return false;
+    this.counting = null;
+    c.out.disconnect();
+    if (!quiet) this.emit('transport');
+    return true;
+  }
+  /* fn 안에서 시작하는 재생은 at에 시작한다 (세션 녹음은 클립을 띄우면서 재생을 시작하므로) */
+  withStart(at, fn) {
+    this.nextStartT = at;
+    try { fn(); } finally { this.nextStartT = null; }
+  }
+  /* 지금 들리는 카운트: 몇째 마디의 몇째 박인지 */
+  countState() {
+    const c = this.counting;
+    if (!c) return null;
+    const total = c.bars * c.bar;
+    const el = Math.min(total - 1e-6, Math.max(0, (this.ctx.currentTime - this.latency() - c.t0) * c.bpm / 60));
+    return { mode: c.mode, bars: c.bars, bar: Math.floor(el / c.bar) + 1, beat: Math.floor((el % c.bar) / c.unit + 1e-6) + 1, beats: Math.round(c.bar / c.unit), left: total - el };
   }
 
   /* ---------- 녹음 ---------- */
@@ -990,13 +1047,14 @@ class Engine {
     }
     U.touch({ rec: true, clip: clip.id });
   }
-  setRecording(on) {
+  /* at: 멈춘 상태에서 시작할 때 재생을 시작할 시각 (카운트인이 끝나는 박) */
+  setRecording(on, at) {
     if (on === this.recording) return;
     if (!on) { this.finishRecording('arr'); this.recording = false; this.emit('transport'); return; }
     this.recording = true;
     // 멈춘 상태에서 시작하면 재생이 조금 뒤(앞당겨 예약)에 시작하니, 지금 시각이 아니라 시작 위치부터 녹음한다
     const was = this.playing;
-    if (!was) this.play(this.project.pos);
+    if (!was) this.play(this.project.pos, at);
     const from = Math.max(0, was ? this.beatAt(this.ctx.currentTime) : this.anchorB);
     for (const t of this.armedMidi()) {
       const n = this.nodes.get(t.id);

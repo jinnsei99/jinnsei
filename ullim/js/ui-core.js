@@ -445,7 +445,7 @@ function menu(items, at) {
       if (!it) continue;
       if (it.sep) { root.append(h('div', { class: 'm-sep' })); continue; }
       if (it.header) { root.append(h('div', { class: 'm-head', text: it.header })); continue; }
-      const row = h('button', { class: 'm-item' + (it.danger ? ' danger' : '') + (it.checked ? ' checked' : ''), type: 'button', role: 'menuitem', disabled: it.disabled || null });
+      const row = h('button', { class: 'm-item' + (it.danger ? ' danger' : '') + (it.checked ? ' checked' : '') + (it.cls ? ' ' + it.cls : ''), type: 'button', role: 'menuitem', disabled: it.disabled || null });
       row.append(h('span', { class: 'm-check', text: it.checked ? '✓' : '' }));
       if (it.swatch) row.append(h('span', { class: 'm-sw', style: { background: it.swatch } }));
       row.append(h('span', { class: 'm-label', text: it.label }));

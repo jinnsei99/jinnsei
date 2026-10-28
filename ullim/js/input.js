@@ -76,6 +76,7 @@ function onKeyDown(e) {
       case 'KeyZ': done(); e.shiftKey ? A.redo() : A.undo(); return;
       case 'KeyY': done(); A.redo(); return;
       case 'KeyS': done(); U.saveNow(); return;
+      case 'KeyK': done(); U.quick.open(); return;
       case 'KeyF': done(); if (!ui.browserOpen) U.toggleBrowser(true); U.browserView.focusSearch(); return;
       case 'KeyD': done(); duplicate(ctx, roll); return;
       case 'KeyE': done(); if (U.arrangeView.splitAtCursor()) U.toast('클립을 나눴어요'); return;
@@ -100,7 +101,7 @@ function onKeyDown(e) {
     case 'Tab': done(); if (e.shiftKey) U.toggleDetailKind(); else U.toggleSongView(); return;
     case 'F9': done(); A.setRecord(!U.engine.recording); return;
     case 'F2': done(); renameSel(); return;
-    case 'Escape': ui.arrSel = []; ui.timeSel = null; U.inval('arrange-draw'); return;
+    case 'Escape': if (A.cancelCountIn()) { done(); return; } ui.arrSel = []; ui.timeSel = null; U.inval('arrange-draw'); return;
     case 'Delete': case 'Backspace': done(); if (ui.mapMode && U.unmapTarget()) return; del(ctx, roll); return;
     case 'Enter': if (ctx === 'session' && ui.slot) { done(); U.ensureAudio(); U.engine.launch(ui.slot.t, ui.slot.s); } return;
     case '+': case '=': done(); U.arrangeView.zoomAt(1.4, U.arrangeView.width / 2); return;

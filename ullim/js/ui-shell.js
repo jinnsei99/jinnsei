@@ -219,14 +219,15 @@ function renderTop() {
   const name = h('button', { type: 'button', class: 'sh-proj', text: p.name || '이름 없는 프로젝트' });
   info(name, '프로젝트 이름', '눌러서 이름을 바꿔요.');
   name.addEventListener('click', () => U.ask('프로젝트 이름', '이름', p.name).then(v => { if (v) { pr().name = v; U.commit('프로젝트 이름'); } }));
-  const un = btn({ icon: 'undo', cls: 'ghost sh-round', title: '되돌리기 (' + U.MOD + '+Z)', onclick: () => A.undo() });
-  const re = btn({ icon: 'undo', cls: 'ghost sh-round st-redo', title: '다시 실행 (' + U.MOD + '+Shift+Z)', onclick: () => A.redo() });
+  // 되돌리기·다시 실행을 길게 누르거나 오른쪽 클릭하면 되돌리기 기록
+  const un = U.quick.bindHistory(btn({ icon: 'undo', cls: 'ghost sh-round', title: '되돌리기 (' + U.MOD + '+Z · 길게 누르면 기록)', onclick: () => A.undo() }));
+  const re = U.quick.bindHistory(btn({ icon: 'undo', cls: 'ghost sh-round st-redo', title: '다시 실행 (' + U.MOD + '+Shift+Z · 길게 누르면 기록)', onclick: () => A.redo() }));
   un.disabled = !U.canUndo();
   re.disabled = !U.canRedo();
   const menu = btn({ icon: 'menu', cls: 'ghost sh-round', title: '메뉴', onclick: () => U.appMenu(menu) });
   els.top.append(h('div', { class: 'sh-brand' }, logo, name),
     stepNav(STEPS, ui.step, n => setStep(n), 'b', '작업 단계'),
-    h('div', { class: 'sh-acts' }, un, re, menu));
+    h('div', { class: 'sh-acts' }, U.quick.button('sh-round'), un, re, menu));
 }
 /* B: 단계 제목과 안내, 단계 안의 고르기 */
 function renderWorkHead() {

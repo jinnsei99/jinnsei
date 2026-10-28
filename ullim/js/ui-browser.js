@@ -18,9 +18,10 @@ const CATS = [
   { id: 'projects', name: '프로젝트', icon: 'file', info: '저장된 프로젝트예요. 두 번 누르면 열어요.' }
 ];
 const st = { cat: U.pref('brCat', 'sounds'), q: '', preview: U.pref('preview', true), sel: null, items: [] };
-/* 묶음 열고 닫기: 사운드는 처음에 접혀 있고(내 사운드만 펼침), 다른 목록은 펼쳐 있다. 누른 대로 이 기기에 기억한다 */
+/* 묶음 열고 닫기: 사운드는 처음에 접혀 있고(내 사운드·즐겨찾기·최근 쓴 소리만 펼침), 다른 목록은 펼쳐 있다. 누른 대로 이 기기에 기억한다 */
 const FOLD = Object.assign({}, U.pref('brFold', {}));
-function folded(name) { const v = FOLD[st.cat + ':' + name]; return v != null ? v : st.cat === 'sounds' && name !== '내 사운드'; }
+const OPEN_FIRST = ['내 사운드', U.favs.FAV_G, U.favs.RECENT_G];
+function folded(name) { const v = FOLD[st.cat + ':' + name]; return v != null ? v : st.cat === 'sounds' && !OPEN_FIRST.includes(name); }
 function setFold(names, shut) {
   for (const n of names) FOLD[st.cat + ':' + n] = shut;
   U.setPref('brFold', Object.assign({}, FOLD));
@@ -80,13 +81,16 @@ function items() {
   const head = name => out.push({ head: name });
   switch (st.cat) {
     case 'sounds': {
-      for (const [tag, list] of U.soundGroups(U.allSounds())) {
-        head(tag);
+      // 맨 위에 ★ 즐겨찾기와 최근 쓴 소리 (찾을 때는 같은 소리가 두 번 나오지 않게 뺀다)
+      const top = U.favs.topGroups().map(([g, l]) => [g, l, true]);
+      for (const [tag, list, special] of top.concat(U.soundGroups(U.allSounds()))) {
+        out.push({ head: tag, special });
         for (const s of list) out.push({
-          label: s.name, sub: U.DEV[s.kind].name, icon: 'sound', find: s.tags.join(' '),
+          label: s.name, sub: U.DEV[s.kind].name + (special ? ' · ' + (s.user ? '내 사운드' : s.tags[0]) : ''), icon: 'sound', find: s.tags.join(' '), dup: special,
+          key: tag + '/' + U.favs.key(s), sound: s,
           drag: { type: 'sound', item: s }, load: () => A.loadSound(loadTarget('midi'), s),
           preview: () => previewDev(U.makeDevice(s.kind, { p: s.p, data: s.data }), s.user ? s.tags[1] || '' : s.tags[0]),
-          menu: s.user ? U.mySoundItems(s) : null
+          menu: [U.favs.menuItem(s)].concat(s.user ? U.mySoundItems(s) : [])
         });
       }
       break;
@@ -177,11 +181,13 @@ function renderList(keepScroll) {
   if (st.cat === 'user' && !st.userList) refreshUser();
   if (st.cat === 'projects' && !st.projList) refreshProjects();
   const sy = keepScroll ? listEl.scrollTop : 0;
+  // 위쪽 묶음(즐겨찾기 등)이 바뀌어도 보고 있던 줄이 제자리에 있게: 맨 위에 보이는 줄을 기억해 둔다
+  const anchor = keepScroll ? topRow() : null;
   U.clear(listEl);
   const q = st.q.toLowerCase();
   let all = items();
   // 이름·설명과 함께 묶음 이름(태그)으로도 찾는다: '재즈'로 재즈 힙합 소리를 모두 찾기. 찾을 때는 접힌 묶음도 다 보여 준다
-  if (q) all = all.filter(it => it.label && [it.label, it.sub, it.find].some(x => (x || '').toLowerCase().includes(q)));
+  if (q) all = all.filter(it => it.label && !it.dup && [it.label, it.sub, it.find].some(x => (x || '').toLowerCase().includes(q)));
   else {
     const out = [];
     let head = null;
@@ -201,14 +207,15 @@ function renderList(keepScroll) {
   }
   all.forEach((it, i) => {
     if (it.head) {
-      const hd = h('button', { type: 'button', class: 'br-head fold' + (it.shut ? ' shut' : ''), 'aria-expanded': it.shut ? 'false' : 'true', dataset: { n: it.n }, text: it.head });
+      const hd = h('button', { type: 'button', class: 'br-head fold' + (it.shut ? ' shut' : '') + (it.special ? ' special' : ''), 'aria-expanded': it.shut ? 'false' : 'true', dataset: { n: it.n, k: 'h/' + it.head }, text: it.head });
       info(hd, it.head + ' · ' + it.n + '개', (it.shut ? '눌러서 펼쳐요.' : '눌러서 접어요.') + ' Alt를 누른 채 누르면 모든 묶음을 한꺼번에 접고 펴요.');
       hd.addEventListener('click', e => setFold(e.altKey ? heads : [it.head], !it.shut));
       listEl.append(hd);
       return;
     }
     if (it.empty) { listEl.append(h('p', { class: 'br-empty', text: it.empty })); return; }
-    const row = h('div', { class: 'br-item' + (it.indent ? ' indent' : '') + (st.sel === i ? ' sel' : ''), role: 'option', dataset: { i } }, icon(it.icon || 'file'), h('span', { class: 'bi-l', text: it.label }), it.sub ? h('span', { class: 'bi-s', text: it.sub }) : null);
+    const row = h('div', { class: 'br-item' + (it.indent ? ' indent' : '') + (st.sel === i ? ' sel' : '') + (it.sound ? ' fav-row' : ''), role: 'option', dataset: { i, k: it.key || it.label + '/' + (it.sub || '') } }, icon(it.icon || 'file'), h('span', { class: 'bi-l', text: it.label }), it.sub ? h('span', { class: 'bi-s', text: it.sub }) : null);
+    if (it.sound) row.append(favStar(it.sound));
     info(row, it.label, (it.infoText || it.sub || '') + (it.load ? ' 두 번 누르거나 Enter로 넣고, 끌어서 원하는 곳에 놓아요.' : ''));
     row.addEventListener('pointerdown', e => {
       if (e.button !== 0) return;
@@ -225,7 +232,28 @@ function renderList(keepScroll) {
     });
     listEl.append(row);
   });
-  if (keepScroll) listEl.scrollTop = sy;
+  if (keepScroll) {
+    listEl.scrollTop = sy;
+    const el = anchor && listEl.querySelector('[data-k="' + CSS.escape(anchor.k) + '"]');
+    if (el) listEl.scrollTop += el.getBoundingClientRect().top - listEl.getBoundingClientRect().top - anchor.off;
+  }
+}
+function topRow() {
+  const top = listEl.getBoundingClientRect().top;
+  for (const el of listEl.querySelectorAll('[data-k]')) {
+    const r = el.getBoundingClientRect();
+    if (r.bottom > top + 1) return { k: el.dataset.k, off: r.top - top };
+  }
+  return null;
+}
+/* 소리 줄의 별: 누르면 즐겨찾기에 넣고 뺀다 (줄을 고르거나 끌지 않게 막는다) */
+function favStar(s) {
+  const on = U.favs.isFav(s);
+  const b = h('button', { type: 'button', class: 'bi-fav' + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false', 'aria-label': on ? '즐겨찾기에서 빼기' : '즐겨찾기에 넣기', title: on ? '즐겨찾기에서 빼기' : '즐겨찾기에 넣기', text: on ? '★' : '☆' });
+  b.addEventListener('pointerdown', e => e.stopPropagation());
+  b.addEventListener('dblclick', e => e.stopPropagation());
+  b.addEventListener('click', e => { e.stopPropagation(); U.favs.toggle(s); });
+  return b;
 }
 function select(i) {
   st.sel = i;
@@ -325,6 +353,7 @@ async function previewSample(ref) {
 }
 
 U.renderer('browser', () => { if (root) { st.userList = null; st.projList = null; renderList(); } });
+U.on('favs', () => { if (root && st.cat === 'sounds') renderList(true); });
 U.on('store', s => { if (s === 'saved' && st.cat === 'projects') refreshProjects(); });
 U.browserView = { build, importFiles, focusSearch: () => { if (searchEl) { searchEl.focus(); searchEl.select(); } } };
 })(window.U = window.U || {});

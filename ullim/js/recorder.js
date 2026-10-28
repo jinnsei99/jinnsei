@@ -15,8 +15,9 @@ async function getStream() {
   stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
   return stream;
 }
-/* mode: 'arr' (어레인지먼트) 또는 'sess' (세션 슬롯) */
-async function start(mode, slot) {
+/* mode: 'arr' (어레인지먼트) 또는 'sess' (세션 슬롯).
+   fromT: 카운트인이 끝나는 시각. 마이크는 세는 동안 미리 켜 두고, 그 앞부분은 버린다 */
+async function start(mode, slot, fromT) {
   const tracks = armedAudio();
   if (!tracks.length || cur) return false;
   if (!supported()) { U.toast('이 브라우저에서는 오디오를 녹음할 수 없어요.', 'error'); return false; }
@@ -28,11 +29,14 @@ async function start(mode, slot) {
     U.toast(window.claude ? 'Claude 안에서는 마이크를 쓸 수 없어요. 녹음한 파일을 끌어다 놓아 주세요.' : '마이크를 쓸 수 없어요. 브라우저의 마이크 권한을 확인해 주세요.', 'error');
     return false;
   }
+  // 마이크 허락을 기다리는 사이에 카운트인을 그만두었으면 켜지 않는다
+  if (fromT && !U.engine.counting && !U.engine.playing) { U.audioSession('playback'); return false; }
+  if (cur) return false;
   const rec = new MediaRecorder(s);
   const chunks = [];
   rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
   const e = U.engine;
-  cur = { rec, chunks, mode, slot, tracks: tracks.map(t => t.id), startT: null };
+  cur = { rec, chunks, mode, slot, tracks: tracks.map(t => t.id), startT: null, fromT: fromT || 0 };
   rec.onstart = () => { cur.startT = e.ctx.currentTime; };
   rec.start();
   U.inval('session');
@@ -46,21 +50,23 @@ async function stop() {
   const endT = e.ctx.currentTime;
   await new Promise(res => { c.rec.onstop = res; c.rec.stop(); });
   U.audioSession('playback');
-  if (!c.chunks.length || c.startT == null) return;
+  // 카운트인 도중에 그만두었으면 남길 것이 없다
+  const t0 = Math.max(c.startT == null ? Infinity : c.startT, c.fromT);
+  if (!c.chunks.length || c.startT == null || endT <= t0) return;
   let buf;
   try {
     const bytes = await new Blob(c.chunks, { type: c.chunks[0].type }).arrayBuffer();
     buf = await U.media.decode(bytes, e.ctx.sampleRate);
   } catch (err) { U.toast('녹음한 소리를 읽지 못했어요.', 'error'); return; }
-  // 입력·출력 지연만큼 앞을 잘라 박자에 맞춘다
-  const lat = e.latency() + 0.01;
+  // 입력·출력 지연(과 카운트인 동안 담긴 앞부분)만큼 앞을 잘라 박자에 맞춘다
+  const lat = e.latency() + 0.01 + (t0 - c.startT);
   const skip = Math.min(buf.length - 1, Math.floor(lat * buf.sampleRate));
   const trimmed = new AudioBuffer({ length: Math.max(1, buf.length - skip), numberOfChannels: buf.numberOfChannels, sampleRate: buf.sampleRate });
   for (let ch = 0; ch < buf.numberOfChannels; ch++) trimmed.copyToChannel(buf.getChannelData(ch).subarray(skip), ch);
   const bpm = pr().bpm;
   const name = '녹음 ' + new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
   const ref = await U.media.addBuffer(trimmed, name, bpm);
-  const startB = e.beatAt(c.startT);
+  const startB = e.beatAt(t0);
   const bar = U.barLen(pr().sig);
   for (const id of c.tracks) {
     const t = U.trackById(pr(), id);
@@ -69,7 +75,7 @@ async function stop() {
     clip.warp = true;
     clip.mode = 'tones';
     if (c.mode === 'sess') {
-      const len = Math.max(bar, Math.round((endT - c.startT) * bpm / 60 / bar) * bar);
+      const len = Math.max(bar, Math.round((endT - t0) * bpm / 60 / bar) * bar);
       clip.end = len;
       clip.loop = { on: true, start: 0, end: len };
       let slot = c.slot != null ? c.slot : t.slots.findIndex(x => !x);
