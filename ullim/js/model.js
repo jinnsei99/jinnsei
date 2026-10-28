@@ -240,6 +240,14 @@ function redo() {
 }
 function canUndo() { return H.i > 0; }
 function canRedo() { return H.i < H.stack.length - 1; }
+/* 되돌리기 기록: 상태마다 그 상태를 만든 편집 이름(0번은 '열기')과 지금 자리 */
+function history() { return { labels: H.labels.slice(), i: H.i }; }
+/* 기록의 아무 자리로 한 번에 간다 (그 뒤의 기록은 남아 있어 다시 실행으로 돌아올 수 있다) */
+function goHistory(i) {
+  if (!(i >= 0 && i < H.stack.length) || i === H.i) return false;
+  restore(i);
+  return true;
+}
 function setProject(pr) {
   U.project = normalize(pr);
   resetHistory();
@@ -252,6 +260,6 @@ Object.assign(U, {
   addTrack, addReturn, removeReturn, newProject, normalize, fixClip,
   allTracks, trackById, deviceById, isPlayable, instrumentOf, clipSpan, clipScale,
   cloneClip, cloneDevice, cloneTrack, arrangementEnd,
-  commit, touch, undo, redo, canUndo, canRedo, setProject, resetHistory
+  commit, touch, undo, redo, canUndo, canRedo, history, goHistory, setProject, resetHistory
 });
 })(window.U = window.U || {});

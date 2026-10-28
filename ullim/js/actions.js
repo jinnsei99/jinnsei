@@ -123,8 +123,9 @@ function removeInstrument(t) {
 function dropAuto(t, devId) {
   for (const k of Object.keys(t.auto)) if (k.startsWith('dev:' + devId + ':')) delete t.auto[k];
 }
-/* 사운드 프리셋: 악기와 그 프리셋의 이펙트를 함께 바꾼다 */
-A.loadSound = function (trackId, sound) {
+/* 사운드 프리셋: 악기와 그 프리셋의 이펙트를 함께 바꾼다.
+   o.browse: 소리 고르기 창에서 넘겨 들어 보는 중이라 '최근 쓴 소리'에 남기지 않는다 */
+A.loadSound = function (trackId, sound, o) {
   let t = T(trackId);
   if (!t || t.type !== 'midi') { t = A.addTrack('midi'); }
   const devs = U.soundDevices(sound);
@@ -136,6 +137,7 @@ A.loadSound = function (trackId, sound) {
   if (!t.name) t.name = sound.name;
   U.ui.track = t.id;
   commit(sound.name + ' 불러오기');
+  if (!(o && o.browse)) U.favs.noteRecent(sound);
   return t;
 };
 A.loadKit = function (trackId, kit) {
@@ -405,9 +407,10 @@ A.setAuto = function (trackId, key, pts, final) {
 };
 
 /* ================= 트랜스포트 ================= */
-A.play = function () { U.ensureAudio(); eng().play(pr().pos); };
+A.play = function () { U.ensureAudio(); A.cancelCountIn(true); eng().play(pr().pos); };
 A.stop = function () {
   const e = eng();
+  if (A.cancelCountIn()) return;
   if (!e.playing) {
     // 멈춘 상태에서 다시 누르면 시작 위치를 처음으로 (같은 동작을 하는 DAW가 많다)
     if (pr().pos !== 0) { pr().pos = 0; U.inval('arrange', 'transport'); }
@@ -419,6 +422,7 @@ A.stop = function () {
 A.togglePlay = function (cont) {
   U.ensureAudio();
   const e = eng();
+  if (A.cancelCountIn()) return;
   if (e.playing) e.stop();
   else e.play(cont && e.lastStopB != null ? e.lastStopB : pr().pos);
 };
@@ -426,7 +430,7 @@ A.setTempo = function (bpm, final) {
   bpm = U.clamp(U.round(bpm, 2), 20, 999);
   pr().bpm = bpm;
   eng().setTempo(bpm);
-  if (final) commit('템포');
+  if (final) commit('템포 ' + bpm);
   else U.touch({ tempo: true });
 };
 A.tap = (function () {
@@ -450,22 +454,51 @@ function ensureArmed() {
   U.toast('녹음할 트랙의 ● 버튼을 먼저 켜 주세요.');
   return false;
 }
+/* 카운트인: 멈춘 상태에서 녹음을 누르면 정한 마디만큼 딸깍으로 먼저 센다 (환경설정·메트로놈 오른쪽 클릭) */
+const countBars = () => (eng().playing ? 0 : U.pref('countIn', 0));
+A.cancelCountIn = function (quiet) {
+  if (!eng().cancelCountIn()) return false;
+  U.audioRec.stop();   // 세는 동안 켜 둔 마이크는 남길 것 없이 끈다
+  if (!quiet) U.toast('카운트인을 멈췄어요.');
+  return true;
+};
 A.setRecord = function (on) {
   U.ensureAudio();
+  const e = eng();
+  if (A.cancelCountIn()) return;   // 세는 중에 다시 누르면 그만
   if (on && !ensureArmed()) return;
-  eng().setRecording(on);
-  if (on && U.audioRec.armedAudio().length) U.audioRec.start('arr');
+  const audio = on && U.audioRec.armedAudio().length;
+  const bars = on ? countBars() : 0;
+  if (bars) {
+    e.startCountIn(bars, at => e.setRecording(true, at), 'arr');
+    if (audio) U.audioRec.start('arr', null, e.counting.tEnd);
+    return;
+  }
+  e.setRecording(on);
+  if (audio) U.audioRec.start('arr');
   if (!on) U.audioRec.stop();
 };
 A.setSessionRec = function (on) {
   U.ensureAudio();
+  const e = eng();
+  if (A.cancelCountIn()) return;
   if (on && !ensureArmed()) return;
   const slot = U.ui.slot ? U.ui.slot.s : U.ui.scene;
-  eng().setSessionRec(on, slot);
-  if (on && U.audioRec.armedAudio().length) {
-    if (!eng().playing) eng().play(Math.floor((pr().pos || 0) / U.barLen(pr().sig)) * U.barLen(pr().sig));
-    U.audioRec.start('sess', slot);
+  const audio = on && U.audioRec.armedAudio().length;
+  const bar = U.barLen(pr().sig), from = Math.floor((pr().pos || 0) / bar) * bar;
+  const begin = at => e.withStart(at, () => {
+    e.setSessionRec(true, slot);
+    if (audio && !e.playing) e.play(from);
+  });
+  const bars = on ? countBars() : 0;
+  if (bars) {
+    e.startCountIn(bars, begin, 'sess');
+    if (audio) U.audioRec.start('sess', slot, e.counting.tEnd);
+    return;
   }
+  if (on) begin(null);
+  else e.setSessionRec(false, slot);
+  if (audio) U.audioRec.start('sess', slot);
   if (!on) U.audioRec.stop();
 };
 
@@ -547,5 +580,12 @@ A.undo = function () {
 A.redo = function () {
   const l = U.redo();
   if (l) U.toast('다시 실행: ' + l);
+};
+/* 되돌리기 기록에서 고른 자리로 한 번에 */
+A.goHistory = function (i) {
+  const hs = U.history(), from = hs.i;
+  if (!U.goHistory(i)) return;
+  const n = Math.abs(i - from);
+  U.toast(i === 0 ? '처음 연 상태로 돌아갔어요 (' + n + '단계)' : (i < from ? '되돌림' : '다시 실행') + ' ' + n + '단계 · 지금: ' + hs.labels[i] + ' 직후');
 };
 })(window.U = window.U || {});

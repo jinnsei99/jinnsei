@@ -13,6 +13,7 @@ function build(root) {
   refs = {};
 
   const menuBtn = btn({ icon: 'menu', cls: 'ghost', title: '메뉴', info: ['메뉴', '새 프로젝트, 열기, 내보내기, 환경설정이 있어요.'], onclick: () => U.appMenu(menuBtn) });
+  const quickBtn = U.quick.button();
   const logo = h('div', { class: 'logo', 'aria-label': '울림' }, h('span', { class: 'logo-mark' }), h('span', { class: 'logo-t', text: '울림' }));
 
   // 템포
@@ -32,7 +33,10 @@ function build(root) {
     e.preventDefault();
     U.menu([2, 4, 8, 16].map(d => ({ label: '분모 ' + d, checked: pr().sig[1] === d, action: () => { pr().sig = [pr().sig[0], d]; U.commit('박자표'); } })), { x: e.clientX, y: e.clientY });
   });
-  refs.metro = btn({ icon: 'metro', cls: 'tg', toggle: true, on: p.metro, title: '메트로놈', info: ['메트로놈', '재생하는 동안 박마다 딸깍 소리를 내요. 마디 첫 박은 더 높아요.'], onclick: () => { pr().metro = !pr().metro; U.commit('메트로놈'); } });
+  refs.metro = btn({ icon: 'metro', cls: 'tg metrobtn', toggle: true, on: p.metro, title: '메트로놈 (오른쪽 클릭: 카운트인)', info: ['메트로놈', '재생하는 동안 박마다 딸깍 소리를 내요. 마디 첫 박은 더 높아요. 오른쪽 클릭하거나 길게 누르면 녹음 전에 먼저 세는 카운트인(1·2·4마디)을 정해요.'], onclick: () => { pr().metro = !pr().metro; U.commit('메트로놈'); } });
+  refs.ci = h('span', { class: 'ci-badge' });
+  refs.metro.append(refs.ci);
+  refs.metro.addEventListener('contextmenu', e => { e.preventDefault(); U.quick.metroMenu(refs.metro); });
   refs.quant = U.select(U.QUANTS.map(q => [q.id, q.name]), p.quant, v => { pr().quant = v; U.commit('런치 퀀타이즈'); }, { cls: 'quant', label: '런치 퀀타이즈', info: ['런치 퀀타이즈', '클립과 씬이 언제 시작될지 정해요. 1마디면 다음 마디 첫 박에 맞춰 시작해요.'] });
 
   // 트랜스포트
@@ -76,7 +80,7 @@ function build(root) {
   }
   const g = (cls, ...kids) => h('div', { class: 'cb-group ' + cls }, ...kids);
   el.append(
-    g('cb-menu', menuBtn, logo),
+    g('cb-menu', menuBtn, quickBtn, logo),
     g('cb-views', refs.views),
     g('cb-tempo', tap, refs.bpm, refs.sig, refs.metro, refs.quant),
     g('cb-trans', refs.play, refs.stop, refs.rec, refs.srec, refs.cap, refs.pos, refs.back),
@@ -109,6 +113,10 @@ function refresh() {
   refs.sig.update();
   refs.quant.value = p.quant;
   setPressed(refs.metro, p.metro);
+  const ci = U.quick.countIn();
+  refs.ci.textContent = ci ? String(ci) : '';
+  refs.ci.hidden = !ci;
+  refs.metro.title = '메트로놈' + (ci ? ' · 카운트인 ' + ci + '마디' : '') + ' (오른쪽 클릭: 카운트인)';
   setPressed(refs.loop, p.loop.on);
   refs.lstart.update(); refs.llen.update();
   refs.lstart.classList.toggle('off', !p.loop.on);
@@ -126,6 +134,9 @@ function refresh() {
     refs.play.classList.toggle('on', e.playing);
     setPressed(refs.rec, e.recording);
     setPressed(refs.srec, e.sessionRec);
+    // 카운트인 동안 누른 녹음 단추가 깜빡인다
+    refs.rec.classList.toggle('counting', !!(e.counting && e.counting.mode === 'arr'));
+    refs.srec.classList.toggle('counting', !!(e.counting && e.counting.mode === 'sess'));
     refs.back.classList.toggle('lit', e.anyOverride());
   }
 }

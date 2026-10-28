@@ -206,8 +206,9 @@ function renderStatus() {
   if (ui.keyboard) right.append(h('span', { class: 'st-kb', text: '⌨ C' + ui.octave + ' · ' + ui.velocity }));
   if (U.isTouch) {
     // 키보드가 없을 때를 위해 되돌리기·다시 실행을 눈에 보이게
-    const un = btn({ icon: 'undo', cls: 'ghost sm st-undo', title: '되돌리기', onclick: () => A.undo() });
-    const re = btn({ icon: 'undo', cls: 'ghost sm st-redo', title: '다시 실행', onclick: () => A.redo() });
+    // 길게 누르면 되돌리기 기록이 열린다
+    const un = U.quick.bindHistory(btn({ icon: 'undo', cls: 'ghost sm st-undo', title: '되돌리기 (길게 누르면 기록)', onclick: () => A.undo() }));
+    const re = U.quick.bindHistory(btn({ icon: 'undo', cls: 'ghost sm st-redo', title: '다시 실행 (길게 누르면 기록)', onclick: () => A.redo() }));
     un.disabled = !U.canUndo();
     re.disabled = !U.canRedo();
     right.append(un, re);
@@ -503,6 +504,7 @@ function prefsDialog() {
     U.select([['auto', '자동 (이 기기는 ' + (U.autoTouch ? '아이패드' : '컴퓨터') + ' 버전)'], ['desktop', '컴퓨터 버전 (마우스·키보드)'], ['touch', '아이패드 버전 (손가락)']], U.uiMode, v => U.setUIMode(v), { label: '화면 버전' })));
   body.append(h('label', { class: 'fld' }, h('span', { text: '화면 밝기' }), U.select([['auto', '시스템 설정 따르기'], ['dark', '어둡게'], ['light', '밝게']], skin, v => { U.setPref('skin', v); applySkin(); })));
   body.append(h('label', { class: 'fld' }, h('span', { text: '녹음 퀀타이즈' }), U.select([['0', '끄기'], ['0.25', '1/16'], ['0.5', '1/8'], ['1', '1/4']], String(U.pref('recQuant', 0)), v => U.setPref('recQuant', +v))));
+  body.append(h('label', { class: 'fld' }, h('span', { text: '녹음 카운트인' }), U.select(U.quick.COUNT_OPTS.map(([n, l]) => [String(n), n ? l + ' 먼저 세기' : l]), String(U.quick.countIn()), v => U.quick.setCountIn(+v), { label: '녹음 카운트인', info: ['녹음 카운트인', '멈춘 상태에서 녹음을 누르면 정한 마디만큼 딸깍 소리로 먼저 세고 녹음을 시작해요. 메트로놈 단추를 오른쪽 클릭(길게 누르기)해도 바꿀 수 있어요.'] })));
   const ctx = U.engine.ctx;
   const lat = Math.round(((ctx.outputLatency || 0) + (ctx.baseLatency || 0)) * 1000);
   body.append(h('p', { class: 'hint', text: '오디오: ' + ctx.sampleRate + ' Hz · 지연 약 ' + lat + ' ms' + (ctx.state !== 'running' ? ' · 아직 소리가 꺼져 있어요' : '') }));
@@ -519,6 +521,7 @@ function helpDialog() {
   const rows = [
     ['Space', '재생 / 정지'], ['Shift+Space', '멈춘 곳에서 이어서 재생'], ['Tab', '세션 ↔ 어레인지먼트 (B: 곡 짜기, C: 곡 지도)'], ['Shift+Tab', '클립 ↔ 장치 칸 (C: 편집 ↔ 소리 탭)'],
     ['F9', '어레인지먼트 녹음'], ['P', '패드 화면 (B: 1 만들기, C: 1 연주 탭)'], ['패드에 적힌 글자', '패드 치기 (패드 화면, 또는 건반을 켠 루프 패드 트랙)'], ['Shift+패드 글자', '누르는 동안 노트 리피트'], ['M', '컴퓨터 건반 켜기/끄기'], ['A ~ K, W E T Y U', '건반 (켜졌을 때)'], ['Z / X', '옥타브 내리기 / 올리기'], ['C / V', '세기 내리기 / 올리기'],
+    [M + '+K', '빠른 실행: 동작·소리·장르를 글로 찾아 바로 하기'],
     ['B', '그리기 모드'], ['A', '자동화 모드 (건반이 꺼졌을 때)'], [M + '+Z', '되돌리기'], [M + '+Shift+Z', '다시 실행'], [M + '+D', '복제'], [M + '+E', '클립 나누기'],
     [M + '+L', '선택 구간을 루프로'], [M + '+U', '퀀타이즈'], [M + '+A', '모두 고르기'], [M + '+C / X / V', '음표 복사 / 잘라내기 / 붙여넣기'], ['Delete', '지우기'],
     ['↑ ↓ ← →', '음표 옮기기 (Shift: 옥타브) · 세션에서 칸 이동'], ['Enter', '고른 클립 띄우기'], ['0', '음표 켜기/끄기'], [M + '+1 / 2', '격자 좁히기 / 넓히기'],
@@ -549,6 +552,7 @@ function helpDialog() {
       h('li', { text: '두 손가락으로 밀면 피아노 롤·어레인지먼트·스텝 시퀀서가 넘어가고, 벌리거나 오므리면 확대·축소돼요.' }),
       h('li', { text: '패드 화면에서 드럼·루프 패드 트랙은 패드로, 신스 트랙은 건반으로 쳐요. 스케일을 고르면 키에 맞는 음만 칸으로 나오고, 코드를 켜면 한 손가락으로 코드를 쳐요.' }),
       h('li', { text: '클립은 길게 눌러 "복사"한 뒤 빈 칸을 길게 눌러 "붙여넣기"로 옮겨요. 스텝 시퀀서의 찍힌 칸을 길게 누르면 세기가 바뀌어요.' }),
+      h('li', { text: '위쪽 🔍 버튼(빠른 실행)에 "녹음", "피아노", "템포 90", 초성 "ㄱㄹㄷ"처럼 치면 바로 해요. 되돌리기 버튼을 길게 누르면 되돌리기 기록이 열려요.' }),
       h('li', { text: '메뉴 › 앱으로 설치하기로 홈 화면에 두면 전체 화면으로 열리고, 인터넷이 없어도 돼요.' }),
       h('li', { text: '컴퓨터 버전(작은 조절기, 마우스·키보드)과 아이패드 버전(큰 버튼, 손가락)은 아래 상태 줄의 버튼이나 메뉴 › 화면 버전에서 직접 골라요. 어느 버전이든 손가락 조작은 돼요.' })));
   U.dialog({ title: '도움말', body: h('div', { class: 'help' }, U.isTouch ? touch : null, guide, U.isTouch ? null : touch, h('h3', { text: '단축키' }), tbl), width: '560px', actions: [{ label: '닫기', primary: true }] });
@@ -564,6 +568,8 @@ function aboutDialog() {
 }
 U.appMenu = function (anchor) {
   U.menu([
+    { label: '빠른 실행…', key: U.MOD + '+K', action: () => U.quick.open() },
+    { sep: true },
     { label: '새 프로젝트…', action: () => U.newProjectDialog() },
     { label: '프로젝트 열기…', action: () => { U.toggleBrowser(true); U.setPref('brCat', 'projects'); U.browserView.build(els.browser); if (ui.narrow) setPane('browser'); } },
     { label: '다른 이름으로 저장…', action: saveAs },
@@ -577,6 +583,7 @@ U.appMenu = function (anchor) {
     { sep: true },
     { label: '되돌리기', key: U.MOD + '+Z', disabled: !U.canUndo(), action: A.undo },
     { label: '다시 실행', key: U.MOD + '+Shift+Z', disabled: !U.canRedo(), action: A.redo },
+    { label: '되돌리기 기록…', disabled: !U.canUndo() && !U.canRedo(), action: () => U.quick.historyMenu(anchor) },
     { sep: true },
     { label: 'MIDI 트랙 넣기', action: () => A.addTrack('midi') },
     { label: '오디오 트랙 넣기', action: () => A.addTrack('audio') },
@@ -592,6 +599,9 @@ U.appMenu = function (anchor) {
     { label: '울림 스튜디오 정보', action: aboutDialog }
   ], anchor);
 };
+
+/* 빠른 실행(quick.js)이 부르는 메뉴 명령 */
+U.appCmds = { saveAs, exportDialog, exportMidi, exportProjectFile, importProjectFile, prefsDialog, helpDialog };
 
 /* ================= 파일 끌어다 놓기 ================= */
 function bindFileDrop() {
@@ -693,6 +703,7 @@ function wire() {
     ui.roll.sel = new Set();
     ui.arrSel = [];
     if (!inf || !inf.undo) {
+      A.cancelCountIn(true);
       // 다른 프로젝트를 열었을 때만 선택을 처음으로
       ui.clip = null; ui.slot = null; ui.timeSel = null; ui.scene = 0;
       ui.track = (pr().tracks[0] || pr().master).id;
@@ -702,7 +713,8 @@ function wire() {
     U.inval('all');
   });
   U.on('engine:transport', () => {
-    if (!U.engine.playing && U.audioRec.active()) U.audioRec.stop();
+    // 카운트인 동안은 미리 켜 둔 마이크를 그대로 둔다
+    if (!U.engine.playing && !U.engine.counting && U.audioRec.active()) U.audioRec.stop();
     U.inval('transport', 'status');
   });
   U.on('engine:override', () => U.inval('transport'));
