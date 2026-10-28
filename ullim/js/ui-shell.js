@@ -25,7 +25,7 @@ const STEPS = [
   { label: '내보내기', icon: 'download', title: '파일로 받기', guide: '다 만든 곡을 WAV나 MIDI 파일로 받거나, 프로젝트 파일로 다른 기기에 옮겨요.' }
 ];
 const TABS = [
-  { label: '연주', icon: 'pads', hint: '패드와 건반으로 쳐요. 녹음 준비를 켜고 녹음하면 친 그대로 클립이 돼요.' },
+  { label: '연주', icon: 'pads', hint: '악기 모양(드럼 세트 · 기타 · 하프 · 패드 · 건반)으로 쳐요. 녹음 준비를 켜고 녹음하면 친 그대로 클립이 돼요.' },
   { label: '소리', icon: 'sound', hint: '왼쪽에서 사운드를 고르고, 장치의 손잡이로 다듬어요.' },
   { label: '편집', icon: 'clip', hint: '고른 클립의 음표·스텝·파형을 고쳐요. 곡 지도에서 클립을 누르면 여기로 와요.' },
   { label: '믹스', icon: 'mixer', hint: '트랙끼리 크기와 울림을 맞춰요.' },
@@ -239,7 +239,7 @@ function renderWorkHead() {
     h('h2', { class: 'wh-t', text: s.title }),
     h('p', { class: 'wh-g', text: s.guide }));
   const right = h('div', { class: 'wh-r' });
-  if (ui.step === 1) right.append(U.seg([['play', '패드·건반으로 치기', '패드나 건반을 크게 띄워요. P로도 바꿔요.'], ['edit', '클립 편집', '고른 클립을 스텝 시퀀서나 피아노 롤로 고쳐요. Shift+Tab으로도 바꿔요.']], ui.bMode, v => setStep(1, { mode: v }), 'wh-seg'));
+  if (ui.step === 1) right.append(U.seg([['play', '손가락으로 치기', '고른 트랙을 악기 모양(드럼 세트 · 기타 · 하프 · 패드 · 건반)으로 크게 띄워요. P로도 바꿔요.'], ['edit', '클립 편집', '고른 클립을 스텝 시퀀서나 피아노 롤로 고쳐요. Shift+Tab으로도 바꿔요.']], ui.bMode, v => setStep(1, { mode: v }), 'wh-seg'));
   if (ui.step === 3) {
     right.append(U.seg([['session', '씬 (세션)', '클립 칸을 띄우며 부분을 만들어요.'], ['arrange', '타임라인', '시간 순서로 곡을 늘어놓아요.']], ui.view === 'arrange' ? 'arrange' : 'session', v => setSongView(v), 'wh-seg'));
     right.append(btn({ icon: 'arrange', text: '씬으로 곡 만들기…', cls: 'sm', info: ['씬으로 곡 만들기', '씬들을 인트로·빌드업·드롭… 순서로 타임라인에 한 번에 늘어놓아요.'], onclick: () => U.songDialog() }));

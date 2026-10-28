@@ -228,7 +228,7 @@ function renderStatus() {
   right.append(h('span', { class: 'st-sr', text: Math.round(ctx.sampleRate / 100) / 10 + ' kHz' }));
   const vs = btn({ icon: 'session', cls: 'ghost sm' + (ui.view === 'session' ? ' on' : ''), title: '세션 뷰 (Tab)', info: ['세션 뷰', '클립을 칸에 담아 자유롭게 띄우는 화면이에요. Tab으로 바꿔요.'], onclick: () => U.setView('session') });
   const va = btn({ icon: 'arrange', cls: 'ghost sm' + (ui.view === 'arrange' ? ' on' : ''), title: '어레인지먼트 뷰 (Tab)', info: ['어레인지먼트 뷰', '시간 순서대로 곡을 배치하는 화면이에요. Tab으로 바꿔요.'], onclick: () => U.setView('arrange') });
-  const vp = btn({ icon: 'pads', cls: 'ghost sm' + (ui.view === 'pads' ? ' on' : ''), title: '패드 화면 (P)', info: ['패드 화면', '루프 패드·드럼 머신의 패드 16개를 크게 띄우고 글자 키로 쳐요.'], onclick: () => U.setView('pads') });
+  const vp = btn({ icon: 'pads', cls: 'ghost sm' + (ui.view === 'pads' ? ' on' : ''), title: '패드 화면 (P)', info: ['패드 화면', '고른 트랙을 손가락과 글자 키로 쳐요. 악기에 맞는 모양으로 나와요: 드럼은 드럼 세트, 기타·베이스는 코드 줄과 지판, 하프·가야금은 줄, 말렛은 음판, 루프 패드는 패드, 신스·피아노는 건반이에요.'], onclick: () => U.setView('pads') });
   const vb = btn({ icon: 'browser', cls: 'ghost sm' + (ui.browserOpen ? ' on' : ''), title: '브라우저 보이기 (' + U.MOD + '+Alt+B)', onclick: () => U.toggleBrowser() });
   const vd = btn({ icon: 'detail', cls: 'ghost sm st-vd' + (ui.detailOpen ? ' on' : ''), title: '아래 칸 보이기', onclick: () => U.toggleDetail() });
   const vi = btn({ icon: 'layout', cls: 'ghost sm st-vi' + (U.inspShown() ? ' on' : ''), title: '고른 트랙 칸 보이기', info: ['고른 트랙 칸', '오른쪽에 고른 트랙의 소리·장치·믹서를 보여 줘요.'], onclick: () => U.shell.toggleInsp() });
@@ -239,7 +239,7 @@ function renderStatus() {
 
 /* ================= 정보 창 기본 글 ================= */
 function infoDefault() {
-  if (ui.view === 'pads') return ['패드 화면', '패드를 누르거나 패드에 적힌 글자 키로 쳐요. 키 지정을 켜면 패드마다 글자를 바꿀 수 있어요. Shift를 누른 채 치면 노트 리피트, Tab은 세션 뷰로 돌아가요.'];
+  if (ui.view === 'pads') return ['패드 화면', '고른 트랙의 악기 모양으로 쳐요: 드럼 세트 · 패드 · 기타 코드 줄과 지판 · 하프 · 가야금 · 말렛 · 건반. 위의 화면 버튼으로 바꾸고, 패드와 드럼은 글자 키로도 쳐요. 기타 코드는 1~8 키. Tab은 세션 뷰로 돌아가요.'];
   if (ui.keyboard) return ['컴퓨터 건반 켜짐', 'A·S·D·F·G·H·J·K가 흰 건반, W·E·T·Y·U가 검은 건반이에요. Z/X로 옥타브, C/V로 세기를 바꿔요.'];
   return ui.view === 'session'
     ? ['세션 뷰', '클립의 ▶를 누르면 다음 마디에 맞춰 재생돼요. 오른쪽 열의 ▶는 씬(가로 한 줄)을 한꺼번에 띄워요. 마우스를 올리면 여기에 설명이 나와요.']
@@ -550,7 +550,7 @@ function helpDialog() {
       h('li', { text: '길게 누르기는 오른쪽 클릭이에요. 클립·씬·트랙·음표·어레인지먼트 클립의 메뉴가 열려요.' }),
       h('li', { text: '두 번 탭은 더블클릭이에요. 빈 칸에 클립 만들기, 피아노 롤에 음 넣기·지우기, 노브를 기본값으로, 브라우저 항목 넣기.' }),
       h('li', { text: '두 손가락으로 밀면 피아노 롤·어레인지먼트·스텝 시퀀서가 넘어가고, 벌리거나 오므리면 확대·축소돼요.' }),
-      h('li', { text: '패드 화면에서 드럼·루프 패드 트랙은 패드로, 신스 트랙은 건반으로 쳐요. 스케일을 고르면 키에 맞는 음만 칸으로 나오고, 코드를 켜면 한 손가락으로 코드를 쳐요.' }),
+      h('li', { text: '패드 화면은 트랙 악기에 맞는 모양으로 나와요: 드럼은 드럼 세트(패드로도 바꿔요), 기타·베이스는 코드 줄과 지판, 현악은 활로 켜는 지판, 하프·가야금은 줄, 마림바·칼림바·스틸 드럼·종은 그 악기 모양, 신스·피아노는 건반이에요. 기타 코드 줄은 코드 이름을 누르거나 줄 위를 쓸어서 긁어요.' }),
       h('li', { text: '클립은 길게 눌러 "복사"한 뒤 빈 칸을 길게 눌러 "붙여넣기"로 옮겨요. 스텝 시퀀서의 찍힌 칸을 길게 누르면 세기가 바뀌어요.' }),
       h('li', { text: '위쪽 🔍 버튼(빠른 실행)에 "녹음", "피아노", "템포 90", 초성 "ㄱㄹㄷ"처럼 치면 바로 해요. 되돌리기 버튼을 길게 누르면 되돌리기 기록이 열려요.' }),
       h('li', { text: '메뉴 › 앱으로 설치하기로 홈 화면에 두면 전체 화면으로 열리고, 인터넷이 없어도 돼요.' }),

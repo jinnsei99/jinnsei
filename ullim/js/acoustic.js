@@ -375,7 +375,7 @@ class Acoustic extends U.Instrument {
     super(eng, dev);
     this.out.gain.value = this.on ? this.outLevel() : 0;
     this.maxVoices = 32;
-    this.pw = { list: [], timer: 0, job: null };
+    this.pw = { list: [], warm: [], timer: 0, job: null };
     this.prewarmSoon();
   }
   cfg() { return AC[this.v.inst] || AC.grand; }
@@ -439,6 +439,13 @@ class Acoustic extends U.Instrument {
   }
   /* 미리 듣기처럼 곧 칠 음들을 먼저 계산해 둔다 (계산하느라 첫 음들이 밀리지 않게) */
   prepare(notes) { for (const n of notes) if (n.p >= 12 && n.p <= 115) this.buffer(n.p, vbOf(n.v || 100)); }
+  /* 연주 화면이 곧 칠 음 (기타 코드 줄 …): 쉬는 틈에 다른 미리 계산보다 먼저. 보관함이 꽉 차 가면 하지 않는다 */
+  warm(notes) {
+    if (this.eng.offline) return;
+    const pw = this.pw;
+    pw.warm = [...new Set(notes.filter(n => n.p >= 12 && n.p <= 115).map(n => n.p + '|' + vbOf(n.v || 100)).concat(pw.warm))];
+    if (!pwBusy.has(this) && pw.warm.length) { pwBusy.add(this); pw.timer = setTimeout(() => this.pwStep(), 0); }
+  }
   param(id, v, t) {
     if (id === 'vol') { if (this.on) smooth(this.out.gain, this.outLevel(), t); return; }
     if (id === 'inst' || id === 'tone' || id === 'decay' || id === 'body') this.prewarmSoon();
@@ -474,9 +481,10 @@ class Acoustic extends U.Instrument {
         const inst = AC[this.v.inst] ? this.v.inst : 'grand';
         if (!REF.has(inst + '|' + sr)) pw.job = { gen: refGen(inst, sr) };   // 크기 맞춤 배율부터
         else {
-          if (!pw.list.length) break;
-          const it = pw.list.shift().split('|'), p = +it[0], b = +it[1];
-          if (p < 12 || p > 115 || (it[2] && cacheSamples > CACHE_CAP * 0.6)) continue;
+          if (!pw.warm.length && !pw.list.length) break;
+          const warm = pw.warm.length > 0;
+          const it = (warm ? pw.warm : pw.list).shift().split('|'), p = +it[0], b = +it[1];
+          if (p < 12 || p > 115 || (it[2] && cacheSamples > CACHE_CAP * 0.6) || (warm && cacheSamples > CACHE_CAP * 0.8)) continue;
           const sp = this.noteSpec(p, b);
           if (cacheGet(sp.key)) continue;   // 이미 있으면 방금 쓴 것으로 표시만 (다른 음을 계산하는 동안 밀려나지 않게)
           pw.job = { key: sp.key, sp, gen: noteGen(...sp.a) };
@@ -485,10 +493,10 @@ class Acoustic extends U.Instrument {
       const r = pw.job.gen.next();
       if (r.done) { const job = pw.job; pw.job = null; if (job.sp) this.store(job.sp, r.value); }
     }
-    if (pw.list.length || pw.job) { pwBusy.add(this); pw.timer = setTimeout(() => this.pwStep(), 20); }
+    if (pw.warm.length || pw.list.length || pw.job) { pwBusy.add(this); pw.timer = setTimeout(() => this.pwStep(), 20); }
     else pwBusy.delete(this);
   }
-  dispose() { clearTimeout(this.pw.timer); this.pw.list = []; this.pw.job = null; pwBusy.delete(this); super.dispose(); }
+  dispose() { clearTimeout(this.pw.timer); this.pw.list = []; this.pw.warm = []; this.pw.job = null; pwBusy.delete(this); super.dispose(); }
 }
 
 /* ================= 앙상블 (실시간) =================
