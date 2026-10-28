@@ -169,7 +169,7 @@ function commands() {
   // 화면
   view('vsess', '세션 화면', () => U.setView('session'), { key: 'Tab', keys: 'session view 세션' });
   view('varr', '곡 화면 (어레인지먼트)', () => U.setView('arrange'), { key: 'Tab', keys: 'arrangement view 곡 타임라인' });
-  view('vpads', '패드 화면', () => U.setView('pads'), { key: 'P', keys: 'pads view 패드 드럼 연주' });
+  view('vpads', '패드 화면', () => U.setView('pads'), { key: 'P', keys: 'pads view 패드 드럼 연주 기타 지판 코드 하프 가야금 마림바 킷 play guitar drum kit' });
   view('brw', '브라우저 보이기', () => U.toggleBrowser(), { on: !!ui.browserOpen, key: M + '+Alt+B', keys: 'browser 브라우저 목록' });
   view('kbd', '컴퓨터 건반', () => U.setKeyboard(!ui.keyboard), { on: !!ui.keyboard, key: 'M', keys: 'keyboard piano 건반 키보드' });
   view('draw', '그리기 모드', () => U.setDraw(!ui.draw), { on: !!ui.draw, key: 'B', keys: 'draw pencil 그리기 연필' });

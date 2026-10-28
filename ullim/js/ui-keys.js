@@ -22,6 +22,7 @@ const KEYMAP = { KeyA: 0, KeyW: 1, KeyS: 2, KeyE: 3, KeyD: 4, KeyF: 5, KeyT: 6, 
 const WHITE = [0, 2, 4, 5, 7, 9, 11];
 
 let track = null;     // 지금 건반이 치는 트랙
+let lay = KS.layout;  // 지금 건반 모양 (기타 트랙을 건반으로 칠 때는 그 화면만 'piano')
 let root = null;      // 건반 화면
 let ro = null;        // 건반 화면 크기 감시 (다시 그릴 때마다 바꾼다)
 const fingers = new Map();  // pointerId 또는 키 code → {id, pitches, el}
@@ -94,14 +95,16 @@ function releaseAll() { for (const id of [...fingers.keys()]) lift(id); count.cl
 
 /* ================= 화면 ================= */
 const LAYOUTS = { piano: ['tk-piano', '건반'], grid: ['tk-grid', '스케일 격자'], chords: ['tk-chords', '코드 패드'] };
-const drawFor = el => (KS.layout === 'grid' ? drawGrid : KS.layout === 'chords' ? drawChords : drawPiano)(el);
-function view(t) {
+const drawFor = el => (lay === 'grid' ? drawGrid : lay === 'chords' ? drawChords : drawPiano)(el);
+/* l: 건반 모양 (없으면 고른 모양) */
+function view(t, l) {
   releaseAll();
   if (track !== t) KS.lastTop = null;
   track = t;
+  lay = LAYOUTS[l || KS.layout] ? l || KS.layout : 'piano';
   root = h('div', { class: 'tk', 'data-nolongpress': '', style: { '--pc': U.colorOf(t.color) } });
-  const lay = LAYOUTS[KS.layout] || LAYOUTS.piano;
-  const surface = h('div', { class: 'tk-surface ' + lay[0], role: 'group', 'aria-label': lay[1] });
+  const L = LAYOUTS[lay];
+  const surface = h('div', { class: 'tk-surface ' + L[0], role: 'group', 'aria-label': L[1] });
   root.append(surface);
   const fill = () => { if (surface.isConnected) drawFor(surface); };
   bind(surface);
@@ -223,19 +226,17 @@ function setOct(t, d) {
 }
 let rangeLbl = null;
 /* 건반의 맨 아래 음 (스케일 격자는 그 옥타브의 근음부터) */
-const rangeText = t => U.noteName(KS.layout === 'grid' ? U.degreeToPitch(0, key().root, key().scale, baseOf(t)) : baseOf(t));
+const rangeText = t => U.noteName(lay === 'grid' ? U.degreeToPitch(0, key().root, key().scale, baseOf(t)) : baseOf(t));
+/* 건반 모양 고르기는 연주 화면 도구 막대가 악기마다 따로 단다 (U.play.layouts) */
 function controls(t, rerender) {
-  const lay = U.seg([['piano', '건반', '피아노처럼 생긴 건반이에요.'], ['grid', '스케일', '키에 맞는 음만 칸으로 늘어놓아요. 오른쪽으로 한 음씩, 위 줄은 4도 위라서 아무 칸이나 쳐도 어울려요.'],
-    ['chords', '코드 패드', '지금 키의 주요 화음을 큰 버튼으로 늘어놓아요. 누르면 화음이 통째로 울리고, 1~7 키(아래 줄은 Q~Y)로도 쳐요.']], KS.layout,
-    v => { KS.layout = v; U.setPref('keysLayout', v); rerender(); }, 'tk-lay');
   const down = btn({ text: '−', cls: 'sm tk-oct', title: '한 옥타브 아래로', onclick: () => setOct(t, -1) });
   const up = btn({ text: '+', cls: 'sm tk-oct', title: '한 옥타브 위로', onclick: () => setOct(t, 1) });
   rangeLbl = h('span', { class: 'tk-range', text: rangeText(t) });
   info(rangeLbl, '옥타브', '건반이 시작하는 음이에요. −, + 또는 키보드의 Z, X로 옮겨요.');
   const oct = [h('span', { class: 'pv-sep' }), down, rangeLbl, up];
-  if (KS.layout === 'chords') return [lay, ...chordControls(() => { KS.lastTop = null; redraw(); })].concat(oct);
+  if (lay === 'chords') return chordControls(() => { KS.lastTop = null; redraw(); }).concat(oct);
   const chord = btn({ text: '코드', cls: 'tg sm', toggle: true, on: KS.chord, info: ['코드', '켜면 한 손가락으로 지금 키의 3화음을 쳐요. 스케일 격자에서는 칸마다 코드 이름이 보여요.'], onclick: () => { KS.chord = !KS.chord; U.setPref('keysChord', KS.chord); U.setPressed(chord, KS.chord); redraw(); } });
-  return [lay, chord].concat(oct);
+  return [chord].concat(oct);
 }
 /* 화음 종류 · 부드럽게 · 베이스 (코드 패드와 클립 칸의 코드 넣기가 함께 쓴다) */
 function chordControls(onChange) {
@@ -251,7 +252,7 @@ function chordControls(onChange) {
 function keyDown(e) {
   if (!track) return false;
   if (e.code === 'KeyZ' || e.code === 'KeyX') { if (!e.repeat) setOct(track, e.code === 'KeyZ' ? -1 : 1); return true; }
-  if (KS.layout === 'chords') {
+  if (lay === 'chords') {
     const i = CHORD_CODES.indexOf(e.code), j = SEC_CODES.indexOf(e.code);
     if (i < 0 && j < 0) return false;
     if (e.repeat || fingers.has(e.code)) return true;

@@ -823,6 +823,166 @@ html.touch .tk-cp-k { display: none; }
 .tk-range { min-width: 34px; text-align: center; font: 600 11.5px var(--font-mono); color: var(--fg-2); }
 .btn.tk-oct { min-width: 28px; font-weight: 700; }
 
+/* ================= 악기별 연주 화면 (기타 · 베이스 · 현악 · 하프 · 가야금 · 말렛 · 드럼 킷) ================= */
+.pv-inst { padding: 10px 14px 12px; }
+.pv-inst > .gv, .pv-inst > .hv, .pv-inst > .mv { flex: 1 1 auto; min-width: 0; min-height: 0; }
+.pl-pos { min-width: 44px; text-align: center; font: 600 11.5px var(--font-kr); color: var(--fg-2); }
+.btn.pl-step { min-width: 28px; }
+.pl-spark { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: var(--pc); opacity: 0; pointer-events: none; z-index: 5; animation: pl-spark 0.45s ease-out forwards; }
+@keyframes pl-spark { 0% { opacity: 0.75; transform: scale(0.45); } 100% { opacity: 0; transform: scale(1.5); } }
+
+/* 기타 · 베이스 · 현악: 위가 가장 낮은 줄 */
+.gv { --gut: 26px; position: relative; display: flex; flex-direction: column; justify-content: center; gap: 6px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.gv-heads { flex: none; display: grid; gap: 4px; height: 54px; margin-left: var(--gut); }
+html.touch .gv-heads { height: 60px; }
+.gv-head { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; cursor: pointer;
+  border: 1px solid var(--line-2); border-radius: 9px 9px 4px 4px; background: linear-gradient(180deg, var(--panel-3), var(--panel-2)); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18); }
+.gv-head.prim { border-color: color-mix(in srgb, var(--pc) 55%, var(--line-2)); background: linear-gradient(180deg, color-mix(in srgb, var(--pc) 22%, var(--panel-3)), var(--panel-2)); }
+.gv-head.extra { border-style: dashed; }
+.gv-head.on { background: var(--pc); border-color: var(--pc); color: #111; }
+.gv-hn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 clamp(14px, 1.7vw, 20px)/1.1 var(--font-kr); }
+.gv-hr { font: 600 10.5px var(--font-mono); color: var(--fg-3); }
+.gv-hk { position: absolute; left: 6px; top: 4px; font: 600 10px var(--font-mono); color: var(--fg-3); }
+.gv-head.on .gv-hr, .gv-head.on .gv-hk { color: rgba(0, 0, 0, 0.6); }
+html.touch .gv-hk { display: none; }
+.gv-body { flex: 1 1 auto; min-height: 0; max-height: calc(var(--S, 6) * 120px); display: flex; }   /* 세로로 아주 긴 화면에서도 줄 사이가 너무 벌어지지 않게 */
+.gv-gut { position: relative; flex: none; width: var(--gut); }
+.gv-gl { position: absolute; left: 0; right: 5px; transform: translateY(-50%); text-align: right; font: 600 11px var(--font-mono); color: var(--fg-3); }
+.gv-neck { position: relative; flex: 1 1 auto; min-width: 0; overflow: hidden; border-radius: 6px; cursor: pointer;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.3), transparent 10%, transparent 90%, rgba(0, 0, 0, 0.35)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 9px), linear-gradient(180deg, #4b2d1d, #3a2216 50%, #4b2d1d);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.45), 0 4px 14px rgba(0, 0, 0, 0.25); }
+.gv-fl .gv-neck { background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 12%, transparent 88%, rgba(0, 0, 0, 0.3)), linear-gradient(180deg, #232120, #161514 50%, #232120); }
+.gv-col { position: absolute; top: 0; bottom: 0; }
+.gv-strum .gv-col { border-right: 1px solid rgba(255, 255, 255, 0.08); }
+.gv-strum .gv-col.alt { background: rgba(255, 255, 255, 0.035); }
+.gv-strum .gv-col.on { background: color-mix(in srgb, var(--pc) 20%, transparent); }
+.gv-fret .gv-col.open { background: rgba(0, 0, 0, 0.28); }
+.gv-fw { position: absolute; top: 0; bottom: 0; z-index: 1; width: 4px; margin-left: -2px; background: linear-gradient(90deg, #6e6e6e, #f4f4f4 45%, #9a9a9a); box-shadow: 1px 0 2px rgba(0, 0, 0, 0.5); }
+.gv-nut { position: absolute; top: 0; bottom: 0; z-index: 1; width: 8px; margin-left: -4px; background: linear-gradient(90deg, #cfc6ad, #f3eedf 50%, #c8bea3); box-shadow: 2px 0 3px rgba(0, 0, 0, 0.5); }
+.gv-tick { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255, 255, 255, 0.09); }
+.gv-inlay { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fffdf6, #e3dccb 55%, #b9ae95); opacity: 0.85; }
+.gv-dot { position: absolute; z-index: 2; width: 18px; height: 18px; margin: -9px 0 0 -9px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255, 255, 255, 0.15); pointer-events: none; }
+.gv-dot.root { background: color-mix(in srgb, var(--pc) 80%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--pc) 30%, transparent); }
+.gv-dot i { font: 600 9.5px var(--font-mono); font-style: normal; color: rgba(255, 255, 255, 0.88); }
+.gv-dot.root i { color: #111; }
+.gv-str { position: absolute; left: 0; right: 0; z-index: 3; border-radius: 2px; pointer-events: none; transform-origin: 50% 50%;
+  background: linear-gradient(180deg, #fafafa, #a9a9a9 60%, #7d7d7d); box-shadow: 0 2px 2px rgba(0, 0, 0, 0.55); }
+.gv-nickel .gv-str.wound { background: repeating-linear-gradient(90deg, #dadada 0 1.5px, #8f8f8f 1.5px 3px); }
+.gv-bronze .gv-str.wound { background: repeating-linear-gradient(90deg, #d8bb7e 0 1.5px, #8c6f3a 1.5px 3px); }
+.gv-nylon .gv-str.wound { background: repeating-linear-gradient(90deg, #e8e8e8 0 1.2px, #a0a0a0 1.2px 2.4px); }
+.gv-nylon .gv-str:not(.wound) { background: linear-gradient(180deg, rgba(255, 255, 242, 0.95), rgba(214, 206, 180, 0.85)); }
+.gv-silver .gv-str.wound { background: repeating-linear-gradient(90deg, #e4e4e4 0 1px, #9d9d9d 1px 2px); }
+.gv-str.vib { animation: gv-vib 0.5s ease-out; }
+.gv-str.bowing { animation: gv-bow 0.09s linear infinite; }
+@keyframes gv-vib { 0% { transform: scaleY(3.2); filter: brightness(1.5); } 20% { transform: translateY(0.7px) scaleY(2); } 45% { transform: translateY(-0.4px) scaleY(1.5); } 100% { transform: none; filter: none; } }
+@keyframes gv-bow { 0%, 100% { transform: scaleY(1.9); filter: brightness(1.3); } 50% { transform: scaleY(1.35); } }
+.gv-x { position: absolute; z-index: 4; transform: translateY(-50%); font: 700 12px var(--font-mono); color: rgba(255, 255, 255, 0.45); pointer-events: none; }
+.gv-nums { position: relative; flex: none; height: 16px; margin-left: var(--gut); }
+.gv-num { position: absolute; transform: translateX(-50%); font: 600 10.5px var(--font-mono); color: var(--fg-3); white-space: nowrap; }
+
+/* 하프 · 가야금 */
+.hv { position: relative; display: flex; touch-action: none; user-select: none; -webkit-user-select: none; }
+.hv-field { position: relative; flex: 1 1 auto; min-width: 0; min-height: 0; overflow: hidden; border-radius: 10px; cursor: pointer; }
+.hv-harp .hv-field { background: radial-gradient(ellipse at 50% 115%, color-mix(in srgb, var(--pc) 14%, var(--sunk)), var(--sunk) 70%); box-shadow: inset 0 0 0 1px var(--line); }
+.hv-frame { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.hv-frame polyline { fill: none; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.hv-frame .nk { stroke: #8a5a2b; stroke-width: 15px; }
+.hv-frame .bd { stroke: #b07a43; stroke-width: 22px; }
+.hv-frame .cl { stroke: #6e4520; stroke-width: 18px; }
+.hv-harp .hv-str { position: absolute; z-index: 1; border-radius: 2px; transform: translateX(-50%); pointer-events: none;
+  background: linear-gradient(90deg, #cdbd94, #fff6dc 50%, #c4b185); box-shadow: 1px 0 2px rgba(0, 0, 0, 0.35); }
+.hv-harp .hv-str.r { background: linear-gradient(90deg, #a5302a, #ef6b5f 50%, #9b2a24); }
+.hv-harp .hv-str.f { background: linear-gradient(90deg, #26355f, #5d74b6 50%, #223058); }
+.hv-harp .hv-str.vib { animation: hv-vib 0.6s ease-out; }
+@keyframes hv-vib { 0% { transform: translateX(-50%) scaleX(3); filter: brightness(1.5); } 30% { transform: translateX(calc(-50% + 0.8px)) scaleX(2); } 100% { transform: translateX(-50%); filter: none; } }
+.hv-lbl { position: absolute; z-index: 2; font: 600 10px var(--font-mono); color: var(--fg-3); pointer-events: none; white-space: nowrap; }
+.hv-harp .hv-lbl { transform: translateX(-50%); }
+.hv-harp .hv-lbl.r { color: #e0574c; }
+.hv-gay .hv-field { background: linear-gradient(180deg, rgba(0, 0, 0, 0.16), transparent 7%, transparent 93%, rgba(0, 0, 0, 0.22)),
+  repeating-linear-gradient(90deg, rgba(120, 72, 30, 0.07) 0 3px, transparent 3px 11px), linear-gradient(180deg, #dcb880, #c99d63 50%, #d4ad74); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25), 0 4px 14px rgba(0, 0, 0, 0.2); }
+.hv-head { position: absolute; top: 0; right: 0; bottom: 0; width: 9%; background: linear-gradient(90deg, #4a2a13, #74451f); box-shadow: -2px 0 4px rgba(0, 0, 0, 0.35); }
+.hv-tail { position: absolute; top: 0; bottom: 0; left: 0; width: 5%; background: linear-gradient(90deg, #8a5a2e, #6b4020); }
+.hv-gay .hv-str { position: absolute; left: 5%; right: 9%; z-index: 1; margin-top: -1px; border-radius: 1px; pointer-events: none; transform-origin: 50% 50%;
+  background: linear-gradient(180deg, #fffaea, #e2d2a8); box-shadow: 0 1px 1px rgba(60, 30, 0, 0.45); }
+.hv-gay .hv-str.vib { animation: gv-vib 0.6s ease-out; }
+.hv-bridge { position: absolute; z-index: 2; width: 22px; height: 15px; margin: -11px 0 0 -11px; pointer-events: none; background: linear-gradient(180deg, #f6ecd4, #c9b68b); clip-path: polygon(50% 0, 100% 100%, 0 100%); filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4)); }
+.hv-gay .hv-lbl { right: 2.2%; transform: translateY(-50%); color: #f4e6c8; }
+
+/* 말렛 · 벨 · 칼림바 · 스틸 드럼 */
+.mv { position: relative; display: flex; touch-action: none; user-select: none; -webkit-user-select: none; }
+.mv-field { position: relative; flex: 1 1 auto; min-width: 0; min-height: 0; }
+.mv-t { position: absolute; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; padding-bottom: 6px; cursor: pointer; }
+.mv-l { font: 600 10.5px var(--font-mono); color: rgba(255, 255, 255, 0.88); text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45); pointer-events: none; white-space: nowrap; }
+.mv-d { width: 6px; height: 6px; border-radius: 50%; pointer-events: none; }
+.mv-t.ink .mv-d { background: rgba(255, 255, 255, 0.55); }
+.mv-t.root .mv-d { background: var(--pc); box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25); }
+.mv-t.hit { animation: mv-hit 0.28s ease-out; }
+@keyframes mv-hit { 0% { filter: brightness(1.7); transform: translateY(2px) scale(0.98); } 100% { filter: none; transform: none; } }
+.mv-bars .mv-t { border-radius: 6px; box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.mv-marimba .mv-t { background: linear-gradient(180deg, #a1543a, #7e3a25 60%, #642c1b); }
+.mv-vibes .mv-t { background: linear-gradient(180deg, #eef1f4, #bcc5ce 55%, #9aa4af); }
+.mv-glock .mv-t { background: linear-gradient(180deg, #fafbfc, #ccd3d9 55%, #adb6be); }
+.mv-musicbox .mv-t { background: linear-gradient(180deg, #f3d98f, #c99c3a 60%, #a57b24); }
+.mv-vibes .mv-l, .mv-glock .mv-l, .mv-musicbox .mv-l, .mv-tines .mv-l, .mv-pan .mv-l, .mv-tubes .mv-l { color: rgba(0, 0, 0, 0.62); text-shadow: none; }
+.mv-vibes .mv-t.ink .mv-d, .mv-glock .mv-t.ink .mv-d, .mv-musicbox .mv-t.ink .mv-d, .mv-tines .mv-t.ink .mv-d, .mv-pan .mv-t.ink .mv-d, .mv-tubes .mv-t.ink .mv-d { background: rgba(0, 0, 0, 0.28); }
+.mv-rail { position: absolute; left: 1%; right: 1%; z-index: 0; height: 5px; border-radius: 3px; background: linear-gradient(180deg, #4b4f55, #24272b); }
+.mv-tubes .mv-frame { position: absolute; left: 0; right: 0; top: 2%; z-index: 2; height: 3.2%; border-radius: 3px; background: linear-gradient(180deg, #4a4d52, #1f2124); }
+.mv-tubes .mv-t { border-radius: 4px 4px 10px 10px; background: linear-gradient(90deg, #8a7744, #f5e6ad 35%, #caae5f 62%, #7a6735); box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.35); }
+.mv-tubes .mv-t::before { content: ''; position: absolute; left: -6%; right: -6%; top: 0; height: 9px; border-radius: 3px; background: linear-gradient(180deg, #b19a55, #6e5d2f); }
+.mv-tubes .mv-t.acc { z-index: 0; filter: brightness(0.86); }
+.mv-tines .mv-body { position: absolute; inset: 0; border-radius: 22px 22px 46% 46% / 22px 22px 18% 18%; background: repeating-linear-gradient(90deg, rgba(90, 50, 20, 0.06) 0 3px, transparent 3px 10px), linear-gradient(180deg, #c48b4f, #a9703a); box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.2), 0 6px 18px rgba(0, 0, 0, 0.3); }
+.mv-tines .mv-hole { position: absolute; left: 50%; bottom: 6%; width: 16%; aspect-ratio: 1; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(circle, #160d06, #3a2513 70%); }
+.mv-tines .mv-bridge { position: absolute; left: 4%; right: 4%; top: 5.5%; z-index: 2; height: 4%; border-radius: 3px; background: linear-gradient(180deg, #d6dadd, #8a9197); box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4); }
+.mv-tines .mv-t { border-radius: 2px 2px 9px 9px; background: linear-gradient(90deg, #8f969c, #f3f5f6 45%, #b5bbc0 60%, #7e858b); box-shadow: 1px 2px 3px rgba(0, 0, 0, 0.35); }
+.mv-pan { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, #f5f7f8, #c5ccd1 55%, #8f989f 85%, #5e666c); box-shadow: inset 0 0 0 7px #7d868c, 0 6px 22px rgba(0, 0, 0, 0.4); }
+.mv-pan .mv-t { justify-content: center; padding: 0; border-radius: 50%; background: radial-gradient(ellipse at 50% 38%, rgba(255, 255, 255, 0.75), rgba(176, 185, 191, 0.55) 72%); box-shadow: inset 0 0 0 1.5px rgba(70, 78, 84, 0.55); }
+
+/* 드럼 킷 */
+.pv-kitbody { padding: 8px 12px 10px; }
+.kit { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; gap: 12px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.kit.tall { flex-direction: column; }
+.kit-stage { position: relative; flex: 1 1 auto; min-width: 0; min-height: 0; }
+.kit-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.kit-extra { flex: 0 0 136px; display: flex; flex-direction: column; gap: 6px; overflow: auto; }
+.kit.tall .kit-extra { flex: none; flex-direction: row; flex-wrap: wrap; overflow: visible; }
+.kit-extra.none { display: none; }
+.kit-xl { flex: none; font: 600 11px var(--font-kr); color: var(--fg-3); }
+.kit.tall .kit-xl { width: 100%; }
+.kit-xp { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 44px; padding: 6px 9px; border: 1px solid var(--line-2); border-radius: 9px;
+  background: linear-gradient(180deg, var(--panel-3), var(--panel-2)); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18); color: var(--fg); font: 600 12px var(--font-kr); cursor: pointer; }
+.kit.tall .kit-xp { flex: 1 1 calc(33% - 6px); min-width: 96px; }
+.kit-xn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kit-xk { flex: none; padding: 0 5px; border: 1px solid var(--line-2); border-radius: 4px; font: 600 11px var(--font-mono); color: var(--fg-2); }
+.kit-xp.hit, .kit-xp.lit { border-color: var(--pc); background: var(--pc); color: #111; }
+.kit-xp.hit .kit-xk, .kit-xp.lit .kit-xk { color: #111; border-color: rgba(0, 0, 0, 0.3); }
+html.touch .kit-xk, html.touch .k-key { display: none; }
+.k-p { cursor: pointer; transform-box: fill-box; transform-origin: center; transition: filter 0.1s; }
+.k-p.k-none { opacity: 0.28; cursor: default; }
+.k-p.hit, .k-p.lit { filter: brightness(1.22) drop-shadow(0 0 10px var(--pc)); }
+.k-p.hit { animation: k-hit 0.14s ease-out; }
+@keyframes k-hit { 0% { transform: scale(0.965); } 100% { transform: none; } }
+.k-shell, .k-kshell { fill: url(#kg-shell); stroke: #33090f; stroke-width: 2; }
+.k-rim, .k-krim { fill: url(#kg-rim); stroke: #7d8389; stroke-width: 2; }
+.k-head { fill: url(#kg-head); stroke: #cbc5b5; stroke-width: 1; }
+.k-zone { fill: none; stroke: rgba(0, 0, 0, 0.18); stroke-width: 1.5; stroke-dasharray: 7 7; pointer-events: none; }
+.k-cym { fill: url(#kg-cym); stroke: #946c1e; stroke-width: 2; }
+.k-cym ~ .k-zone { stroke: rgba(90, 60, 0, 0.5); }
+.k-groove { fill: none; stroke: rgba(120, 82, 15, 0.38); stroke-width: 1.2; pointer-events: none; }
+.k-bell { fill: #c5932c; stroke: #8f6a1d; stroke-width: 1.5; }
+.k-khead { fill: url(#kg-khead); }
+.k-port { fill: #08080a; stroke: #4c4c50; stroke-width: 3; }
+.k-logo { fill: #f2efe6; font: 800 34px var(--font-mono); letter-spacing: 4px; pointer-events: none; }
+.k-pedal { fill: #3a3d42; stroke: #1c1e21; stroke-width: 2; }
+.k-name { fill: rgba(25, 25, 25, 0.72); stroke: none; font: 600 21px var(--font-kr); pointer-events: none; }
+.kp-cym .k-name { fill: rgba(70, 45, 0, 0.78); }
+.kp-kick .k-name, .kp-pedal .k-name { fill: rgba(255, 255, 255, 0.8); }
+.k-key { pointer-events: none; }
+.k-key rect { fill: rgba(255, 255, 255, 0.9); stroke: rgba(0, 0, 0, 0.35); }
+.k-key text { fill: #222; font: 700 15px var(--font-mono); }
+.k-stands line { stroke: #70757b; stroke-width: 5; stroke-linecap: round; opacity: 0.55; }
+
 /* ================= 터치 화면 (아이패드·휴대폰) =================
    손가락으로 누르기 쉽게 조절기를 키우고, 마우스를 올려야 보이는 정보 칸은 빼요 */
 html.touch { --ctrl-h: 50px; --split-h: 16px; --status-h: 30px; }

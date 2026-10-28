@@ -116,5 +116,5 @@ function voice(ch, center, prev, o) {
   return { top, all: extra.concat(top).filter(p => p >= 12 && p <= 115) };
 }
 
-U.chords = { TYPES, diatonic, secondary, voice, quality, parentScale };
+U.chords = { TYPES, diatonic, secondary, voice, quality, parentScale, spell };
 })(window.U = window.U || {});

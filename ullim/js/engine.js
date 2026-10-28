@@ -497,14 +497,15 @@ class Engine {
   }
 
   /* ---------- 건반 연주 ---------- */
-  /* repeat: true면 노트 리피트를 켠 것처럼, 없으면 노트 리피트 설정을 따른다 */
-  liveOn(trackId, p, v, audition, repeat) {
+  /* repeat: true면 노트 리피트를 켠 것처럼, 없으면 노트 리피트 설정을 따른다.
+     at: 조금 뒤에 울릴 시각 (기타 스트럼처럼 줄마다 몇 ms씩 늦게). 없으면 바로 */
+  liveOn(trackId, p, v, audition, repeat, at) {
     const n = this.nodes.get(trackId);
     if (!n || n.track.type !== 'midi') return;
     if (this.ctx.state !== 'running') this.ctx.resume();
     const rep = repeat != null ? repeat : this.repeat.on;
     if (!audition && rep && n.inst && n.inst.isPads) { this.startRepeat(n, p, v); return; }
-    const t = this.ctx.currentTime;
+    const t = Math.max(this.ctx.currentTime, at || 0);
     let notes = [{ p, v, b: 0, d: 0 }];
     const voices = [];
     let arp = null, arpIn = null;
@@ -521,16 +522,16 @@ class Engine {
       n.live.set(p, { voices });
     }
     if (audition) { n.auditions = (n.auditions || new Set()).add(p); return; }
-    this.recordNote(n, p, v, true);
+    this.recordNote(n, p, v, true, t);
     if (!n.liveLog) n.liveLog = [];
     n.liveLog.push({ p, v, t0: t, t1: null });
     if (n.liveLog.length > 600) n.liveLog.splice(0, 100);
   }
-  liveOff(trackId, p) {
+  liveOff(trackId, p, at) {
     const n = this.nodes.get(trackId);
     if (!n) return;
     if (this.repeats.delete(n.id + ':' + p)) return;
-    const t = this.ctx.currentTime;
+    const t = Math.max(this.ctx.currentTime, at || 0);
     const h = n.live.get(p);
     if (h) {
       if (h.arp) for (const x of h.pitches) h.arp.liveOff(x);
@@ -538,7 +539,7 @@ class Engine {
       n.live.delete(p);
     }
     if (n.auditions && n.auditions.delete(p)) return;
-    this.recordNote(n, p, 0, false);
+    this.recordNote(n, p, 0, false, t);
     if (n.liveLog) for (let i = n.liveLog.length - 1; i >= 0; i--) if (n.liveLog[i].p === p && n.liveLog[i].t1 == null) { n.liveLog[i].t1 = t; break; }
   }
   allLiveOff() {
@@ -1009,9 +1010,9 @@ class Engine {
 
   /* ---------- 녹음 ---------- */
   armedMidi() { return this.project.tracks.filter(t => t.type === 'midi' && t.arm); }
-  recordNote(n, p, v, on) {
+  recordNote(n, p, v, on, at) {
     if (!this.playing) return;
-    const b = this.beatAt(this.ctx.currentTime - this.latency());
+    const b = this.beatAt((at || this.ctx.currentTime) - this.latency());
     if (!n.track.arm) return;
     const r = n.rec;
     if (!r) return;
