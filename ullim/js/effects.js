@@ -371,6 +371,139 @@ class Saturator extends AudioFx {
   }
 }
 
+/* ---------- Amp: 기타·베이스 앰프와 스피커 캐비닛 ----------
+   input → 입력 필터(조이기 · 미드 부스트) → 프리앰프 1~3단(진공관처럼 비대칭으로 일그러지고, 단 사이에서 높은 소리를 깎는다)
+   → 톤 스택(Bass · Mid · Treble) → 파워앰프 → Presence → 스피커 캐비닛(공진 · 콘 · 급한 고역 감쇠) → Output.
+   모델 값: hp 입력 저역 차단 · ts 미드 부스트 [Hz, dB, Q] · lp 입력 고역 · g Gain 0과 10일 때 1단 앞 게인(dB) ·
+   st 단마다 [곡선 세기 k, 비대칭 b, 단 앞 게인 dB, 단 뒤 고역 Hz] · tone 톤 스택 기본 [bass, mid, treble dB, mid Hz] ·
+   blend 일그러지지 않은 소리를 섞는 양(베이스) · pwr 파워앰프로 미는 게인(dB) · comp 크기 맞춤(dB) · track Gain을 올릴 때 줄이는 비율 */
+const AMP = {
+  clean:  { hp: 60, ts: null, lp: 11000, g: [-8, 12], st: [[1.3, 0.06, 0, 9000]], tone: [1.5, -2, 1, 500], pwr: 0, comp: -7, track: 0.75, cab: '2x12' },
+  crunch: { hp: 80, ts: [1000, 2, 0.6], lp: 10000, g: [-2, 20], st: [[2, 0.1, 0, 7500], [1.6, 0.05, 5, 7000]], tone: [0, 0, 1.5, 800], pwr: 3, comp: -16.4, track: 0.07, cab: '2x12' },
+  blues:  { hp: 160, ts: [720, 8, 0.7], lp: 5500, g: [-4, 18], st: [[2.2, 0.12, 0, 6500], [1.5, 0.05, 4, 6500]], tone: [0, 1, 0, 750], pwr: 2, comp: -15.1, track: 0.11, cab: '1x12' },
+  lead:   { hp: 110, ts: [900, 3, 0.7], lp: 8000, g: [4, 26], st: [[2.2, 0.12, 0, 6500], [2, 0.06, 10, 6000], [1.6, 0.03, 6, 5500]], tone: [1, 2, 0, 750], pwr: 2, comp: -16.8, track: -0.05, cab: '4x12' },
+  metal:  { hp: 250, ts: [800, 6, 0.8], lp: 6500, g: [6, 28], st: [[2.4, 0.1, 0, 6500], [2.2, 0.04, 12, 6000], [1.8, 0.02, 8, 5000]], tone: [2.5, -3.5, 1.5, 700], pwr: 2, comp: -16.3, track: -0.05, cab: '4x12' },
+  bass:   { hp: 30, ts: null, lp: 3500, g: [-6, 18], st: [[1.2, 0.08, 0, 3500]], tone: [1.5, -2, 0, 500], blend: 0.7, pwr: 1, comp: -9.7, track: 0.6, cab: '1x15' }
+};
+/* 캐비닛: [저역 차단 Hz, Q] · 봉우리 넷 [Hz, dB, Q] · 고역 감쇠 둘 [Hz, Q] */
+const CAB = {
+  '4x12': { hp: [75, 0.7], pk: [[105, 3.5, 1.3], [450, -2.5, 0.9], [2400, 4, 1.6], [3800, 2.5, 3]], lp: [[5000, 0.9], [6000, 0.6]] },
+  '2x12': { hp: [85, 0.6], pk: [[120, 1.5, 1], [600, -1.5, 0.8], [2000, 2.5, 1.2], [4200, 3, 2.5]], lp: [[6200, 0.8], [7500, 0.6]] },
+  '1x12': { hp: [100, 0.7], pk: [[160, 1.5, 1.2], [1200, 2.5, 0.9], [3000, 2, 1.5], [5000, -1, 2]], lp: [[5000, 0.9], [6000, 0.6]] },
+  '1x15': { hp: [38, 0.7], pk: [[75, 3, 1.2], [500, -2, 0.8], [1800, 1, 1.5], [3000, 0, 1]], lp: [[3000, 0.8], [4000, 0.6]] },
+  off:    { hp: [20, 0.7], pk: [[100, 0, 1], [500, 0, 1], [2000, 0, 1], [4000, 0, 1]], lp: [[18000, 0.7], [20000, 0.6]] }
+};
+/* 진공관처럼 비대칭인 곡선: 위쪽이 먼저 눌려서 짝수 배음이 생긴다. 입력이 ±1을 넘으면 끝값에 머문다 */
+const ampCurves = new Map();
+function ampCurve(k, b) {
+  const key = k + '|' + b;
+  if (ampCurves.has(key)) return ampCurves.get(key);
+  const n = 4096, c = new Float32Array(n), t0 = Math.tanh(k * b);
+  const m = Math.max(Math.abs(Math.tanh(k * (1 + b)) - t0), Math.abs(Math.tanh(k * (b - 1)) - t0));
+  for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = (Math.tanh(k * (x + b)) - t0) / m; }
+  ampCurves.set(key, c);
+  return c;
+}
+const PWR_CURVE = (() => { const n = 2048, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = Math.tanh(1.5 * x) / Math.tanh(1.5); } return c; })();
+const knobDb = (v, range) => ((v - 5) / 5) * range;
+class Amp extends AudioFx {
+  constructor(eng, dev) {
+    super(eng, dev);
+    const ctx = this.ctx;
+    const bq = (type, f, q, g) => { const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; if (q != null) b.Q.value = q; if (g != null) b.gain.value = g; return b; };
+    this.hp = bq('highpass', 80, 0.7);
+    this.ts = bq('peaking', 800, 0.7, 0);
+    this.lp = bq('lowpass', 10000, 0.7);
+    this.g = [gainNode(ctx, 1), gainNode(ctx, 1), gainNode(ctx, 1)];
+    this.sh = [0, 1, 2].map(() => { const s = ctx.createWaveShaper(); s.oversample = '4x'; return s; });
+    this.dc = [0, 1, 2].map(() => bq('highpass', 25, 0.7));
+    this.slp = [0, 1, 2].map(() => bq('lowpass', 8000, 0.7));
+    this.blend = gainNode(ctx, 0);
+    this.sum = gainNode(ctx, 1);
+    this.bass = bq('lowshelf', 120, null, 0);
+    this.mid = bq('peaking', 700, 0.8, 0);
+    this.treble = bq('highshelf', 2800, null, 0);
+    this.pwrIn = gainNode(ctx, 1);
+    this.pwr = ctx.createWaveShaper();
+    this.pwr.curve = PWR_CURVE;
+    this.pwr.oversample = '2x';
+    this.pres = bq('highshelf', 4500, null, 0);
+    this.cab = [bq('highpass', 75, 0.7), bq('peaking', 100, 1, 0), bq('peaking', 500, 1, 0), bq('peaking', 2000, 1, 0), bq('peaking', 4000, 1, 0), bq('lowpass', 5200, 0.7), bq('lowpass', 6500, 0.6)];
+    this.post = gainNode(ctx, 1);
+    // 앰프는 모노: 들어온 소리를 한 채널로 합쳐 처리한다 (계산이 절반. 꺼 두었을 때 지나가는 소리는 스테레오 그대로)
+    this.mono = gainNode(ctx, 1);
+    this.mono.channelCount = 1;
+    this.mono.channelCountMode = 'explicit';
+    this.mono.channelInterpretation = 'speakers';
+    this.input.connect(this.mono);
+    // 이어 붙이기
+    let at = this.mono;
+    for (const n of [this.hp, this.ts, this.lp]) { at.connect(n); at = n; }
+    this.lp.connect(this.blend);
+    this.blend.connect(this.sum);
+    for (let i = 0; i < 3; i++) { at.connect(this.g[i]); this.g[i].connect(this.sh[i]); this.sh[i].connect(this.dc[i]); this.dc[i].connect(this.slp[i]); at = this.slp[i]; }
+    at.connect(this.sum);
+    at = this.sum;
+    for (const n of [this.bass, this.mid, this.treble, this.pwrIn, this.pwr, this.pres, ...this.cab, this.post]) { at.connect(n); at = n; }
+    this.post.connect(this.fxOut);
+    this.applyModel(true);
+  }
+  m() { return AMP[this.v.model] || AMP.crunch; }
+  /* 모델을 바꾸면 단 수·곡선·필터를 모두 다시 정한다 */
+  applyModel(now) {
+    const M = this.m(), t = this.ctx.currentTime;
+    const set = (p, v) => (now ? (p.value = v) : smooth(p, v, t, 0.01));
+    set(this.hp.frequency, M.hp);
+    set(this.ts.gain, M.ts ? M.ts[1] : 0);
+    if (M.ts) { set(this.ts.frequency, M.ts[0]); set(this.ts.Q, M.ts[2]); }
+    set(this.lp.frequency, M.lp);
+    for (let i = 0; i < 3; i++) {
+      const s = M.st[i];
+      this.sh[i].curve = s ? ampCurve(s[0], s[1]) : null;   // 쓰지 않는 단은 그대로 지나간다
+      if (i) set(this.g[i].gain, s ? dbToGain(s[2]) : 1);
+      set(this.slp[i].frequency, s ? s[3] : 20000);
+      set(this.dc[i].frequency, s ? 25 : 5);
+    }
+    set(this.blend.gain, M.blend || 0);
+    set(this.mid.frequency, M.tone[3]);
+    set(this.pwrIn.gain, dbToGain(M.pwr - 6));
+    this.applyGain(now);
+    this.applyTone(now);
+    this.applyCab(now);
+  }
+  gainDb() { const M = this.m(); return M.g[0] + (M.g[1] - M.g[0]) * clamp(this.v.gain, 0, 10) / 10; }
+  /* Gain을 올려도 크기가 너무 커지지 않게 track만큼 되깎는다 (일그러짐이 이미 꼭대기를 누르는 모델은 조금만) */
+  applyGain(now) {
+    const M = this.m(), t = this.ctx.currentTime, gd = this.gainDb();
+    const g1 = dbToGain(gd), outDb = M.comp - M.track * (gd - (M.g[0] + M.g[1]) / 2) + (this.v.out || 0);
+    if (now) { this.g[0].gain.value = g1; this.post.gain.value = dbToGain(outDb); return; }
+    smooth(this.g[0].gain, g1, t, 0.02);
+    smooth(this.post.gain, dbToGain(outDb), t, 0.02);
+  }
+  applyTone(now) {
+    const M = this.m(), P = this.v, t = this.ctx.currentTime;
+    const set = (p, v) => (now ? (p.value = v) : smooth(p, v, t, 0.015));
+    set(this.bass.gain, M.tone[0] + knobDb(P.bass, 12));
+    set(this.mid.gain, M.tone[1] + knobDb(P.mid, 12));
+    set(this.treble.gain, M.tone[2] + knobDb(P.treble, 12));
+    set(this.pres.gain, knobDb(P.pres, 8));
+  }
+  applyCab(now) {
+    const C = CAB[this.v.cab] || CAB['4x12'], t = this.ctx.currentTime;
+    const set = (p, v) => (now ? (p.value = v) : smooth(p, v, t, 0.015));
+    set(this.cab[0].frequency, C.hp[0]); set(this.cab[0].Q, C.hp[1]);
+    C.pk.forEach(([f, g, q], i) => { set(this.cab[1 + i].frequency, f); set(this.cab[1 + i].gain, g); set(this.cab[1 + i].Q, q); });
+    C.lp.forEach(([f, q], i) => { set(this.cab[5 + i].frequency, f); set(this.cab[5 + i].Q, q); });
+  }
+  param(id, v) {
+    if (id === 'model') this.applyModel(false);
+    else if (id === 'gain' || id === 'out') this.applyGain(false);
+    else if (id === 'cab') this.applyCab(false);
+    else this.applyTone(false);
+  }
+}
+U.AMP_MODELS = AMP;
+
 /* ---------- Chorus / Flanger / Vibrato ---------- */
 class Chorus extends AudioFx {
   constructor(eng, dev) {
@@ -517,7 +650,7 @@ class Spectrum extends AudioFx {
 
 Object.assign(U.DEVICE_CLASSES, {
   eq: EQ, comp: Compressor, limiter: Limiter, reverb: Reverb, delay: Delay, autofilter: AutoFilter,
-  sat: Saturator, chorus: Chorus, phaser: Phaser, utility: Utility, duck: Ducker, spectrum: Spectrum
+  sat: Saturator, chorus: Chorus, phaser: Phaser, utility: Utility, duck: Ducker, spectrum: Spectrum, amp: Amp
 });
 U.AudioFx = AudioFx;
 })(window.U = window.U || {});

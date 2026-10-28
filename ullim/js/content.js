@@ -59,6 +59,36 @@ KITS.push(
     crash: { tune: -3, tone: 0.2, level: -8 }, sub: { name: '808 Sub', decay: 0.5, tone: 0.1, level: -6 }, ride: { name: 'Jazz Ride', tune: -2, decay: 0.7, tone: 0.35, level: -4 }
   }) }
 );
+/* 밴드 드럼: 진짜 드럼처럼 계산한 어쿠스틱 소리. 패드 자리는 GM과 같다 (C1 킥, C#1 사이드 스틱, D1 스네어, E1 림샷,
+   F1·G1·A1 탐, F#1 닫힌 햇, G#1 페달 햇, A#1 열린 햇, B1 라이드 벨, C2 탬버린, C#2·D2 크래시, D#2 라이드).
+   o: 킷마다 다른 값 {tune, decay, tone} — 패드 이름별로 덮어쓴다 */
+function bandKit(o) {
+  o = o || {};
+  const P = (type, name, d) => Object.assign({ type, name }, d);
+  const all = {
+    kick: P('akick', 'Kick'), rim: P('astick', 'Side Stick'), snare: P('asnare', 'Snare'), clap: P('clap', 'Hand Clap', { decay: 0.45, tone: 0.4 }),
+    snap: P('arim', 'Rimshot'), tl: P('atom', 'Floor Tom', { tune: -5 }), chh: P('ahat', 'Hi-Hat', { choke: 1, level: -3 }), tm: P('atom', 'Low Tom', { tune: -1 }),
+    shaker: P('apedal', 'Pedal Hat', { choke: 1, level: -4 }), th: P('atom', 'Hi Tom', { tune: 4 }), ohh: P('aohat', 'Open Hat', { choke: 1, level: -4 }), cow: P('abell', 'Ride Bell', { level: -5 }),
+    conga: P('atamb', 'Tambourine', { level: -6 }), crash: P('acrash', 'Crash', { level: -4 }), sub: P('acrash', 'Crash 2', { tune: 2, decay: 0.35, level: -5 }), ride: P('aride', 'Ride', { level: -3 })
+  };
+  for (const k in o) all[k] = Object.assign({}, all[k], o[k]);
+  return kit(all);
+}
+KITS.push(
+  { id: 'krock', name: '록 드럼', tags: ['밴드', '록'], pads: bandKit({
+    kick: { decay: 0.4, tone: 0.6 }, snare: { decay: 0.55, tone: 0.6 }, snap: { decay: 0.55, tone: 0.6 },
+    tl: { decay: 0.65 }, tm: { decay: 0.6 }, th: { decay: 0.55 }, chh: { tone: 0.6 }, ohh: { decay: 0.45, tone: 0.6 }, crash: { decay: 0.6 }, ride: { decay: 0.55 }
+  }) },
+  { id: 'kpop', name: '팝 드럼', tags: ['밴드', '팝'], pads: bandKit({
+    kick: { tune: 1, decay: 0.28, tone: 0.75 }, snare: { tune: 2, decay: 0.35, tone: 0.7 }, snap: { tune: 2, decay: 0.35, tone: 0.75 }, rim: { tune: 1 },
+    tl: { decay: 0.45 }, tm: { decay: 0.4 }, th: { decay: 0.35 }, chh: { decay: 0.35, tone: 0.75 }, ohh: { decay: 0.35, tone: 0.75 }, crash: { decay: 0.45, tone: 0.65 }, ride: { decay: 0.45, tone: 0.6 }
+  }) },
+  { id: 'kvintage', name: '빈티지 드럼', tags: ['밴드', '소울·펑크'], pads: bandKit({
+    kick: { tune: -1, decay: 0.18, tone: 0.3 }, snare: { tune: -2, decay: 0.25, tone: 0.35 }, snap: { tune: -2, decay: 0.25, tone: 0.35 }, rim: { tune: -1 },
+    tl: { tune: -6, decay: 0.3 }, tm: { tune: -2, decay: 0.3 }, th: { tune: 2, decay: 0.28 }, chh: { decay: 0.45, tone: 0.3 }, ohh: { decay: 0.3, tone: 0.3 },
+    crash: { tune: -2, decay: 0.45, tone: 0.25 }, ride: { tune: -1, decay: 0.5, tone: 0.3 }, conga: { tone: 0.35 }
+  }) }
+);
 U.KITS = KITS;
 U.DEFAULT_KIT = KITS[0].pads;
 U.kitById = id => KITS.find(k => k.id === id) || KITS[0];
@@ -108,8 +138,8 @@ SOUNDS.push(
   AC('로파이 피아노', ['피아노', '로파이'], { inst: 'upright', tone: 0.3, decay: 0.8 }, [FX('chorus', { mode: 'vibrato', rate: 0.8, depth: 0.15 }), FX('sat', { type: 'crush', bits: 10, drive: 2, out: -3, mix: 0.3 }), FX('eq', { b6on: true, b6f: 5000 })]),
   AC('나일론 기타', ['기타'], { inst: 'nylon' }, [ROOM(0.15)]),
   AC('통기타', ['기타'], { inst: 'steel' }, [ROOM(0.12)]),
-  AC('일렉 기타', ['기타'], { inst: 'electric' }, [FX('chorus', { mix: 0.3, rate: 0.6 }), ROOM(0.15)]),
-  AC('크런치 기타', ['기타'], { inst: 'electric', tone: 0.6 }, [FX('sat', { type: 'tube', drive: 16, out: -11 }), FX('eq', { b1on: true, b1f: 100, b6on: true, b6f: 6500 }), ROOM(0.12)]),
+  AC('일렉 기타', ['기타'], { inst: 'electric' }, [FX('amp', { model: 'clean', gain: 3, cab: '2x12' }), FX('chorus', { mix: 0.3, rate: 0.6 }), ROOM(0.15)]),
+  AC('크런치 기타', ['기타'], { inst: 'electric', tone: 0.6 }, [FX('amp', { model: 'crunch', gain: 5.5, cab: '2x12' }), ROOM(0.12)]),
   AC('뮤트 기타', ['기타'], { inst: 'mute' }, [ROOM(0.1, 1.2)]),
   AC('베이스 기타', ['베이스'], { inst: 'bass' }),
   EN('현악 합주', ['현악'], { inst: 'strings' }, [ROOM(0.3, 3)]),
@@ -162,10 +192,32 @@ SOUNDS.push(
   EN('스모키 색소폰', ['재즈 힙합', '관악'], { inst: 'sax_tenor', bright: 0.4 }, [FX('sat', { type: 'tube', drive: 6, out: -5, mix: 0.6 }), DARK(6000, 120), FX('reverb', { mix: 0.25, decay: 2.2, pre: 0.01, damp: 7000 })]),
   EN('로파이 플루트', ['재즈 힙합', '관악'], { inst: 'flute', bright: 0.4 }, [TAPE(0.6, 0.12), DARK(6000), ROOM(0.28, 2.6)])
 );
+/* 일렉 기타와 밴드: 줄 소리(싱글코일·험버커·팜 뮤트·리드)를 Amp(앰프와 캐비닛)에 넣은 소리 (뒤에 붙여서 앞 번호는 그대로) */
+const AMP = (model, p) => FX('amp', Object.assign({ model }, p));
+SOUNDS.push(
+  AC('클린 싱글코일', ['일렉 기타'], { inst: 'strat' }, [AMP('clean', { gain: 3, cab: '2x12', treble: 5.5 }), FX('reverb', { mix: 0.18, decay: 1.6, size: 0.4, damp: 6000 })]),
+  AC('펑크 커팅', ['일렉 기타'], { inst: 'strat', tone: 0.65, decay: 0.45, vol: -9 }, [FX('comp', { thr: -26, ratio: 4, att: 0.003, rel: 0.08, makeup: 0 }), AMP('clean', { gain: 3.5, cab: '2x12', mid: 4.5, treble: 6, pres: 6 }), ROOM(0.1, 1)]),
+  AC('시티팝 클린', ['일렉 기타'], { inst: 'strat', tone: 0.55 }, [FX('comp', { thr: -24, ratio: 3, att: 0.005, rel: 0.1, makeup: 1 }), AMP('clean', { gain: 3, cab: '2x12' }), FX('chorus', { mix: 0.35, rate: 0.5, depth: 0.45 }), FX('reverb', { mix: 0.2, decay: 2 })]),
+  AC('드림 팝 기타', ['일렉 기타'], { inst: 'electric', tone: 0.45 }, [AMP('clean', { gain: 4, cab: '2x12', treble: 4.5 }), FX('chorus', { mix: 0.4, rate: 0.35, depth: 0.6 }), FX('delay', { mode: 'stereo', divl: '1/4D', divr: '1/4', fb: 0.45, lp: 3500, hp: 300, mix: 0.28 }), FX('reverb', { mix: 0.35, decay: 4.5, size: 0.8 })]),
+  AC('크런치 브리티시', ['일렉 기타'], { inst: 'humbucker', tone: 0.55 }, [AMP('crunch', { gain: 5, cab: '2x12' }), ROOM(0.12, 1.4)]),
+  AC('블루스 드라이브', ['일렉 기타'], { inst: 'strat' }, [AMP('blues', { gain: 5.5, cab: '1x12' }), FX('reverb', { mix: 0.16, decay: 1.8 })]),
+  AC('하드 록 리듬', ['일렉 기타'], { inst: 'humbucker' }, [AMP('lead', { gain: 6 }), ROOM(0.1, 1.2)]),
+  AC('메탈 리듬', ['일렉 기타'], { inst: 'humbucker', tone: 0.55 }, [AMP('metal', { gain: 7.5, mid: 4, bass: 5.5 }), ROOM(0.08, 1)]),
+  AC('팜 뮤트 리프', ['일렉 기타'], { inst: 'palm' }, [AMP('metal', { gain: 7, mid: 4.5 }), ROOM(0.06, 0.9)]),
+  // 한 음만 쳐도 근음 · 5도 · 옥타브를 함께 울린다 (Chord 장치의 '파워 코드')
+  { name: '파워 코드', kind: 'acoustic', tags: ['일렉 기타'], p: { inst: 'humbucker' }, pre: [FX('chord', { sc: false, s1: 7, s2: 12 })], fx: [AMP('lead', { gain: 6.5 }), ROOM(0.1, 1.2)] },
+  AC('록 리드', ['일렉 기타'], { inst: 'egtr_lead' }, [AMP('lead', { gain: 8, mid: 6.5, pres: 6 }), FX('delay', { mode: 'stereo', divl: '1/8D', divr: '1/4', fb: 0.3, lp: 4000, hp: 400, mix: 0.2 }), FX('reverb', { mix: 0.22, decay: 2.4 })]),
+  AC('록 베이스', ['밴드', '베이스'], { inst: 'pickbass' }, [FX('comp', { thr: -22, ratio: 4, att: 0.01, rel: 0.12, makeup: 3 }), AMP('bass', { gain: 4.5, cab: '1x15' })]),
+  AC('핑거 베이스', ['밴드', '베이스'], { inst: 'bass' }, [FX('comp', { thr: -20, ratio: 3, att: 0.015, rel: 0.15, makeup: 2 }), AMP('bass', { gain: 2.5, cab: '1x15', treble: 4.5 })]),
+  AC('그라인드 베이스', ['밴드', '베이스'], { inst: 'pickbass', tone: 0.6 }, [AMP('bass', { gain: 8, cab: '1x15', mid: 6 }), FX('comp', { thr: -18, ratio: 3, att: 0.01, rel: 0.12, makeup: 0 })]),
+  AC('밴드 피아노', ['밴드', '피아노'], { inst: 'grand', tone: 0.65, vol: -8 }, [FX('eq', { b1on: true, b1f: 110 }), FX('comp', { thr: -20, ratio: 2.5, att: 0.01, rel: 0.15, makeup: 1 }), ROOM(0.16, 1.8)]),
+  EN('밴드 오르간', ['밴드', '오르간'], { inst: 'organ_jazz' }, [AMP('crunch', { gain: 3, cab: '2x12', treble: 6 }), ROOM(0.14, 1.6)]),
+  AC('밴드 로즈', ['밴드', '키'], { inst: 'rhodes', tone: 0.55 }, [AMP('clean', { gain: 4.5, cab: '2x12' }), FX('chorus', { mix: 0.25, rate: 0.6 }), ROOM(0.14, 1.6)])
+);
 U.SOUNDS = SOUNDS;
 U.sound = name => SOUNDS.find(x => x.name === name) || SOUNDS[0];
 /* 묶음(첫 태그) 순서. 브라우저와 소리 고르기 창이 이 순서로 보여 준다 */
-const GROUP_ORDER = ['내 사운드', '피아노', '키', '기타', '베이스', '현악', '관악', '말렛·벨', '오르간', '콰이어', '월드', '재즈 힙합', '패드', '코드', '플럭', '리드', '보컬', 'FX', '샘플러'];
+const GROUP_ORDER = ['내 사운드', '피아노', '키', '기타', '일렉 기타', '밴드', '베이스', '현악', '관악', '말렛·벨', '오르간', '콰이어', '월드', '재즈 힙합', '패드', '코드', '플럭', '리드', '보컬', 'FX', '샘플러'];
 U.soundGroups = list => {
   const groups = new Map();
   for (const s of list || SOUNDS) {
@@ -190,6 +242,7 @@ const FX_PRESETS = {
   limiter: [['기본', {}], ['마스터 크게', { gain: 6, ceil: -0.3 }]],
   duck: [['1/4 펌핑', {}], ['1/8 빠른 펌핑', { div: '1/8', depth: 0.6, rel: 0.1 }], ['부드럽게', { depth: 0.45, rel: 0.35 }]],
   spectrum: [['기본', {}]],
+  amp: [['기본 (크런치)', {}], ['클린', { model: 'clean', gain: 3, cab: '2x12' }], ['블루스 드라이브', { model: 'blues', gain: 5, cab: '1x12' }], ['하드 록', { model: 'lead', gain: 6 }], ['리드 솔로', { model: 'lead', gain: 8, mid: 6.5, pres: 6 }], ['메탈', { model: 'metal', gain: 7, mid: 4 }], ['베이스 앰프', { model: 'bass', gain: 4, cab: '1x15' }]],
   arp: [['기본 (업 1/16)', {}], ['업다운 2옥타브', { style: 'updown', oct: 2 }], ['랜덤 1/8', { style: 'random', rate: '1/8', gate: 0.8 }], ['컨버지 1/16T', { style: 'converge', rate: '1/16T' }]],
   chord: [['스케일 3화음', {}], ['스케일 7화음', { s3: 6 }], ['파워 코드', { sc: false, s1: 7, s2: 12 }], ['옥타브 겹치기', { sc: false, s1: 12, s2: 0 }]],
   scale: [['현재 키 따라가기', {}], ['C 메이저 펜타토닉', { cur: false, root: 0, scale: 'majpent' }]],
@@ -329,6 +382,75 @@ const CLIPS = [
     return degNotes(k, 60, out, 4);
   } }
 ];
+/* ================= 기타처럼 치기 =================
+   gtrVoicing: 스케일 도수 deg의 화음을 기타처럼 짚는다. 근음이 6번 줄 E~A#(40~46)이면 E 모양, 그 위면 5번 줄 A 모양 바레.
+   power면 근음 · 5도 · 옥타브만 (파워 코드는 스케일과 상관없이 완전 5도) */
+function gtrVoicing(key, deg, power) {
+  const sc = U.chords.parentScale(key.scale);
+  const r0 = U.degreeToPitch(deg, key.root, sc, 60);
+  const iv = k => ((U.degreeToPitch(deg + k, key.root, sc, 60) - r0) % 12 + 12) % 12;
+  let R = 40;
+  while (R % 12 !== ((r0 % 12) + 12) % 12) R++;
+  if (power) return [R, R + 7, R + 12];
+  const third = iv(2), fifth = iv(4);
+  return R <= 46 ? [R, R + fifth, R + 12, R + 12 + third, R + 12 + fifth, R + 24] : [R, R + fifth, R + 12, R + 12 + third, R + 12 + fifth];
+}
+/* 스트럼: pattern 한 글자가 every박. D 다운(낮은 줄부터), U 업(높은 줄부터, 위 네 줄만), 소문자는 여리게, . 쉼, - 앞 소리 이어서.
+   한 번 긁을 때 줄마다 spread박씩 늦게 닿는다 */
+function strum(voicing, at, pattern, o) {
+  o = o || {};
+  const every = o.every || 0.5, spread = o.spread != null ? o.spread : 0.012, notes = [];
+  for (let i = 0; i < pattern.length; i++) {
+    const c = pattern[i];
+    if (!/[DUdu]/.test(c)) continue;
+    let j = i + 1;
+    while (j < pattern.length && pattern[j] === '-') j++;
+    const up = c === 'U' || c === 'u', soft = c === 'd' || c === 'u';
+    const strings = up ? voicing.slice(-4).reverse() : voicing;
+    strings.forEach((p, k) => {
+      const s = at + i * every + k * spread;
+      notes.push({ p, s: U.round(s, 4), d: U.round(Math.max(0.05, (j - i) * every * (o.gate || 0.92) - k * spread), 4), v: Math.round((soft ? 72 : up ? 88 : 104) * (1 - k * 0.025)) });
+    });
+  }
+  return notes;
+}
+/* 메이저 계열이면 I–V–vi–IV, 마이너 계열이면 i–VI–III–VII */
+const rockProg = key => (U.chords.parentScale(key.scale) === 'major' || U.scaleOf(key.scale).steps[2] === 4 ? [0, 4, 5, 3] : [0, 5, 2, 6]);
+U.guitar = { voicing: gtrVoicing, strum, rockProg };
+CLIPS.push(
+  /* 밴드 드럼 (GM 자리라서 어느 킷에도 맞는다. 밴드 킷: r 사이드 스틱 · n 림샷 · z 페달 햇 · g 탬버린 · y 라이드) */
+  { name: '록 8비트', cat: '드럼', make: () => drum({ x: 'x...............................', k: 'x.......x.x.....x.......x.....x.', s: '....X.......X.......X.......X...', h: 'x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.' }, 0.25, 8) },
+  { name: '팝 록 (라이드)', cat: '드럼', make: () => drum({ x: 'x...............................', k: 'x.....x.x.......x.....x.x...x...', s: '....X.......X.......X.......X...', y: 'x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.' }, 0.25, 8) },
+  { name: '하프타임 록', cat: '드럼', make: () => drum({ k: 'x.....x...x.....x.....x.....x...', s: '........X...............X.......', h: 'x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.', x: 'x...............................' }, 0.25, 8) },
+  { name: '펑크 록 질주', cat: '드럼', make: () => drum({ k: 'x...x...x...x...', s: '..X...X...X...X.', h: 'x.x.x.x.x.x.x.x.', x: 'x...............' }, 0.25, 4) },
+  { name: '디스코 · 팝 펑크', cat: '드럼', make: () => drum({ k: 'x...x...x...x...', s: '....X.......X...', h: 'x...x...x...x...', o: '..x...x...x...x.' }, 0.25, 4) },
+  { name: '모타운 4비트', cat: '드럼', make: () => drum({ k: 'x.......x.x.....', s: 'o...X...o...X...', g: '....x.......x...', h: 'x.x.x.x.x.x.x.x.' }, 0.25, 4) },
+  { name: '발라드 (사이드 스틱)', cat: '드럼', make: () => drum({ k: 'x.......x.......x.......x..x....', r: '....x.......x.......x.......x...', h: 'x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.' }, 0.25, 8) },
+  { name: '셔플 블루스', cat: '드럼', make: () => {
+    const notes = [];
+    for (let b = 0; b < 8; b++) {
+      notes.push({ p: 42, s: b, d: 0.3, v: 100 }, { p: 42, s: b + 2 / 3, d: 0.25, v: 70 });
+      notes.push({ p: b % 2 ? 38 : 36, s: b, d: 0.3, v: b % 2 ? 115 : 105 });
+    }
+    notes.push({ p: 36, s: 2 + 2 / 3, d: 0.25, v: 80 }, { p: 36, s: 6 + 2 / 3, d: 0.25, v: 80 });
+    return { len: 8, notes };
+  } },
+  { name: '록 필인 (탐 돌리기)', cat: '드럼', make: () => drum({ k: 'x...............', s: 'X...xxxx........', i: '........xx......', t: '..........xx....', d: '............xxxx' }, 0.25, 4) },
+  /* 기타: 프로젝트 키를 따라 기타처럼 짚는다. 일렉 기타 소리(하드 록 리듬 · 팜 뮤트 리프 · 클린 싱글코일 …)와 함께 */
+  { name: '파워 코드 8분', cat: '기타', make: k => ({ len: 16, notes: rockProg(k).flatMap((deg, b) => {
+    const v = gtrVoicing(k, deg, true);
+    return [0, 1, 2, 3, 4, 5, 6, 7].flatMap(i => v.map(p => ({ p, s: b * 4 + i * 0.5, d: 0.42, v: i % 2 ? 96 : 112 })));
+  }) }) },
+  { name: '팜 뮤트 질주', cat: '기타', make: k => ({ len: 16, notes: rockProg(k).flatMap((deg, b) => {
+    const v = gtrVoicing(k, deg, true).slice(0, 2);
+    return Array.from({ length: 16 }, (_, i) => v.map(p => ({ p, s: b * 4 + i * 0.25, d: 0.2, v: i % 4 ? 92 : 118 }))).flat();
+  }) }) },
+  { name: '스트러밍 (다운·업)', cat: '기타', make: k => ({ len: 16, notes: rockProg(k).flatMap((deg, b) => strum(gtrVoicing(k, deg), b * 4, 'D-DU-UDU')) }) },
+  { name: '클린 아르페지오', cat: '기타', make: k => ({ len: 16, notes: rockProg(k).flatMap((deg, b) => {
+    const v = gtrVoicing(k, deg);
+    return [0, 2, 3, 4, v.length - 1, 4, 3, 2].map((j, i) => ({ p: v[Math.min(j, v.length - 1)], s: b * 4 + i * 0.5, d: 4 - i * 0.5 - 0.05, v: i ? 86 : 100 }));
+  }) }) }
+);
 function degNotes(key, base, list, len) {
   return { len, notes: list.map(([d, s, dur, v]) => ({ p: U.degreeToPitch(d, key.root, key.scale, base), s, d: dur, v })) };
 }

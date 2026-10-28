@@ -37,6 +37,7 @@ const MACROS = [
     ensemble: [span('width', 0, 1)],
     acoustic: [span('body', 0, 1)]
   } },
+  { id: 'drive', name: '드라이브', info: '앰프(Amp)를 얼마나 세게 밀지예요. 올리면 거칠고 길게 끌리고, 내리면 깨끗해져요. 앰프가 있는 소리에만 나와요.', amp: true },
   { id: 'space', name: '공간', info: '울리는 공간(리버브)의 양이에요. 트랙에 리버브가 없으면 하나 넣어요.', space: true },
   { id: 'vel', name: '세기 반응', info: '세게 칠수록 크게 나는 정도예요. 내리면 늘 같은 크기로 나요.', map: forAll(SYNTHS, () => [span('vel', 0, 1)]) },
   { id: 'vol', name: '음량', info: '악기 자체의 음량이에요. 트랙 페이더와 따로 움직여요.', map: forAll(SYNTHS.concat(['drums']), () => [span('vol', 0, 1)]) }
@@ -48,8 +49,14 @@ function reverbOf(t, inst) {
   const list = t.devices.slice(i + 1).filter(d => d.kind === 'reverb');
   return list[list.length - 1] || null;
 }
+/* 악기 뒤의 첫 앰프 */
+function ampOf(t, inst) {
+  const i = t.devices.indexOf(inst);
+  return t.devices.slice(i + 1).find(d => d.kind === 'amp') || null;
+}
 function valueOf(t, d, mac) {
   if (mac.space) { const rv = reverbOf(t, d); return rv && rv.on !== false ? clamp(rv.p.mix / SPACE_MAX, 0, 1) : 0; }
+  if (mac.amp) { const am = ampOf(t, d); return am ? clamp((am.p.gain != null ? am.p.gain : 5) / 10, 0, 1) : 0; }
   const m = mac.map[d.kind][0];
   return clamp(m.get(d.kind, d.p[m.id], d.p), 0, 1);
 }
@@ -65,6 +72,10 @@ function apply(t, d, mac, m, final) {
     }
     rv.on = true;
     rv.p.mix = U.round(SPACE_MAX * m, 3);
+  } else if (mac.amp) {
+    const am = ampOf(t, d);
+    if (!am) return;
+    am.p.gain = U.round(m * 10, 1);
   } else {
     for (const mp of mac.map[d.kind]) d.p[mp.id] = mp.set(d.kind, m);
   }
@@ -72,7 +83,7 @@ function apply(t, d, mac, m, final) {
   else {
     U.touch({});
     // 장치 칸의 노브도 함께 움직인다
-    for (const p of U.deviceView.panels) if (p.d === d || (mac.space && p.d.kind === 'reverb')) p.el.update();
+    for (const p of U.deviceView.panels) if (p.d === d || (mac.space && p.d.kind === 'reverb') || (mac.amp && p.d.kind === 'amp')) p.el.update();
   }
 }
 
@@ -122,7 +133,7 @@ function panel(t) {
   const title = h('div', { class: 'dev-name' }, h('span', { class: 'dn', text: '소리 다듬기' }), d.preset ? h('span', { class: 'dp', text: d.preset }) : null);
   info(title, '소리 다듬기', '쉬운 손잡이로 악기 소리를 다듬어요. 오른쪽 장치의 노브와 함께 움직여요. 마음에 들면 내 사운드로 저장해 두세요.');
   const body = h('div', { class: 'shp-body' });
-  for (const mac of MACROS) if (mac.space || (mac.map[d.kind] && mac.map[d.kind].every(mp => spec(d.kind, mp.id)))) body.append(slider(t, d, mac));
+  for (const mac of MACROS) if (mac.space || (mac.amp ? ampOf(t, d) : mac.map[d.kind] && mac.map[d.kind].every(mp => spec(d.kind, mp.id)))) body.append(slider(t, d, mac));
   const save = btn({ text: '내 사운드로 저장', cls: 'sm primary', info: ['내 사운드로 저장', '지금 소리(악기와 이펙트)를 이름 붙여 저장해요. 다른 곡에서도 소리 고르기의 \'내 사운드\'에서 불러와요.'], onclick: () => saveMySound(t) });
   const orig = U.allSounds().find(s => s.kind === d.kind && s.name === d.preset);
   const reset = btn({ text: '처음 값으로', cls: 'sm', info: ['처음 값으로', orig ? '"' + orig.name + '"을(를) 불러왔을 때의 악기 값으로 되돌려요.' : '악기를 기본값으로 되돌려요.'], onclick: () => orig ? A.applyPreset(d.id, orig.name, orig.p) : A.applyPreset(d.id, null, {}) });

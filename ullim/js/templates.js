@@ -103,7 +103,7 @@ const glue = ['comp', { thr: -16, ratio: 3, att: 0.02, rel: 0.15, makeup: 2 }];
 
 /* ================= 장르 ================= */
 const EDM = ['intro', 'build', 'drop', 'break', 'outro'];
-const ROLE_NAMES = { intro: '인트로', build: '빌드업', drop: '드롭', break: '브레이크', outro: '아웃트로', main: '메인' };
+const ROLE_NAMES = { intro: '인트로', build: '빌드업', drop: '드롭', break: '브레이크', outro: '아웃트로', main: '메인', verse: '벌스', pre: '프리코러스', chorus: '코러스', bridge: '브릿지', solo: '기타 솔로' };
 const GENRES = [];
 
 /* ---------- 하우스 ---------- */
@@ -315,6 +315,159 @@ const GENRES = [];
   });
 })();
 
+/* ================= 밴드 =================
+   드럼은 GM 자리(밴드 킷), 기타는 기타처럼 짚은 화음(U.guitar). 한 마디가 16칸 */
+/* 드럼: groove 한 마디를 bars번, o.fill이면 마지막 마디를 탐 필로, o.crash면 첫 박에 크래시 (o.crashEvery마디마다) */
+const FILL = { k: 'x...............', s: 'X...xxxx........', i: '........xx......', t: '..........xx....', d: '............xxxx' };
+function bandBeat(groove, bars, o) {
+  o = o || {};
+  const rows = {};
+  const keys = new Set(Object.keys(groove).concat(o.fill ? Object.keys(FILL) : []).concat(o.crash ? ['x'] : []));
+  for (const k of keys) {
+    let str = '';
+    for (let b = 0; b < bars; b++) {
+      const last = o.fill && b === bars - 1;
+      let bar = (last ? FILL[k] : groove[k]) || '................';
+      if (k === 'x' && o.crash && b % (o.crashEvery || bars) === 0) bar = 'X' + bar.slice(1);
+      str += bar;
+    }
+    rows[k] = str;
+  }
+  return DR(rows, bars * 4);
+}
+/* 파워 코드 줄: 마디마다 화음 하나, 리듬 문자열(hits)대로. o.n: 위에서 몇 음만 (팜 뮤트는 근음·5도 두 음) */
+function powerLine(key, prog, rhythm, o) {
+  o = o || {};
+  const notes = [];
+  prog.forEach((deg, b) => {
+    const v = U.guitar.voicing(key, deg, true).slice(0, o.n || 3);
+    for (const hh of hits(rhythm)) v.forEach(p => notes.push(nt(p, b * 4 + hh.s, hh.d * (o.gate || 0.9), hh.c === 'X' ? 118 : o.vel || 100)));
+  });
+  return { len: prog.length * 4, notes };
+}
+/* 두 번 녹음한 듯한 둘째 기타: 시작을 살짝 흔들고 세기를 조금 바꾼다 (좌우로 벌리면 넓고 두꺼워진다) */
+function retake(m, seed) {
+  const rnd = U.rng(seed || 7);
+  return { len: m.len, notes: m.notes.map(x => Object.assign({}, x, { s: U.round(Math.max(0, x.s + (rnd() - 0.4) * 0.025), 4), v: U.clamp(Math.round(x.v + (rnd() - 0.5) * 12), 1, 127) })) };
+}
+const strums = (key, prog, pattern, o) => ({ len: prog.length * 4, notes: prog.flatMap((deg, b) => U.guitar.strum(U.guitar.voicing(key, deg), b * 4, pattern, o)) });
+function arpeggio(key, prog, order) {
+  return { len: prog.length * 4, notes: prog.flatMap((deg, b) => {
+    const v = U.guitar.voicing(key, deg);
+    return order.map((j, i) => nt(v[Math.min(j, v.length - 1)], b * 4 + i * 0.5, 4 - i * 0.5 - 0.05, i ? 84 : 98));
+  }) };
+}
+
+/* ---------- 록 밴드 ---------- */
+(() => {
+  const key = { root: 4, scale: 'minor' };   // E 마이너
+  const verse = [0, 5, 0, 6], chorus = [2, 6, 0, 5], solo = [0, 5, 2, 6];   // Em C Em D · G D Em C · Em C G D
+  const ROCK = { k: 'x.......x.x.....', s: '....X.......X...', h: 'x.x.x.x.x.x.x.x.' };
+  const RIDE = { k: 'x.....x.x.......', s: '....X.......X...', y: 'x.x.x.x.x.x.x.x.' };
+  GENRES.push({
+    id: 'rock', name: '록 밴드', bpm: 132, key, swing: 0,
+    desc: '록 드럼 킷, 피크 베이스, 벌스엔 팜 뮤트, 코러스엔 좌우로 겹친 하이게인 기타와 기타 솔로',
+    roles: ['intro', 'verse', 'chorus', 'solo', 'outro'],
+    structure: [['intro', 4], ['verse', 8], ['chorus', 8], ['verse', 8], ['chorus', 8], ['solo', 8], ['chorus', 8], ['outro', 4]],
+    tracks: [
+      { name: '드럼', color: 1, kit: 'krock', vol: -3, a: -22, post: [glue], clips: {
+        intro: () => bandBeat(ROCK, 4, { crash: true, fill: true }),
+        verse: () => bandBeat(ROCK, 8, { crash: true, fill: true }),
+        chorus: () => bandBeat(RIDE, 8, { crash: true, crashEvery: 4, fill: true }),
+        solo: () => bandBeat(RIDE, 8, { crash: true, crashEvery: 2, fill: true }),
+        outro: () => DR({ x: 'X...............X...............X...............X...............', k: 'x...............x...............x...............x...............', s: 'X...............X...............X...............X...............' }, 16)
+      } },
+      { name: '베이스', color: 0, sound: '록 베이스', vol: -3, clips: {
+        intro: () => bassline(key, solo, { base: 28, pattern: 'x-x-x-x-x-x-x-x-' }),
+        verse: () => bassline(key, verse, { base: 28, pattern: 'x-x-x-x-x-x-x-x-' }),
+        chorus: () => bassline(key, chorus, { base: 28, pattern: ['X-x-x-x-x-x-x-o-', 'X-x-x-x-x-x-5-o-'] }),
+        solo: () => bassline(key, solo, { base: 28, pattern: 'X-x-x-x-x-x-x-o-' }),
+        outro: () => bassline(key, [0], { base: 28, pattern: 'X---------------' })
+      } },
+      { name: '팜 뮤트 기타', color: 6, sound: '팜 뮤트 리프', vol: -5, clips: {
+        intro: () => powerLine(key, solo, 'x-x-x-x-x-x-x-x-', { n: 2, gate: 0.6 }),
+        verse: () => powerLine(key, verse, 'X-x-x-x-x-x-x-x-', { n: 2, gate: 0.6, vel: 96 })
+      } },
+      { name: '기타 L', color: 5, sound: '하드 록 리듬', vol: -6, pan: -0.85, clips: {
+        chorus: () => powerLine(key, chorus, 'X-x-x-x-x-x-x-x-'),
+        solo: () => powerLine(key, solo, 'X-------x-x-x---'),
+        outro: () => powerLine(key, [0], 'X---------------', { gate: 0.98 })
+      } },
+      { name: '기타 R', color: 5, sound: '하드 록 리듬', vol: -6, pan: 0.85, clips: {
+        chorus: () => retake(powerLine(key, chorus, 'X-x-x-x-x-x-x-x-'), 11),
+        solo: () => retake(powerLine(key, solo, 'X-------x-x-x---'), 12),
+        outro: () => retake(powerLine(key, [0], 'X---------------', { gate: 0.98 }), 13)
+      } },
+      { name: '리드 기타', color: 9, sound: '록 리드', vol: -6, a: -18, clips: {
+        intro: () => melody(key, [[7, 0, 1.5], [6, 1.5, 0.5], [4, 2, 2], [3, 4, 0.5], [4, 4.5, 0.5], [6, 5, 1], [4, 6, 2],
+          [2, 8, 1.5], [3, 9.5, 0.5], [4, 10, 2], [6, 12, 1], [4, 13, 1], [3, 14, 0.5], [2, 14.5, 0.5], [0, 15, 1]], 16, 64),
+        solo: () => melody(key, [[4, 0, 1], [6, 1, 0.5], [7, 1.5, 0.5], [6, 2, 0.5], [4, 2.5, 1.5], [3, 4, 0.5], [4, 4.5, 0.5], [3, 5, 0.5], [2, 5.5, 0.5], [0, 6, 2],
+          [2, 8, 0.5], [3, 8.5, 0.5], [4, 9, 1], [6, 10, 0.5], [7, 10.5, 1.5], [9, 12, 1], [7, 13, 1], [6, 14, 2],
+          [7, 16, 0.5], [6, 16.5, 0.5], [4, 17, 0.5], [6, 17.5, 0.5], [7, 18, 2], [9, 20, 0.5], [10, 20.5, 0.5], [9, 21, 0.5], [7, 21.5, 0.5], [6, 22, 2],
+          [4, 24, 0.5], [6, 24.5, 0.5], [7, 25, 0.5], [9, 25.5, 0.5], [10, 26, 0.5], [11, 26.5, 1.5], [10, 28, 0.5], [9, 28.5, 0.5], [7, 29, 0.5], [6, 29.5, 0.5], [7, 30, 2]], 32, 64)
+      } },
+      { name: '오르간', color: 10, sound: '밴드 오르간', vol: -12, a: -20, clips: {
+        chorus: () => chords(key, chorus, { size: 3, base: 59, vel: 84 }),
+        solo: () => chords(key, solo, { size: 3, base: 59, vel: 80 })
+      } }
+    ]
+  });
+})();
+
+/* ---------- 팝 밴드 ---------- */
+(() => {
+  const key = { root: 2, scale: 'major' };   // D 메이저
+  const prog = [0, 4, 5, 3], pre = [3, 4, 5, 4], bridge = [5, 3, 0, 4];   // D A Bm G · G A Bm A · Bm G D A
+  const VERSE = { k: 'x.......x.x.....', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.' };
+  const PRE = { k: 'x...x...x...x...', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.' };
+  const CHORUS = { k: 'x.....x.x.......', s: '....X.......X...', o: '..x...x...x...x.', h: 'x...x...x...x...', g: '....x.......x...' };
+  const HALF = { k: 'x.......x.......', s: '........X.......', y: 'x.x.x.x.x.x.x.x.' };
+  GENRES.push({
+    id: 'popband', name: '팝 밴드', bpm: 120, key, swing: 0,
+    desc: '팝 드럼 킷과 탬버린, 핑거 베이스, 클린 아르페지오와 스트럼, 크런치 기타, 밴드 피아노',
+    roles: ['intro', 'verse', 'pre', 'chorus', 'bridge', 'outro'],
+    structure: [['intro', 4], ['verse', 8], ['pre', 4], ['chorus', 8], ['verse', 8], ['pre', 4], ['chorus', 8], ['bridge', 8], ['chorus', 8], ['outro', 4]],
+    tracks: [
+      { name: '드럼', color: 1, kit: 'kpop', vol: -3, a: -24, post: [glue], clips: {
+        intro: () => bandBeat({ k: 'x.......x.......', h: 'x.x.x.x.x.x.x.x.' }, 4, { crash: true }),
+        verse: () => bandBeat(VERSE, 8, { crash: true, fill: true }),
+        pre: () => bandBeat(PRE, 4, { fill: true }),
+        chorus: () => bandBeat(CHORUS, 8, { crash: true, crashEvery: 4, fill: true }),
+        bridge: () => bandBeat(HALF, 8, { crash: true, fill: true }),
+        outro: () => bandBeat(CHORUS, 4, { crash: true, crashEvery: 4 })
+      } },
+      { name: '베이스', color: 0, sound: '핑거 베이스', vol: -3, clips: {
+        intro: () => bassline(key, prog, { base: 38, pattern: 'x-------x-------' }),
+        verse: () => bassline(key, prog, { base: 38, pattern: 'x---x---x-x-x---' }),
+        pre: () => bassline(key, pre, { base: 38, pattern: 'x-x-x-x-x-x-x-x-' }),
+        chorus: () => bassline(key, prog, { base: 38, pattern: ['x-x-o-x-x-x-o-x-', 'x-x-o-x-x-5-o-x-'] }),
+        bridge: () => bassline(key, bridge, { base: 38, pattern: 'x-------x---x---' }),
+        outro: () => bassline(key, prog, { base: 38, pattern: 'x-x-o-x-x-x-o-x-' })
+      } },
+      { name: '클린 기타', color: 7, sound: '클린 싱글코일', vol: -6, pan: -0.6, a: -18, clips: {
+        intro: () => arpeggio(key, prog, [0, 2, 3, 4, 5, 4, 3, 2]),
+        verse: () => arpeggio(key, prog, [0, 2, 3, 4, 5, 4, 3, 2]),
+        pre: () => strums(key, pre, 'D-D-D-D-'),
+        chorus: () => strums(key, prog, 'D-DU-UDU'),
+        bridge: () => arpeggio(key, bridge, [0, 3, 4, 5, 4, 3, 2, 3]),
+        outro: () => strums(key, prog, 'D-DU-UDU')
+      } },
+      { name: '크런치 기타', color: 5, sound: '크런치 브리티시', vol: -8, pan: 0.6, clips: {
+        pre: () => powerLine(key, pre, 'x---x---x---x---'),
+        chorus: () => powerLine(key, prog, 'X-x-x-x-x-x-x-x-'),
+        outro: () => powerLine(key, prog, 'X-x-x-x-x-x-x-x-')
+      } },
+      { name: '피아노', color: 10, sound: '밴드 피아노', vol: -7, a: -20, clips: {
+        intro: () => chords(key, prog, { size: 3, base: 62, rhythm: 'x-------x-------', vel: 82 }),
+        verse: () => chords(key, prog, { size: 3, base: 62, rhythm: 'x-------x-------', vel: 84 }),
+        pre: () => chords(key, pre, { size: 3, base: 62, rhythm: 'x---x---x---x---', vel: 88 }),
+        chorus: () => chords(key, prog, { size: 3, base: 62, rhythm: 'x---x---x---x---', vel: 92 }),
+        bridge: () => chords(key, bridge, { size: 3, base: 62, rhythm: 'x---------------', vel: 80 })
+      } }
+    ]
+  });
+})();
+
 /* ---------- 퓨처 베이스 ---------- */
 (() => {
   const key = { root: 5, scale: 'major' }; // F 메이저
@@ -386,6 +539,7 @@ function genreProject(id) {
   for (const spec of g.tracks) {
     const t = U.addTrack(pr, spec.type || 'midi', null, { name: spec.name, color: spec.color, devices: devicesFor(spec) });
     t.vol = spec.vol || 0;
+    if (spec.pan) t.pan = spec.pan;
     t.sends = [spec.a != null ? spec.a : OFF, spec.b != null ? spec.b : OFF];
     t.slots = pr.scenes.map((sc, i) => {
       const role = g.roles[i], make = role && spec.clips[role];

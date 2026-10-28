@@ -208,14 +208,15 @@ def('looppad', {
 const ACOUSTIC_TYPES = [
   ['grand', '그랜드 피아노', '피아노'], ['upright', '업라이트 피아노', '피아노'], ['felt', '펠트 피아노', '피아노'],
   ['rhodes', '로즈 피아노', '일렉 피아노'], ['wurli', '우리처', '일렉 피아노'],
-  ['nylon', '나일론 기타', '기타'], ['steel', '통기타', '기타'], ['electric', '일렉 기타', '기타'], ['jazzgtr', '재즈 기타', '기타'], ['mute', '뮤트 기타', '기타'],
-  ['bass', '베이스 기타', '베이스'], ['dbass', '업라이트 베이스', '베이스'],
+  ['nylon', '나일론 기타', '기타'], ['steel', '통기타', '기타'], ['jazzgtr', '재즈 기타', '기타'], ['mute', '뮤트 기타', '기타'],
+  ['electric', '일렉 기타', '일렉 기타'], ['strat', '싱글코일', '일렉 기타'], ['humbucker', '험버커', '일렉 기타'], ['palm', '팜 뮤트', '일렉 기타'], ['egtr_lead', '리드 기타', '일렉 기타'],
+  ['bass', '베이스 기타', '베이스'], ['pickbass', '피크 베이스', '베이스'], ['dbass', '업라이트 베이스', '베이스'],
   ['harp', '하프', '줄 뜯기'], ['gayageum', '가야금', '줄 뜯기'], ['pizz', '피치카토 현', '줄 뜯기'],
   ['marimba', '마림바', '말렛·벨'], ['vibes', '비브라폰', '말렛·벨'], ['glock', '글로켄슈필', '말렛·벨'], ['musicbox', '오르골', '말렛·벨'], ['kalimba', '칼림바', '말렛·벨'], ['steeldrum', '스틸 드럼', '말렛·벨'], ['bell', '종', '말렛·벨']
 ];
 def('acoustic', {
   name: 'Acoustic', type: 'instrument',
-  info: '피아노·일렉 피아노·기타·하프·가야금·마림바·종처럼 줄을 뜯거나 두드리는 악기예요. 위의 악기 버튼으로 종류를 바꿔요. 음마다 소리를 계산해 두었다가 쳐서, 처음 치는 음은 아주 잠깐 늦을 수 있어요.',
+  info: '피아노·일렉 피아노·기타·일렉 기타·베이스·하프·가야금·마림바·종처럼 줄을 뜯거나 두드리는 악기예요. 위의 악기 버튼으로 종류를 바꿔요. 일렉 기타는 뒤에 Amp를 두면 진짜 앰프 소리가 나요. 음마다 소리를 계산해 두었다가 쳐서, 처음 치는 음은 아주 잠깐 늦을 수 있어요.',
   params: [
     en('inst', '악기', ACOUSTIC_TYPES.map(x => [x[0], x[1]]), 'grand', { info: '이 장치가 흉내 낼 악기예요.' }),
     pct('tone', 'Tone', 0.5, { info: '밝기. 올리면 세게 뜯거나 단단한 채로 때린 듯 또렷해지고, 내리면 부드러워져요.' }),
@@ -360,6 +361,33 @@ def('sat', {
   layout: [{ visual: 'curve', params: ['type', 'drive', 'bits'] }, { params: ['out', 'mix'] }]
 });
 
+/* 기타·베이스 앰프: 노브는 진짜 앰프처럼 0~10 (5가 가운데) */
+const ten = (id, label, def, info) => num(id, label, 0, 10, def, { fmt: v => v.toFixed(1), info });
+const AMP_MODELS = [
+  ['clean', 'Clean', '깨끗한 소리. 세게 쳐야 살짝 거칠어져요. 펑크 커팅·시티팝·발라드 반주에.'],
+  ['crunch', 'Crunch', '브리티시 크런치. 살살 치면 맑고 세게 치면 갈라져요. 록 반주·브릿팝에.'],
+  ['blues', 'Blues', '가운데 소리를 밀어 주는 오버드라이브. 블루스·리드에 따뜻하게 일그러져요.'],
+  ['lead', 'Lead', '하드 록 하이게인. 파워 코드와 길게 끄는 리드 솔로에.'],
+  ['metal', 'Metal', '단단하게 조인 메탈 게인. 팜 뮤트 리프가 또렷하게 끊겨요.'],
+  ['bass', 'Bass', '베이스 앰프. 낮은 소리는 깨끗하게 두고 위만 살짝 거칠게 해요.']
+];
+def('amp', {
+  name: 'Amp', type: 'audio',
+  info: '기타·베이스 앰프와 스피커 캐비닛이에요. 줄 악기를 진짜 일렉 기타 소리로 만들어 줘요. 모델을 고르고 Gain으로 일그러지는 정도, Bass·Mid·Treble로 소리 색을 정해요.',
+  params: [
+    en('model', 'Model', AMP_MODELS.map(m => [m[0], m[1]]), 'crunch', { info: AMP_MODELS.map(m => m[1] + ': ' + m[2]).join(' ') }),
+    ten('gain', 'Gain', 5, '프리앰프를 얼마나 세게 밀지예요. 올릴수록 일그러지고 소리가 길게 늘어져요.'),
+    ten('bass', 'Bass', 5, '낮은 소리 (5가 가운데)'),
+    ten('mid', 'Mid', 5, '가운데 소리. 올리면 앞으로 튀어나오고, 내리면 메탈처럼 속이 빈 소리가 돼요.'),
+    ten('treble', 'Treble', 5, '높은 소리'),
+    ten('pres', 'Presence', 5, '아주 높은 소리의 날. 올리면 또렷하게 찌르고, 내리면 둥글어져요.'),
+    en('cab', 'Cabinet', [['4x12', '4x12'], ['2x12', '2x12'], ['1x12', '1x12'], ['1x15', 'Bass 1x15'], ['off', 'Off (DI)']], '4x12', { info: '스피커 캐비닛. 4x12는 크고 묵직하게, 2x12는 열린 콤보처럼 시원하게, 1x12는 작은 앰프처럼 가운데가 진하게. Off는 캐비닛 없이 바로 들어요.' }),
+    db('out', 'Output', -24, 12, 0, { info: '앰프 뒤의 음량. 모델과 Gain이 달라도 비슷한 크기로 맞춰져 있어요.' })
+  ],
+  layout: [{ visual: 'amp', params: ['gain'] }, { title: 'Tone', params: ['bass', 'mid', 'treble', 'pres'] }, { title: 'Cab', params: ['cab', 'out'] }],
+  models: AMP_MODELS
+});
+
 def('chorus', {
   name: 'Chorus', type: 'audio',
   info: '조금씩 어긋난 복사본을 겹쳐 소리를 넓고 두껍게 만들어요. Flanger와 Vibrato로도 바꿀 수 있어요.',
@@ -490,7 +518,10 @@ const PAD_TYPES = [
   ['kick', 'Kick'], ['snare', 'Snare'], ['clap', 'Clap'], ['chh', 'Closed Hat'], ['ohh', 'Open Hat'],
   ['tom', 'Tom'], ['rim', 'Rim'], ['cow', 'Cowbell'], ['crash', 'Crash'], ['ride', 'Ride'],
   ['shaker', 'Shaker'], ['conga', 'Conga'], ['sub', '808 Sub'], ['zap', 'Zap'], ['noise', 'Noise Hit'], ['snap', 'Snap'],
-  ['brush', 'Brush'], ['swish', 'Brush Swish']
+  ['brush', 'Brush'], ['swish', 'Brush Swish'],
+  // 어쿠스틱 드럼 (밴드 킷)
+  ['akick', 'Kick (Acoustic)'], ['asnare', 'Snare (Acoustic)'], ['arim', 'Rimshot'], ['astick', 'Side Stick'], ['atom', 'Tom (Acoustic)'],
+  ['ahat', 'Hi-Hat'], ['apedal', 'Pedal Hat'], ['aohat', 'Open Hi-Hat'], ['acrash', 'Crash Cymbal'], ['aride', 'Ride Cymbal'], ['abell', 'Ride Bell'], ['atamb', 'Tambourine']
 ];
 function pad(type, o) {
   const name = (PAD_TYPES.find(t => t[0] === type) || [type, type])[1];

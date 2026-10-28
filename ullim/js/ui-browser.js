@@ -89,7 +89,7 @@ function items() {
           label: s.name, sub: U.DEV[s.kind].name + (special ? ' · ' + (s.user ? '내 사운드' : s.tags[0]) : ''), icon: 'sound', find: s.tags.join(' '), dup: special,
           key: tag + '/' + U.favs.key(s), sound: s,
           drag: { type: 'sound', item: s }, load: () => A.loadSound(loadTarget('midi'), s),
-          preview: () => previewDev(U.makeDevice(s.kind, { p: s.p, data: s.data }), s.user ? s.tags[1] || '' : s.tags[0]),
+          preview: () => previewDev(U.makeDevice(s.kind, { p: s.p, data: s.data }), s.user ? s.tags[1] || '' : s.tags[0], s),
           menu: [U.favs.menuItem(s)].concat(s.user ? U.mySoundItems(s) : [])
         });
       }
@@ -328,7 +328,13 @@ const BASS = [{ p: 33, s: 0, d: 0.4 }, { p: 33, s: 0.5, d: 0.4 }, { p: 45, s: 1,
 const LEAD = [{ p: 69, s: 0, d: 0.45 }, { p: 72, s: 0.5, d: 0.45 }, { p: 76, s: 1, d: 0.45 }, { p: 74, s: 1.5, d: 0.9 }];
 const BEAT = [36, 42, 38, 42, 36, 36, 38, 46].map((p, i) => ({ p, s: i * 0.5, d: 0.25, v: 110 })).concat([{ p: 42, s: 0.25, d: 0.2, v: 70 }]);
 const PADS8 = [0, 1, 2, 3, 4, 5, 6, 7].map(i => ({ p: 36 + i, s: i * 0.5, d: 0.4, v: 110 })); // 패드 1~8을 8분음표로
-function previewDev(dev, tag) {
+/* 앰프를 거친 일렉 기타: 파워 코드 리프 (E5 8분 넷 → G5 → A5), 팜 뮤트는 16분 질주 */
+const pc5 = (r, s, d, v) => [0, 7, 12].map(x => ({ p: r + x, s, d, v: v || 104 }));
+const POWER = [0, 0.5, 1, 1.5].flatMap(s => pc5(40, s, 0.42, s % 1 ? 92 : 112)).concat(pc5(43, 2, 0.9), pc5(45, 3, 0.9));
+const PALM = [0, 1, 2, 3, 4, 5, 6, 7].flatMap(i => [40, 47].map(p => ({ p, s: i * 0.25, d: 0.2, v: i % 4 ? 92 : 118 }))).concat(pc5(43, 2, 0.9, 112));
+const NO_PREVIEW_FX = ['duck', 'spectrum'];
+/* s: 사운드 프리셋 — 딸린 이펙트까지 거쳐 들려주고, 앞의 Chord(파워 코드 등)도 흉내 낸다 */
+function previewDev(dev, tag, s) {
   let notes = tag === 'drums' ? BEAT : tag === 'loopkit' ? PADS8 : tag === '베이스' ? BASS : tag === '리드' || tag === '플럭' ? LEAD : tag === '보컬' ? [{ p: 57, s: 0, d: 1.5 }] : CHORD;
   // 진짜 악기는 그 악기의 음역으로 옮겨서 들려준다 (베이스는 베이스 줄, 혼자 부는 악기는 멜로디)
   const m = U.instMeta(dev.kind, dev.p.inst);
@@ -336,8 +342,16 @@ function previewDev(dev, tag) {
     const base = m.low ? BASS : m.solo ? LEAD : CHORD;
     const shift = m.low ? 0 : 12 * Math.round((m.demo - (m.solo ? 72 : 60)) / 12);
     notes = base.map(n => Object.assign({}, n, { p: n.p + shift }));
+    // 파워 코드 사운드는 앞의 Chord가 5도·옥타브를 더하므로 근음만 친다
+    if (m.riff) notes = m.riff === 'palm' ? PALM : s && (s.pre || []).some(f => f.kind === 'chord') ? POWER.filter((n, i) => i % 3 === 0) : POWER;
   }
-  U.engine.previewDevice(dev, notes);
+  for (const f of (s && s.pre) || []) {
+    if (f.kind !== 'chord' || !f.p || f.p.sc !== false) continue;
+    const add = [f.p.s1, f.p.s2, f.p.s3, f.p.s4].filter(Boolean);
+    notes = notes.flatMap(n => [n].concat(add.map(x => Object.assign({}, n, { p: n.p + x }))));
+  }
+  const fx = s ? (s.fx || []).filter(f => !NO_PREVIEW_FX.includes(f.kind)).map(f => U.makeDevice(f.kind, { p: f.p })) : null;
+  U.engine.previewDevice(dev, notes, fx);
 }
 function previewTpl(tpl) {
   const made = tpl.make(pr().key);
