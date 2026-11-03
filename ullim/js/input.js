@@ -167,7 +167,7 @@ function moveSlot(dx, dy) {
 
 /* ================= MIDI 장치 =================
    건반(세기 → 터치 감도), 패드(드럼 트랙으로), 노브 8개(소리 다듬기 손잡이), 피치 벤드 · 모드 휠 · 누르는 힘(애프터터치), 서스테인.
-   M-VAVE SMK-25 mini 같은 작은 건반을 꽂으면 바로 쓰도록 맞췄다. 패드 채널과 노브 번호는 장치마다 달라서 'MIDI 장치' 창에서 알아낸다 */
+   M-VAVE SMK-25 mini · Akai MPK mini MK3 같은 작은 건반을 꽂으면 바로 쓰도록 맞췄다. 패드 채널과 노브 번호가 장치마다 다르면 'MIDI 장치' 창에서 알아낸다 */
 let midi = null;
 const MC = Object.assign({ padCh: 9, curve: 'normal', fixed: 100, pb: 2, at: 'vib', knobs: [], devKnobs: {} }, U.pref('midiCfg', null) || {});
 if (!MC.devKnobs) MC.devKnobs = {};   // 장치 이름 → 알아본 노브 (장치를 바꿔 꽂아도 그 장치의 노브로)

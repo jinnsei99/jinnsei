@@ -1,4 +1,4 @@
-/* 울림 — MIDI 장치 창: 연결한 건반(M-VAVE SMK-25 mini 같은)을 그림으로 두고, 누르고 돌리는 대로 보여 준다.
+/* 울림 — MIDI 장치 창: 연결한 건반(M-VAVE SMK-25 mini · Akai MPK mini MK3 같은)을 그림으로 두고, 누르고 돌리는 대로 보여 준다.
    건반은 누른 세기(키압)만큼 차오르고, 패드는 드럼 트랙으로, 노브 8개는 소리 다듬기 손잡이로 움직인다.
    터치 감도 · 패드 채널 알아보기 · 노브 알아보기 · 피치 벤드 범위 · 누르는 힘(애프터터치)을 여기서 정한다 */
 (function (U) {
@@ -25,7 +25,7 @@ function render(body) {
   if (!I().supported()) {
     body.append(h('div', { class: 'mid-none' },
       h('p', { text: U.isIOS ? '아이패드·아이폰의 브라우저(사파리·크롬 모두)는 MIDI 장치를 쓰지 못하게 되어 있어요.' : '이 브라우저는 MIDI 장치를 지원하지 않아요.' }),
-      h('p', { text: 'SMK-25 mini 같은 MIDI 건반은 컴퓨터(맥·윈도우)의 크롬이나 엣지에서 이 웹사이트를 열고 USB-C 선으로 꽂으면 바로 돼요.' + (U.isIOS ? ' 아이패드에서 꼭 써야 하면 Web MIDI를 지원하는 브라우저 앱(예: Web MIDI Browser)으로 이 주소를 열어 보세요.' : '') })));
+      h('p', { text: 'SMK-25 mini · MPK mini 같은 MIDI 건반은 컴퓨터(맥·윈도우)의 크롬이나 엣지에서 이 웹사이트를 열고 USB-C 선으로 꽂으면 바로 돼요.' + (U.isIOS ? ' 아이패드에서 꼭 써야 하면 Web MIDI를 지원하는 브라우저 앱(예: Web MIDI Browser)으로 이 주소를 열어 보세요.' : '') })));
     return;
   }
   body.append(devRow());
