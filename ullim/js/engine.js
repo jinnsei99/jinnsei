@@ -542,6 +542,11 @@ class Engine {
     this.recordNote(n, p, 0, false, t);
     if (n.liveLog) for (let i = n.liveLog.length - 1; i >= 0; i--) if (n.liveLog[i].p === p && n.liveLog[i].t1 == null) { n.liveLog[i].t1 = t; break; }
   }
+  /* MIDI 건반의 표현 (피치 벤드 · 비브라토)을 그 트랙 악기에 */
+  expr(trackId, o) {
+    const n = this.nodes.get(trackId);
+    if (n && n.inst && n.inst.expr) n.inst.expr(o);
+  }
   allLiveOff() {
     this.repeats.clear();
     for (const n of this.nodes.values()) for (const p of [...n.live.keys()]) this.liveOff(n.id, p);

@@ -220,10 +220,10 @@ function renderStatus() {
   info(md, '화면 버전', '컴퓨터 버전(마우스·키보드)과 아이패드 버전(손가락) 중에서 골라요. 자동이면 이 기기에 맞춰요.');
   md.addEventListener('click', () => modeMenu(md));
   right.append(dz, md);
-  const mc = U.input.midiCount();
-  const midi = h('button', { class: 'st-midi', type: 'button', text: mc ? 'MIDI ' + mc : 'MIDI 연결' });
-  info(midi, 'MIDI 장치', mc ? 'MIDI 건반 ' + mc + '개가 연결돼 있어요. 연주는 녹음 준비(●)한 트랙이나 고른 트랙으로 가요.' : 'USB MIDI 건반을 꽂고 눌러서 연결해요.');
-  midi.addEventListener('click', () => U.input.connectMidi(true));
+  const mc = U.input.midiCount(), devs = U.input.devices().filter(d => d.on);
+  const midi = h('button', { class: 'st-midi', type: 'button', text: mc === 1 ? devs[0].name.slice(0, 18) : mc ? 'MIDI ' + mc : 'MIDI 연결' });
+  info(midi, 'MIDI 장치', (mc ? 'MIDI 건반 ' + devs.map(d => d.name).join(', ') + '이(가) 연결돼 있어요. 연주는 녹음 준비(●)한 트랙이나 고른 트랙으로 가요.' : 'USB MIDI 건반(M-VAVE SMK-25 mini 등)을 꽂고 눌러서 연결해요.') + ' 누르면 MIDI 장치 창이 열려요: 터치 감도 · 패드 · 노브 · 피치 벤드.');
+  midi.addEventListener('click', () => U.midiPanel());
   right.append(midi);
   right.append(h('span', { class: 'st-sr', text: Math.round(ctx.sampleRate / 100) / 10 + ' kHz' }));
   const vs = btn({ icon: 'session', cls: 'ghost sm' + (ui.view === 'session' ? ' on' : ''), title: '세션 뷰 (Tab)', info: ['세션 뷰', '클립을 칸에 담아 자유롭게 띄우는 화면이에요. Tab으로 바꿔요.'], onclick: () => U.setView('session') });
@@ -508,7 +508,7 @@ function prefsDialog() {
   const ctx = U.engine.ctx;
   const lat = Math.round(((ctx.outputLatency || 0) + (ctx.baseLatency || 0)) * 1000);
   body.append(h('p', { class: 'hint', text: '오디오: ' + ctx.sampleRate + ' Hz · 지연 약 ' + lat + ' ms' + (ctx.state !== 'running' ? ' · 아직 소리가 꺼져 있어요' : '') }));
-  body.append(btn({ text: 'MIDI 장치 연결', cls: 'sm', onclick: () => U.input.connectMidi(true) }));
+  body.append(btn({ text: 'MIDI 장치 (건반 · 패드 · 노브)', cls: 'sm', onclick: () => U.midiPanel() }));
   U.dialog({ title: '환경설정', body, width: '400px', actions: [{ label: '닫기', primary: true }] });
 }
 function applySkin() {
