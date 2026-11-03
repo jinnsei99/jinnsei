@@ -141,7 +141,7 @@ function commands() {
   add('rec', e.recording ? '녹음 멈추기' : '녹음 시작 (어레인지먼트)', () => A.setRecord(!e.recording), { key: 'F9', pri: 5, keys: 'record rec 녹음' });
   add('srec', e.sessionRec ? '세션 녹음 멈추기' : '세션 녹음 시작', () => A.setSessionRec(!e.sessionRec), { keys: 'record session 녹음 세션' });
   add('capture', 'MIDI 캡처 · 방금 친 연주 건지기', () => A.capture(), { keys: 'capture 캡처 건지기 연주' });
-  add('midipanel', 'MIDI 장치 · 건반 · 패드 · 노브', () => U.midiPanel(), { keys: 'midi keyboard device smk m-vave 건반 연결 노브 패드 터치 감도 키압 세기 벤드' });
+  add('midipanel', 'MIDI 장치 · 건반 · 패드 · 노브', () => U.midiPanel(), { keys: 'midi keyboard device smk m-vave mpk akai 아카이 조이스틱 건반 연결 노브 패드 터치 감도 키압 세기 벤드' });
   add('metro', '메트로놈', () => { p.metro = !p.metro; U.commit('메트로놈'); }, { on: p.metro, pri: 3, keys: 'metronome click 딸깍 박자' });
   for (const [n, l] of COUNT_OPTS) add('ci' + n, '카운트인 ' + l, () => setCountIn(n), { on: countIn() === n || null, keys: 'countin count 카운트인 세기 미리 녹음' });
   add('loop', '루프', () => { p.loop.on = !p.loop.on; U.commit('루프'); }, { on: p.loop.on, keys: 'loop 반복' });
