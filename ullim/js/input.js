@@ -169,7 +169,8 @@ function moveSlot(dx, dy) {
    건반(세기 → 터치 감도), 패드(드럼 트랙으로), 노브 8개(소리 다듬기 손잡이), 피치 벤드 · 모드 휠 · 누르는 힘(애프터터치), 서스테인.
    M-VAVE SMK-25 mini 같은 작은 건반을 꽂으면 바로 쓰도록 맞췄다. 패드 채널과 노브 번호는 장치마다 달라서 'MIDI 장치' 창에서 알아낸다 */
 let midi = null;
-const MC = Object.assign({ padCh: 9, curve: 'normal', fixed: 100, pb: 2, at: 'vib', knobs: [] }, U.pref('midiCfg', null) || {});
+const MC = Object.assign({ padCh: 9, curve: 'normal', fixed: 100, pb: 2, at: 'vib', knobs: [], devKnobs: {} }, U.pref('midiCfg', null) || {});
+if (!MC.devKnobs) MC.devKnobs = {};   // 장치 이름 → 알아본 노브 (장치를 바꿔 꽂아도 그 장치의 노브로)
 const saveCfg = () => U.setPref('midiCfg', MC);
 /* 터치 감도: 들어온 세기 → 칠 세기 */
 const CURVES = {
@@ -216,7 +217,7 @@ async function connectMidi(ask) {
     return false;
   }
   const bind = () => {
-    for (const inp of midi.inputs.values()) inp.onmidimessage = onMidi;
+    for (const inp of midi.inputs.values()) inp.onmidimessage = e => onMidi(e, inp);
     U.inval('status');
     U.emit('midi', { k: 'devices' });
     greet();
@@ -227,13 +228,54 @@ async function connectMidi(ask) {
   return true;
 }
 function devices() { return midi ? [...midi.inputs.values()].map(i => ({ id: i.id, name: i.name || 'MIDI 장치', maker: i.manufacturer || '', on: i.state === 'connected' })) : []; }
-const isSMK = d => /smk|m-?vave/i.test(d.name + ' ' + d.maker);
-/* M-VAVE SMK-25 mini를 처음 꽂으면 한 번 알려 준다 */
+/* ---------- 잘 알려진 건반 ----------
+   이름으로 알아본다. MPK mini MK3는 노브 8개가 CC 70~77, 패드가 10번 채널로 정해져 있어 알아보기 없이 바로 쓰고,
+   SMK-25 mini는 장치 설정에 따라 달라서 노브만 한 번 알아보기 */
+const PROFILES = [
+  { id: 'mpk3', name: 'Akai MPK mini MK3', test: d => /mpk\s*mini\s*(3|iii|mk\s*3|play)/i.test(d.name), knobs: [70, 71, 72, 73, 74, 75, 76, 77], pads: 'mpc',
+    hello: '건반은 누른 세기대로, 패드(A·B 뱅크)는 드럼 트랙으로, 노브 8개는 소리 다듬기 손잡이로, 조이스틱은 피치 벤드 · 모드로 바로 써요.',
+    panel: '노브 8개(CC 70~77)는 이어 두었어요 · 조이스틱 좌우 = 피치 벤드, 위 = 모드 · 패드 A·B 뱅크 = 드럼 패드 1~16 · 노트 리피트 · 아르페지에이터는 건반 쪽에서' },
+  { id: 'smk', name: 'M-VAVE SMK-25 mini', test: d => /smk|m-?vave/i.test(d.name + ' ' + (d.maker || '')), pref: 'midiSMK',
+    hello: '건반은 누른 세기대로, 패드는 드럼 트랙으로 가요. 노브는 MIDI 장치 창에서 한 번 알아보기를 해 주세요.',
+    panel: '노브는 장치 설정에 따라 번호가 달라서 한 번 알아보기를 해 주세요 · 피치 벤드 · 모드 버튼, 서스테인 버튼도 돼요' }
+];
+const profileOf = d => (d && PROFILES.find(p => p.test(d))) || null;
+const isSMK = d => (profileOf(d) || {}).id === 'smk';
+/* 아는 건반을 처음 꽂으면 한 번 알려 준다 */
 function greet() {
-  const d = devices().find(x => x.on && isSMK(x));
-  if (!d || U.pref('midiSMK', false)) return;
-  U.setPref('midiSMK', true);
-  U.toast(d.name + '을(를) 찾았어요. 건반은 누른 세기대로, 패드는 드럼 트랙으로 가요. 노브는 MIDI 장치 창에서 한 번 알아보기를 해 주세요.');
+  for (const d of devices()) {
+    const pf = d.on && profileOf(d);
+    if (!pf) continue;
+    const key = pf.pref || 'midiHello:' + pf.id;
+    if (U.pref(key, false)) continue;
+    U.setPref(key, true);
+    U.toast(pf.name + '을(를) 찾았어요. ' + pf.hello);
+  }
+  U.emit('midi', { k: 'learn', done: true });
+}
+/* 노브 목록: 그 장치에서 알아본 노브 → 아는 건반의 정해진 노브 → 장치를 모를 때 알아본 노브 */
+const profKnobs = {};
+function knobsFor(dev) {
+  if (dev && MC.devKnobs[dev]) return MC.devKnobs[dev];
+  const pf = dev && profileOf({ name: dev });
+  if (pf && pf.knobs) return profKnobs[pf.id] || (profKnobs[pf.id] = pf.knobs.map(cc => ({ ch: -1, cc, mode: 'auto', src: pf.id })));
+  return MC.knobs;
+}
+/* 지금 쓰는 장치: 마지막으로 무언가 보낸 장치(아직 꽂혀 있으면), 아니면 처음 연결된 장치 */
+function curDev() {
+  const on = devices().filter(x => x.on);
+  if (X.dev && on.some(x => x.name === X.dev)) return X.dev;
+  return on.length ? on[0].name : X.dev || '';
+}
+const knobs = () => knobsFor(curDev());
+const kMatch = (k, ch, cc) => !!k && k.cc === cc && (k.ch === ch || k.ch === -1);
+/* 지우기: 이 장치에서 알아본 것 → (없으면) 아는 건반은 정해진 노브라 그대로, 모르는 건반은 공통으로 알아본 것 */
+function clearKnobs() {
+  const dev = curDev(), pf = dev && profileOf({ name: dev });
+  if (dev && MC.devKnobs[dev]) delete MC.devKnobs[dev];
+  else if (!(pf && pf.knobs)) MC.knobs = [];
+  saveCfg();
+  U.emit('midi', { k: 'learn', done: true });
 }
 
 /* ---------- 건반 · 패드 ---------- */
@@ -311,20 +353,24 @@ function polyPressure(ch, p, v) {
 const REL2 = v => v <= 7 || v >= 121, REL64 = v => v >= 57 && v <= 71;
 const relDelta = (mode, v) => (mode === 'rel64' ? v - 64 : v < 64 ? v : v - 128);
 const ccSeen = new Map();
-/* 이 CC는 어떤 노브인가: 배운 노브는 그 방식, 아니면 들어오는 값으로 짐작한다 (모를 때는 조금씩 움직여 값이 튀지 않게) */
+/* 이 CC는 어떤 노브인가: 알아본 노브는 그 방식, 아니면 들어오는 값으로 알아낸다.
+   가운데 값이면 보통 노브, 같은 작은 값이 이어지면 끝없는 노브, 한두 칸씩 바뀌면 보통 노브. 아직 모르면 'wait' (그 값은 건너뛴다, 값이 튀지 않게) */
 function ccMode(ch, cc, v) {
-  const k = MC.knobs.find(x => x && x.ch === ch && x.cc === cc);
+  const k = knobs().find(x => kMatch(x, ch, cc));
   if (k && k.mode !== 'auto') return k.mode;
   const key = ch + ':' + cc, sn = ccSeen.get(key) || { vals: [], mode: null };
   ccSeen.set(key, sn);
   if (!sn.mode) {
+    const prev = sn.vals.length ? sn.vals[sn.vals.length - 1] : null;
     sn.vals.push(v);
     if (sn.vals.length > 4) sn.vals.shift();
-    if (!REL2(v) && !REL64(v)) sn.mode = 'abs';   // 가운데 값이 나오면 보통 노브
-    else if (sn.vals.length >= 3 && sn.vals.every(x => x === v)) sn.mode = REL64(v) ? 'rel64' : 'rel2';
-    if (sn.mode && k) { k.mode = sn.mode; saveCfg(); }
+    if (!REL2(v) && !REL64(v)) sn.mode = 'abs';
+    else if (prev === v) sn.mode = REL64(v) ? 'rel64' : 'rel2';
+    else if (prev != null && Math.abs(prev - v) <= 2) sn.mode = 'abs';
+    else if (sn.vals.length >= 4) sn.mode = REL64(v) ? 'rel64' : 'rel2';
+    if (sn.mode && k) { k.mode = sn.mode; if (!k.src) saveCfg(); }
   }
-  return sn.mode || (REL64(v) ? 'rel64' : 'rel2');
+  return sn.mode || 'wait';
 }
 function knobTrack() { const ids = liveTargets(); return ids.length ? U.trackById(pr(), ids[0]) : null; }
 function knobGet(t, id) {
@@ -337,6 +383,7 @@ function knobTurn(i, val, mode) {
   const t = knobTrack(), id = KNOBS[i][0];
   const cur = knobGet(t, id);
   if (cur == null) return null;   // 이 소리에는 없는 손잡이 (앰프가 없으면 드라이브처럼)
+  if (mode === 'wait') return cur;
   const m = mode === 'abs' ? val / 127 : U.clamp(cur + relDelta(mode, val) / 100, 0, 1);
   if (id === 'fader') A.setMixer(t.id, 'vol', U.round(U.posToDb(m), 1), false);
   else U.shapeKnob.set(t, id, m, false);
@@ -347,7 +394,7 @@ function knobTurn(i, val, mode) {
 function learnKnob(ch, cc, v) {
   const L = learn;
   if (L.cc == null || L.cc !== cc || L.ch !== ch) {
-    if (MC.knobs.some((k, j) => j < L.i && k && k.cc === cc && k.ch === ch)) return;   // 앞에서 배운 노브를 아직 돌리는 중
+    if (L.list.some((k, j) => j < L.i && kMatch(k, ch, cc))) return;   // 앞에서 배운 노브를 아직 돌리는 중
     if (L.cc != null) finishKnob();
     if (!learn) return;
     L.cc = cc; L.ch = ch; L.vals = [];
@@ -365,7 +412,7 @@ function finishKnob() {
   // 오른쪽으로 돌리면 보통 노브는 값이 커지고, 끝없는 노브는 같은 작은 값(1 또는 65)이 이어진다. 하나만 왔으면 쓰면서 알아낸다
   const mode = same && REL2(v) ? 'rel2' : same && REL64(v) ? 'rel64' : vals.length >= 2 || (!REL2(v) && !REL64(v)) ? 'abs' : 'auto';
   const i = L.i, cc = L.cc;
-  MC.knobs[i] = { ch: L.ch, cc, mode };
+  L.list[i] = { ch: L.ch, cc, mode };
   saveCfg();
   ccSeen.delete(L.ch + ':' + cc);
   L.i++;
@@ -376,8 +423,9 @@ function finishKnob() {
 }
 function startLearn(what) {
   if (learn && learn.timer) clearTimeout(learn.timer);
-  learn = what === 'knob' ? { what, i: 0, cc: null, vals: [] } : what === 'pad' ? { what } : null;
-  if (what === 'knob') MC.knobs = [];
+  learn = what === 'knob' ? { what, i: 0, cc: null, vals: [], list: [] } : what === 'pad' ? { what } : null;
+  // 알아본 노브는 그 장치 것으로 둔다 (장치를 모르면 공통)
+  if (what === 'knob') { const dev = curDev(); if (dev) MC.devKnobs[dev] = learn.list; else MC.knobs = learn.list; }
   U.emit('midi', { k: 'learn', what, start: true });
 }
 function stopLearn() {
@@ -451,19 +499,20 @@ function onCC(ch, cc, val) {
   if (learn && learn.what === 'knob' && cc !== 1 && cc !== 64 && cc < 120) { learnKnob(ch, cc, val); act({ k: 'cc', ch, cc, v: val, learning: true }); return; }
   if (ui.mapMode && ui.mapTarget) { learnCC(ch, cc); return; }
   const maps = (pr().midimap || []).filter(m => m.cc === cc && m.ch === ch);
-  if (maps.length) { const mode = ccMode(ch, cc, val); for (const m of maps) applyCC(m, val, mode); act({ k: 'cc', ch, cc, v: val, mapped: true }); return; }
+  if (maps.length) { const mode = ccMode(ch, cc, val); if (mode !== 'wait') for (const m of maps) applyCC(m, val, mode); act({ k: 'cc', ch, cc, v: val, mapped: true }); return; }
   if (cc === 1) { modWheel(val); return; }
   if (cc === 64) { setSustain(val >= 64); return; }
   if (cc === 120 || cc === 123) { midiAllOff(); return; }
-  const i = MC.knobs.findIndex(k => k && k.cc === cc && k.ch === ch);
+  const i = knobs().findIndex(k => kMatch(k, ch, cc));
   const m = i >= 0 ? knobTurn(i, val, ccMode(ch, cc, val)) : null;
   act({ k: 'cc', ch, cc, v: val, knob: i, m });
 }
 
 function midiCount() { return midi ? [...midi.inputs.values()].filter(i => i.state === 'connected').length : 0; }
-function onMidi(ev) {
+function onMidi(ev, inp) {
   const d = ev.data, st = d[0];
   if (st >= 0xf0) return;   // 클럭 · 시스템 메시지
+  if (inp && inp.name && X.dev !== inp.name) { X.dev = inp.name; U.emit('midi', { k: 'dev', name: inp.name }); }
   const type = st & 0xf0, ch = st & 0x0f, d1 = d[1], d2 = d[2];
   switch (type) {
     case 0x90:
@@ -484,7 +533,7 @@ function learnPad(ch) {
   if (ch === keysChannel() && ch !== MC.padCh) {
     learn = null;
     U.emit('midi', { k: 'learn', what: 'pad', same: true, ch, done: true });
-    U.toast('패드가 건반과 같은 ' + (ch + 1) + '번 채널로 와요. 이대로면 패드도 건반 트랙으로 가요. M-VAVE 편집 앱에서 패드 채널을 10번으로 바꾸면 드럼 트랙으로 갈라져요.');
+    U.toast('패드가 건반과 같은 ' + (ch + 1) + '번 채널로 와요. 이대로면 패드도 건반 트랙으로 가요. 건반의 편집 앱(M-VAVE · MPK mini 3 Program Editor)에서 패드 채널을 10번으로 바꾸면 드럼 트랙으로 갈라져요.');
     return;
   }
   MC.padCh = ch;
@@ -502,7 +551,8 @@ function init() {
   connectMidi(false);
 }
 U.input = {
-  init, connectMidi, midiCount, liveTargets, onMidi, devices, isSMK, cfg: MC, saveCfg, curveVel, CURVES, KNOBS,
-  startLearn, stopLearn, learning: () => learn, padTarget, knobTrack, knobGet, state: X, supported: () => !!navigator.requestMIDIAccess, connected: () => !!midi
+  init, connectMidi, midiCount, liveTargets, onMidi, devices, isSMK, profileOf, PROFILES, cfg: MC, saveCfg, curveVel, CURVES, KNOBS,
+  knobs, clearKnobs, curDev, startLearn, stopLearn, learning: () => learn, padTarget, knobTrack, knobGet, state: X,
+  supported: () => !!navigator.requestMIDIAccess, connected: () => !!midi
 };
 })(window.U = window.U || {});

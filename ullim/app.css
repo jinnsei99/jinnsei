@@ -833,6 +833,8 @@ html.touch .tk-cp-k { display: none; }
 .mid-dev { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--line-2); border-radius: 999px; background: var(--panel-2); font-size: 12px; }
 .mid-dev i { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-3); }
 .mid-dev.on i { background: #3ecf6b; box-shadow: 0 0 6px #3ecf6b; }
+.mid-dev.cur { border-color: var(--accent); }
+.mid-pf { margin: 6px 0 0; }
 .mid-dev em { font-style: normal; font-size: 10.5px; padding: 1px 6px; border-radius: 999px; background: var(--accent); color: var(--accent-fg); }
 .mid-ctl { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 14px; background: linear-gradient(180deg, #2b2d31, #1d1e21); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 6px 18px rgba(0, 0, 0, 0.25); color: #e6e6e6; }
 .mid-top { display: flex; gap: 14px; }

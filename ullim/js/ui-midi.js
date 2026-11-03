@@ -7,7 +7,7 @@ const { h, btn, info, clamp } = U;
 const pr = () => U.project;
 const I = () => U.input;
 const BLACK = [1, 3, 6, 8, 10];
-let dlg = null, off = null, V = null;
+let dlg = null, off = null, V = null, devT = 0;
 
 function open() {
   if (dlg) return;
@@ -46,22 +46,26 @@ function devRow() {
   const list = I().devices();
   if (!list.some(d => d.on)) row.append(h('span', { class: 'mid-dl', text: '장치를 찾지 못했어요. USB-C 선으로 꽂은 뒤 다시 찾기를 눌러 주세요.' }));
   for (const d of list) {
-    const chip = h('span', { class: 'mid-dev' + (d.on ? ' on' : '') }, h('i'), h('b', { text: d.name }), I().isSMK(d) ? h('em', { text: 'M-VAVE SMK-25 mini' }) : null);
+    const pf = I().profileOf(d);
+    const chip = h('span', { class: 'mid-dev' + (d.on ? ' on' : '') + (d.name === I().curDev() ? ' cur' : '') }, h('i'), h('b', { text: d.name }), pf ? h('em', { text: pf.name }) : null);
     info(chip, d.name, d.on ? '연결돼 있어요' + (d.maker ? ' (' + d.maker + ')' : '') + '. 건반 · 패드 · 노브를 쓰면 아래 그림이 따라 움직여요.' : '꺼져 있거나 빠졌어요.');
     row.append(chip);
   }
   row.append(btn({ text: '다시 찾기', cls: 'sm', onclick: async () => { await I().connectMidi(true); if (V) render(V.body); } }));
-  return row;
+  // 아는 건반이면 무엇이 어디로 가는지 한 줄
+  const cur = list.find(d => d.on && d.name === I().curDev()), pf = cur && I().profileOf(cur);
+  V.hint = h('p', { class: 'hint mid-pf', text: pf ? pf.name + ': ' + pf.panel : '' });
+  V.hint.hidden = !pf;
+  return h('div', null, row, V.hint);
 }
 
 /* ---------- 건반 그림: 패드 8 · 노브 8 · 건반 25 ---------- */
 function controller() {
   const pads = h('div', { class: 'mid-pads', role: 'group', 'aria-label': '패드' });
-  for (let i = 0; i < 8; i++) {
-    const p = h('div', { class: 'mid-pad' }, h('span', { text: String(i + 1) }));
-    V.pads.push(p);
-    pads.append(p);
-  }
+  for (let i = 0; i < 8; i++) V.pads.push(h('div', { class: 'mid-pad' }, h('span', { text: String(i + 1) })));
+  // MPC처럼 패드 1~4가 아래 줄인 건반(MPK mini)은 그림도 그렇게
+  const pf = I().profileOf({ name: I().curDev() });
+  for (const i of pf && pf.pads === 'mpc' ? [4, 5, 6, 7, 0, 1, 2, 3] : [0, 1, 2, 3, 4, 5, 6, 7]) pads.append(V.pads[i]);
   info(pads, '패드', '패드를 치면 드럼 트랙(' + trackName(I().padTarget()) + ')으로 가요. ' + (I().cfg.padCh + 1) + '번 채널을 패드로 알아들어요.');
   const knobs = h('div', { class: 'mid-knobs', role: 'group', 'aria-label': '노브' });
   I().KNOBS.forEach(([id, name], i) => {
@@ -148,7 +152,7 @@ function settings() {
   V.learnLbl = h('span', { class: 'mid-val mid-learn' });
   const knobLearn = btn({ text: '노브 알아보기', cls: 'sm', info: ['노브 알아보기', '누른 뒤 장치의 노브를 1번부터 8번까지 차례로 오른쪽으로 조금씩 돌려 주세요. 노브마다 CC 번호와 방식(보통 노브 · 끝없이 도는 노브)을 배워요.'], onclick: () => { I().startLearn('knob'); showLearn(); showKnobs(); } });
   V.knobStop = btn({ text: '그만', cls: 'sm ghost', onclick: () => { I().stopLearn(); showLearn(); showKnobs(); } });
-  const knobClear = btn({ text: '지우기', cls: 'sm ghost', onclick: () => { I().cfg.knobs = []; I().saveCfg(); showKnobs(); showLearn(); } });
+  const knobClear = btn({ text: '지우기', cls: 'sm ghost', info: ['지우기', '이 장치에서 알아본 노브를 지워요. 아는 건반(MPK mini MK3 등)이면 정해진 노브로 돌아가요.'], onclick: () => { I().clearKnobs(); showKnobs(); showLearn(); } });
   // 피치 벤드 · 누르는 힘
   const pb = U.seg([[2, '±2반음', '벤드를 끝까지 올리면 2반음(온음) 올라가요. 기타 초킹 정도예요.'], [12, '±1옥타브', '끝까지 올리면 한 옥타브 올라가요.']], M.pb, v => { M.pb = v; I().saveCfg(); });
   const at = U.seg([['vib', '비브라토', '건반을 누른 채 더 세게 누르면 떨림이 깊어져요.'], ['off', '쓰지 않기', '누르는 힘은 그림에만 보여요.']], M.at, v => { M.at = v; I().saveCfg(); });
@@ -167,23 +171,24 @@ function showLearn() {
   const pt = I().padTarget();
   V.padLbl.textContent = L && L.what === 'pad' ? '패드를 아무거나 하나 쳐 주세요…' : (M.padCh + 1) + '번 채널 → ' + (pt ? trackName(pt) : '드럼 트랙이 없어요 (패드도 건반 트랙으로 가요)');
   V.padLbl.classList.toggle('wait', !!(L && L.what === 'pad'));
-  const n = M.knobs.filter(Boolean).length;
-  V.learnLbl.textContent = L && L.what === 'knob' ? '노브 ' + (L.i + 1) + '(' + I().KNOBS[L.i][1] + ')을 오른쪽으로 조금 돌려 주세요…' : n ? n + '개 이었어요 → ' + trackName(I().liveTargets()) : '아직 몰라요. 알아보기를 눌러 주세요.';
+  const ks = I().knobs(), n = ks.filter(Boolean).length, pre = ks.some(k => k && k.src);
+  V.learnLbl.textContent = L && L.what === 'knob' ? '노브 ' + (L.i + 1) + '(' + I().KNOBS[L.i][1] + ')을 오른쪽으로 조금 돌려 주세요…' : n ? n + '개 이었어요' + (pre ? ' (이 건반에 맞춰 두었어요)' : '') + ' → ' + trackName(I().liveTargets()) : '아직 몰라요. 알아보기를 눌러 주세요.';
   V.learnLbl.classList.toggle('wait', !!(L && L.what === 'knob'));
   V.knobStop.hidden = !(L && L.what === 'knob');
 }
 /* 노브마다 이은 CC와 지금 값 */
 function showKnobs() {
   if (!V) return;
-  const L = I().learning(), M = I().cfg, t = I().knobTrack();
+  const L = I().learning(), ks = I().knobs(), t = I().knobTrack();
   V.knobs.forEach((k, i) => {
-    const kk = M.knobs[i];
-    k.cc.textContent = kk ? 'CC ' + kk.cc + (kk.mode === 'abs' ? '' : ' ↻') : '—';
+    const kk = ks[i];
+    k.cc.textContent = kk ? 'CC ' + kk.cc + (kk.mode === 'rel2' || kk.mode === 'rel64' ? ' ↻' : '') : '—';
     const m = kk ? I().knobGet(t, k.id) : null;
     k.ring.style.setProperty('--m', m == null ? 0 : m);
     k.el.classList.toggle('none', m == null);
     k.el.classList.toggle('learn', !!(L && L.what === 'knob' && L.i === i));
-    info(k.el, '노브 ' + (i + 1) + ' · ' + I().KNOBS[i][1], (kk ? 'CC ' + kk.cc + (kk.mode === 'abs' ? ' (보통 노브)' : ' (끝없이 도는 노브: 돌린 만큼 바뀌어요)') + '. ' : '아직 이어지지 않았어요. ') + (m == null && kk ? '이 소리에는 없는 손잡이예요.' : '건반이 치는 트랙의 ' + I().KNOBS[i][1] + '을(를) 바꿔요.'));
+    const how = !kk ? '' : kk.mode === 'abs' ? ' (보통 노브)' : kk.mode === 'auto' ? ' (돌리면 방식을 알아내요)' : ' (끝없이 도는 노브: 돌린 만큼 바뀌어요)';
+    info(k.el, '노브 ' + (i + 1) + ' · ' + I().KNOBS[i][1], (kk ? 'CC ' + kk.cc + how + '. ' : '아직 이어지지 않았어요. ') + (m == null && kk ? '이 소리에는 없는 손잡이예요.' : '건반이 치는 트랙의 ' + I().KNOBS[i][1] + '을(를) 바꿔요.'));
   });
 }
 
@@ -196,6 +201,10 @@ function onEvent(ev) {
   if (!V || !V.now) { if (ev.k === 'devices' && V) render(V.body); return; }
   switch (ev.k) {
     case 'devices': render(V.body); return;
+    case 'dev':   // 다른 건반을 쓰기 시작했다 (그 건반의 노브로). 두 건반을 함께 치면 번갈아 오므라 잠깐 뒤에 한 번
+      clearTimeout(devT);
+      devT = setTimeout(() => { if (V) render(V.body); }, 150);
+      return;
     case 'note': {
       const k = keyEl(ev.p);
       if (k) { k.style.setProperty('--v', ev.vel / 127); k.classList.add('on'); }
@@ -212,6 +221,9 @@ function onEvent(ev) {
     }
     case 'pad': {
       const pd = V.pads[((ev.p - 36) % 8 + 8) % 8];
+      // B 뱅크(44~51)는 드럼 패드 9~16: 뱅크를 바꿔 치면 칸 번호도 모두 바꿔 보여 준다
+      const bank = ev.p >= 44 && ev.p < 52 ? 1 : 0;
+      if (bank !== (V.bank || 0)) { V.bank = bank; V.pads.forEach((c, i) => { c.firstChild.textContent = String(bank * 8 + i + 1); }); }
       if (pd) { pd.style.setProperty('--v', ev.vel / 127); pd.classList.add('on'); }
       const t = ev.ids && U.trackById(pr(), ev.ids[0]), d = t && U.instrumentOf(t);
       const pad = d && d.data && d.data.pads && d.data.pads[ev.p - 36];
