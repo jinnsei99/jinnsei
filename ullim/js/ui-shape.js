@@ -54,6 +54,8 @@ function ampOf(t, inst) {
   const i = t.devices.indexOf(inst);
   return t.devices.slice(i + 1).find(d => d.kind === 'amp') || null;
 }
+/* 이 소리에 이 손잡이가 있는지 (드라이브는 앰프가 있을 때만, 공간은 언제나) */
+function macroOn(t, d, mac) { return !!(mac.space || (mac.amp ? ampOf(t, d) : mac.map[d.kind] && mac.map[d.kind].every(mp => spec(d.kind, mp.id)))); }
 function valueOf(t, d, mac) {
   if (mac.space) { const rv = reverbOf(t, d); return rv && rv.on !== false ? clamp(rv.p.mix / SPACE_MAX, 0, 1) : 0; }
   if (mac.amp) { const am = ampOf(t, d); return am ? clamp((am.p.gain != null ? am.p.gain : 5) / 10, 0, 1) : 0; }
@@ -133,7 +135,7 @@ function panel(t) {
   const title = h('div', { class: 'dev-name' }, h('span', { class: 'dn', text: '소리 다듬기' }), d.preset ? h('span', { class: 'dp', text: d.preset }) : null);
   info(title, '소리 다듬기', '쉬운 손잡이로 악기 소리를 다듬어요. 오른쪽 장치의 노브와 함께 움직여요. 마음에 들면 내 사운드로 저장해 두세요.');
   const body = h('div', { class: 'shp-body' });
-  for (const mac of MACROS) if (mac.space || (mac.amp ? ampOf(t, d) : mac.map[d.kind] && mac.map[d.kind].every(mp => spec(d.kind, mp.id)))) body.append(slider(t, d, mac));
+  for (const mac of MACROS) if (macroOn(t, d, mac)) body.append(slider(t, d, mac));
   const save = btn({ text: '내 사운드로 저장', cls: 'sm primary', info: ['내 사운드로 저장', '지금 소리(악기와 이펙트)를 이름 붙여 저장해요. 다른 곡에서도 소리 고르기의 \'내 사운드\'에서 불러와요.'], onclick: () => saveMySound(t) });
   const orig = U.allSounds().find(s => s.kind === d.kind && s.name === d.preset);
   const reset = btn({ text: '처음 값으로', cls: 'sm', info: ['처음 값으로', orig ? '"' + orig.name + '"을(를) 불러왔을 때의 악기 값으로 되돌려요.' : '악기를 기본값으로 되돌려요.'], onclick: () => orig ? A.applyPreset(d.id, orig.name, orig.p) : A.applyPreset(d.id, null, {}) });
@@ -176,6 +178,13 @@ function mySoundItems(s) {
 function mySoundMenu(s, at) { U.menu([{ header: s.name }].concat(mySoundItems(s)), at); }
 
 U.shapePanel = panel;
+/* 바깥(MIDI 건반의 노브)에서 쉬운 손잡이를 움직인다. 이 소리에 없는 손잡이면 get은 null, set은 false */
+const macro = (t, id) => { const d = t && U.instrumentOf(t), mac = MACROS.find(x => x.id === id); return d && mac && macroOn(t, d, mac) ? { d, mac } : null; };
+U.shapeKnob = {
+  get: (t, id) => { const x = macro(t, id); return x ? valueOf(t, x.d, x.mac) : null; },
+  set: (t, id, m, final) => { const x = macro(t, id); if (!x) return false; apply(t, x.d, x.mac, clamp(m, 0, 1), final); return true; },
+  name: id => (MACROS.find(x => x.id === id) || {}).name || ''
+};
 U.saveMySound = saveMySound;
 U.mySoundMenu = mySoundMenu;
 U.mySoundItems = mySoundItems;

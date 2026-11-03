@@ -733,6 +733,7 @@ html.touch .amp-models .inst-b { min-height: 34px; }
 .st-save.err { color: var(--rec); }
 .st-midi, .st-audio, .st-mode { height: 18px; padding: 0 6px; border: 1px solid var(--line-2); border-radius: 3px; background: var(--panel); font-size: 10.5px; color: var(--fg-2); white-space: nowrap; }
 .st-mode:hover, .st-midi:hover { color: var(--fg); border-color: var(--fg-3); }
+.st-midi.act { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .st-audio { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
 .st-kb { font-family: var(--font-mono); color: var(--accent); }
 .st-sr { font-family: var(--font-mono); color: var(--fg-3); }
@@ -822,6 +823,65 @@ body.map-mode [data-cc]::after { content: attr(data-cc); position: absolute; lef
 html.touch .tk-cp-k { display: none; }
 .tk-range { min-width: 34px; text-align: center; font: 600 11.5px var(--font-mono); color: var(--fg-2); }
 .btn.tk-oct { min-width: 28px; font-weight: 700; }
+
+/* ================= MIDI 장치 창 (건반 · 패드 · 노브 그림, 터치 감도) ================= */
+.mid { display: flex; flex-direction: column; gap: 12px; font-family: var(--font-kr); }
+.mid-none p { margin: 0 0 8px; font-size: 13px; line-height: 1.55; color: var(--fg-2); }
+.mid-none p:first-child { color: var(--fg); font-weight: 600; }
+.mid-devs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.mid-dl { font-size: 12.5px; color: var(--fg-2); }
+.mid-dev { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--line-2); border-radius: 999px; background: var(--panel-2); font-size: 12px; }
+.mid-dev i { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-3); }
+.mid-dev.on i { background: #3ecf6b; box-shadow: 0 0 6px #3ecf6b; }
+.mid-dev em { font-style: normal; font-size: 10.5px; padding: 1px 6px; border-radius: 999px; background: var(--accent); color: var(--accent-fg); }
+.mid-ctl { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 14px; background: linear-gradient(180deg, #2b2d31, #1d1e21); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 6px 18px rgba(0, 0, 0, 0.25); color: #e6e6e6; }
+.mid-top { display: flex; gap: 14px; }
+.mid-pads { flex: 0 0 46%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.mid-pad { position: relative; aspect-ratio: 1.35; display: flex; align-items: flex-start; padding: 4px 6px; border-radius: 7px; background: #3a3c41; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.35); font: 600 10px var(--font-mono); color: rgba(255, 255, 255, 0.45); overflow: hidden; }
+.mid-pad::after { content: ''; position: absolute; inset: 0; background: var(--accent); opacity: 0; transition: opacity 0.25s; }
+.mid-pad.on::after { opacity: calc(0.35 + var(--v, 1) * 0.65); transition: none; }
+.mid-pad span { position: relative; z-index: 1; }
+.mid-knobs { flex: 1 1 auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; }
+.mid-knob { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+.mid-kr { width: 34px; height: 34px; border-radius: 50%; background: conic-gradient(from 225deg, var(--accent) calc(var(--m, 0) * 270deg), #4a4c52 calc(var(--m, 0) * 270deg) 270deg, transparent 270deg);
+  -webkit-mask: radial-gradient(circle, transparent 52%, #000 54%); mask: radial-gradient(circle, transparent 52%, #000 54%); }
+.mid-knob.none .mid-kr { opacity: 0.35; }
+.mid-knob.act .mid-kr { filter: brightness(1.4); }
+.mid-knob.learn { outline: 2px dashed var(--accent); outline-offset: 2px; border-radius: 8px; }
+.mid-kn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; color: #d6d6d6; }
+.mid-kc { font: 600 9px var(--font-mono); color: rgba(255, 255, 255, 0.45); }
+.mid-keys { position: relative; height: 92px; }
+.mid-w { position: absolute; top: 0; bottom: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; border: 1px solid #8f8d87; border-radius: 0 0 5px 5px; background: linear-gradient(180deg, #f4f2ec, #dfdcd3); overflow: hidden; }
+.mid-w span { position: relative; z-index: 1; font: 600 9px var(--font-mono); color: #5d5a53; }
+.mid-b { position: absolute; top: 0; height: 58%; z-index: 2; border-radius: 0 0 4px 4px; background: linear-gradient(180deg, #2b2b2e, #111); box-shadow: 0 2px 3px rgba(0, 0, 0, 0.5); overflow: hidden; }
+.mid-w::after, .mid-b::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--v, 0) * 100%); background: var(--accent); opacity: 0; transition: opacity 0.6s; }
+.mid-w.on::after, .mid-b.on::after { opacity: 0.85; transition: none; }
+.mid-meters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 11px; color: #cfcfcf; }
+.mid-vel { display: flex; align-items: center; gap: 6px; }
+.mid-vel b { min-width: 64px; padding: 1px 6px; border-radius: 5px; background: #3a3c41; font: 600 12px var(--font-mono); color: #fff; }
+.mid-m { display: flex; align-items: center; gap: 6px; }
+.mid-m b { position: relative; width: 74px; height: 8px; border-radius: 4px; background: #3a3c41; overflow: hidden; }
+.mid-m i { position: absolute; top: 0; bottom: 0; left: 0; width: calc(var(--x, 0) * 100%); background: var(--accent); }
+.mid-m.bend i { left: 50%; width: calc(var(--x, 0) * 50%); }
+.mid-m.bend b::before { content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: rgba(255, 255, 255, 0.5); }
+.mid-sus { display: flex; align-items: center; gap: 6px; }
+.mid-sus i { width: 10px; height: 10px; border-radius: 50%; background: #3a3c41; }
+.mid-sus.on i { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.mid-now { min-height: 20px; padding: 6px 10px; border-radius: 8px; background: var(--sunk); font-size: 12.5px; color: var(--fg); }
+.mid-set { display: flex; flex-direction: column; gap: 8px; }
+.mid-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.mid-sl { flex: 0 0 76px; font-size: 12px; font-weight: 600; color: var(--fg-2); }
+.mid-val { font-size: 12px; color: var(--fg-2); }
+.mid-val.wait { color: var(--accent); font-weight: 600; }
+.mid-cv { display: inline-flex; }
+.mid-curve { width: 40px; height: 40px; }
+.mid-curve rect { fill: var(--sunk); stroke: var(--line-2); }
+.mid-curve polyline { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.mid .num.off { opacity: 0.4; pointer-events: none; }
+.mid-foot { margin: 0; }
+html.touch .mid-keys { height: 110px; }
+body.narrow .mid-top { flex-direction: column; }
+body.narrow .mid-sl { flex-basis: 100%; }
 
 /* ================= 악기별 연주 화면 (기타 · 베이스 · 현악 · 하프 · 가야금 · 말렛 · 드럼 킷) ================= */
 .pv-inst { padding: 10px 14px 12px; }
@@ -1040,7 +1100,6 @@ html.touch .pane-b { font-size: 11.5px; }
 html.touch .pane-b .ic { width: 20px; height: 20px; }
 html.touch body.narrow .app { grid-template-rows: auto minmax(0, 1fr) var(--status-h) 54px; }
 html.touch .pe2-more { font-size: 16px; }
-html.ios .st-midi { display: none; }
 html.touch .st-midi, html.touch .st-audio, html.touch .st-mode { height: 24px; padding: 0 9px; font-size: 11.5px; }
 .np-mode { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-2); }
 .np-mode > span:first-child { color: var(--fg-2); font-size: 12.5px; }

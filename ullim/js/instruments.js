@@ -66,6 +66,7 @@ class Instrument extends Device {
     vo.p = p; vo.t0 = t; vo.t1 = Infinity; vo.live = !!live;
     if (vo.end == null) vo.end = Infinity;
     this.voices.push(vo);
+    if (this.ex) this.exTo(vo);
     return vo;
   }
   noteOff(vo, t) {
@@ -105,15 +106,43 @@ class Instrument extends Device {
     this.voices = keep;
   }
   free(vo) {
+    if (this.ex) for (const s of vo.srcs || []) if (s.detune) { try { this.ex.bus.disconnect(s.detune); } catch (e) { /* 무시 */ } }
     for (const n of vo.nodes || []) { try { n.disconnect(); } catch (e) { /* 무시 */ } }
   }
   activeVoices(t) { return this.voices.filter(vo => vo.end > t && vo.t0 <= t + 0.01); }
+  /* ---------- 건반의 표현: 피치 벤드 · 비브라토 (MIDI 건반의 벤드 · 모드 휠 · 누르는 힘) ----------
+     악기마다 '표현 버스' 하나를 두고 울리는 음의 소스(오실레이터 · 샘플)마다 detune에 더한다. 음마다 정한 값은 그대로 둔다.
+     o.bend: 센트, o.vib: 비브라토 깊이(센트). 패드 악기는 하지 않는다 */
+  expr(o, t) {
+    if (this.isPads) return;
+    t = t == null ? this.ctx.currentTime : t;
+    const ex = this.ex || this.makeExpr();
+    if (o.bend != null) ex.bend.offset.setTargetAtTime(o.bend, t, 0.006);
+    if (o.vib != null) ex.depth.gain.setTargetAtTime(o.vib, t, 0.04);
+  }
+  makeExpr() {
+    const ctx = this.ctx;
+    const bend = ctx.createConstantSource(), lfo = ctx.createOscillator();
+    const depth = gainNode(ctx, 0), bus = gainNode(ctx, 1);
+    bend.offset.value = 0;
+    lfo.frequency.value = 5.6;
+    lfo.connect(depth); depth.connect(bus); bend.connect(bus);
+    bend.start(); lfo.start();
+    this.ex = { bend, lfo, depth, bus };
+    for (const vo of this.voices) if (vo.end > ctx.currentTime) this.exTo(vo);
+    return this.ex;
+  }
+  exTo(vo) { for (const s of vo.srcs || []) if (s.detune) { try { this.ex.bus.connect(s.detune); } catch (e) { /* 무시 */ } } }
   /* 울리는 소리를 모두 끊는다 (패드 화면의 '모두 멈춤') */
   stopAll(t) { for (const vo of this.voices) if (vo.end > t) this.kill(vo, t); }
   dispose() {
     const t = this.ctx.currentTime;
     for (const vo of this.voices) this.kill(vo, t);
-    setTimeout(() => { for (const vo of this.voices) this.free(vo); try { this.out.disconnect(); } catch (e) { /* 무시 */ } }, 100);
+    setTimeout(() => {
+      for (const vo of this.voices) this.free(vo);
+      try { this.out.disconnect(); } catch (e) { /* 무시 */ }
+      if (this.ex) { try { this.ex.bend.stop(); this.ex.lfo.stop(); this.ex.bus.disconnect(); } catch (e) { /* 무시 */ } }
+    }, 100);
   }
 }
 

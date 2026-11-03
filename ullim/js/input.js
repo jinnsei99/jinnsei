@@ -43,6 +43,7 @@ function kbUp(e) {
 function releaseAll() {
   for (const [code] of held) kbUp({ code });
   if (U.padsView) U.padsView.releaseAll();
+  midiAllOff();
   U.engine && U.engine.allLiveOff();
 }
 function kbStatus() {
@@ -164,12 +165,42 @@ function moveSlot(dx, dy) {
   U.sessionView.selectSlot(t, s, !!t.slots[s]);
 }
 
-/* ================= MIDI 장치 ================= */
+/* ================= MIDI 장치 =================
+   건반(세기 → 터치 감도), 패드(드럼 트랙으로), 노브 8개(소리 다듬기 손잡이), 피치 벤드 · 모드 휠 · 누르는 힘(애프터터치), 서스테인.
+   M-VAVE SMK-25 mini 같은 작은 건반을 꽂으면 바로 쓰도록 맞췄다. 패드 채널과 노브 번호는 장치마다 달라서 'MIDI 장치' 창에서 알아낸다 */
 let midi = null;
-const midiHeld = new Map();
+const MC = Object.assign({ padCh: 9, curve: 'normal', fixed: 100, pb: 2, at: 'vib', knobs: [] }, U.pref('midiCfg', null) || {});
+const saveCfg = () => U.setPref('midiCfg', MC);
+/* 터치 감도: 들어온 세기 → 칠 세기 */
+const CURVES = {
+  light: v => 127 * Math.pow(v / 127, 0.6),   // 가볍게: 살살 쳐도 크게
+  normal: v => v,
+  heavy: v => 127 * Math.pow(v / 127, 1.6),   // 무겁게: 세게 쳐야 크게
+  fixed: () => MC.fixed                       // 고정: 늘 같은 세기
+};
+const curveVel = v => U.clamp(Math.round((CURVES[MC.curve] || CURVES.normal)(v)), 1, 127);
+/* 노브 8개가 움직이는 것: 건반이 치는 트랙의 소리 다듬기 손잡이와 트랙 볼륨 */
+const KNOBS = [['bright', '밝기'], ['len', '길이'], ['width', '두께'], ['drive', '드라이브'], ['space', '공간'], ['vel', '세기 반응'], ['vol', '음량'], ['fader', '트랙 볼륨']];
+const midiHeld = new Map();   // '채널:음' → {ids, p}
+const sustained = new Map();  // 서스테인 페달로 붙잡아 둔 음
+const X = { bend: 0, mod: 0, press: 0, sus: false, poly: new Map(), tracks: new Set(), keyCh: new Map() };
+let learn = null;             // {what: 'pad'} · {what: 'knob', i, ch, cc, vals, timer}
+
+let flashT = 0;
+function act(o) {
+  U.emit('midi', o);
+  const b = document.querySelector('.st-midi');
+  if (!b) return;
+  b.classList.add('act');
+  clearTimeout(flashT);
+  flashT = setTimeout(() => b.classList.remove('act'), 120);
+}
+let hintAt = 0;
+const hintOnce = msg => { const now = Date.now(); if (now - hintAt > 4000) { hintAt = now; U.toast(msg); } };
+
 async function connectMidi(ask) {
   if (!navigator.requestMIDIAccess) {
-    if (ask) U.toast(U.isIOS ? '아이패드·아이폰의 브라우저는 MIDI 장치를 지원하지 않아요. 패드 화면의 패드와 건반으로 쳐 주세요.' : '이 브라우저는 MIDI 장치를 지원하지 않아요. 크롬이나 엣지를 써 보세요.', 'error');
+    if (ask) U.toast(U.isIOS ? '아이패드·아이폰의 브라우저는 MIDI 장치를 지원하지 않아요. 컴퓨터의 크롬·엣지에서 연결해 주세요.' : '이 브라우저는 MIDI 장치를 지원하지 않아요. 크롬이나 엣지를 써 보세요.', 'error');
     return false;
   }
   if (!ask) {
@@ -184,12 +215,177 @@ async function connectMidi(ask) {
     if (ask) U.toast('MIDI 장치에 연결하지 못했어요. 브라우저 권한을 확인해 주세요.', 'error');
     return false;
   }
-  const bind = () => { for (const inp of midi.inputs.values()) inp.onmidimessage = onMidi; U.inval('status'); };
+  const bind = () => {
+    for (const inp of midi.inputs.values()) inp.onmidimessage = onMidi;
+    U.inval('status');
+    U.emit('midi', { k: 'devices' });
+    greet();
+  };
   bind();
   midi.onstatechange = bind;
   if (ask) U.toast(midiCount() ? 'MIDI 장치 ' + midiCount() + '개를 연결했어요.' : 'MIDI 장치를 찾지 못했어요. 장치를 꽂은 뒤 다시 눌러 주세요.');
   return true;
 }
+function devices() { return midi ? [...midi.inputs.values()].map(i => ({ id: i.id, name: i.name || 'MIDI 장치', maker: i.manufacturer || '', on: i.state === 'connected' })) : []; }
+const isSMK = d => /smk|m-?vave/i.test(d.name + ' ' + d.maker);
+/* M-VAVE SMK-25 mini를 처음 꽂으면 한 번 알려 준다 */
+function greet() {
+  const d = devices().find(x => x.on && isSMK(x));
+  if (!d || U.pref('midiSMK', false)) return;
+  U.setPref('midiSMK', true);
+  U.toast(d.name + '을(를) 찾았어요. 건반은 누른 세기대로, 패드는 드럼 트랙으로 가요. 노브는 MIDI 장치 창에서 한 번 알아보기를 해 주세요.');
+}
+
+/* ---------- 건반 · 패드 ---------- */
+const isPadTrack = t => !!t && t.type === 'midi' && ['drums', 'looppad'].includes((U.instrumentOf(t) || {}).kind);
+/* 패드가 칠 트랙: 녹음 준비한 패드 트랙 → 고른 트랙(드럼 · 루프 패드면) → 연주 화면에 띄운 패드 트랙 → 첫 드럼 머신 → 첫 루프 패드 */
+function padTarget() {
+  const list = pr().tracks.filter(isPadTrack);
+  if (!list.length) return null;
+  const armed = list.filter(t => t.arm);
+  if (armed.length) return armed.map(t => t.id);
+  const st = U.selTrack(), pt = U.padsShown() && ui.padTrack && U.trackById(pr(), ui.padTrack);
+  const one = isPadTrack(st) ? st : isPadTrack(pt) ? pt : list.find(t => U.instrumentOf(t).kind === 'drums') || list[0];
+  return [one.id];
+}
+function noteOn(ch, p, v) {
+  U.ensureAudio();
+  const pad = ch === MC.padCh;
+  const ids = (pad && padTarget()) || liveTargets();
+  if (!ids.length) { hintOnce('MIDI 트랙을 고르거나 ● 녹음 준비를 켜 주세요.'); return; }
+  const vel = curveVel(v), key = ch + ':' + p;
+  if (!pad) X.keyCh.set(ch, (X.keyCh.get(ch) || 0) + 1);   // 건반이 주로 오는 채널 (패드 알아보기에서 본다)
+  // 서스테인으로 붙잡아 둔 같은 음은 놓고 새로 친다
+  const s = sustained.get(key);
+  if (s) { sustained.delete(key); for (const id of s.ids) U.engine.liveOff(id, p); }
+  for (const id of ids) U.engine.liveOn(id, p, vel);
+  midiHeld.set(key, { ids, p });
+  U.emit('livenote', { p, on: true, src: 'midi' });
+  act({ k: pad ? 'pad' : 'note', ch, p, v, vel, ids });
+}
+function noteOff(ch, p) {
+  const key = ch + ':' + p, h = midiHeld.get(key);
+  if (X.poly.delete(p)) pressure(X.poly.size ? Math.max(...X.poly.values()) : 0);
+  if (!h) return;
+  midiHeld.delete(key);
+  act({ k: 'off', ch, p, pad: ch === MC.padCh });
+  // 서스테인 페달을 밟고 있으면 뗄 때까지 울린다 (패드는 그대로)
+  if (X.sus && ch !== MC.padCh) { sustained.set(key, h); return; }
+  for (const id of h.ids) U.engine.liveOff(id, p);
+  U.emit('livenote', { p, on: false, src: 'midi' });
+}
+function setSustain(on) {
+  X.sus = on;
+  if (!on) {
+    for (const [key, h] of sustained) if (!midiHeld.has(key)) { for (const id of h.ids) U.engine.liveOff(id, h.p); U.emit('livenote', { p: h.p, on: false, src: 'midi' }); }
+    sustained.clear();
+  }
+  act({ k: 'sus', on });
+}
+function midiAllOff() {
+  for (const [, h] of midiHeld) for (const id of h.ids) U.engine.liveOff(id, h.p);
+  for (const [, h] of sustained) for (const id of h.ids) U.engine.liveOff(id, h.p);
+  midiHeld.clear();
+  sustained.clear();
+}
+
+/* ---------- 표현: 피치 벤드 · 모드 휠 · 누르는 힘 ---------- */
+function exprTo(o) {
+  const ids = liveTargets();
+  for (const id of ids) { U.engine.expr(id, o); X.tracks.add(id); }
+  // 표현을 받던 트랙이 바뀌면 제자리로
+  for (const id of [...X.tracks]) if (!ids.includes(id)) { U.engine.expr(id, { bend: 0, vib: 0 }); X.tracks.delete(id); }
+}
+const vibOf = () => 40 * Math.max(X.mod, MC.at === 'vib' ? X.press : 0);   // 비브라토 깊이 (센트)
+function pitchBend(v14) { X.bend = (v14 - 8192) / 8192; exprTo({ bend: X.bend * MC.pb * 100 }); act({ k: 'bend', v: X.bend }); }
+function modWheel(v) { X.mod = v / 127; exprTo({ vib: vibOf() }); act({ k: 'mod', v: X.mod }); }
+function pressure(v) { X.press = v / 127; exprTo({ vib: vibOf() }); act({ k: 'press', v: X.press }); }
+function polyPressure(ch, p, v) {
+  if (ch === MC.padCh) { act({ k: 'press', v: v / 127, pad: true, p }); return; }
+  if (v > 0) X.poly.set(p, v); else X.poly.delete(p);
+  pressure(X.poly.size ? Math.max(...X.poly.values()) : 0);
+}
+
+/* ---------- 노브 ----------
+   끝없이 도는 노브(엔코더)는 '얼마나 돌렸는지'를 보낸다: 1 · 127(2의 보수) 또는 65 · 63(64 기준). 보통 노브는 0~127 자리 */
+const REL2 = v => v <= 7 || v >= 121, REL64 = v => v >= 57 && v <= 71;
+const relDelta = (mode, v) => (mode === 'rel64' ? v - 64 : v < 64 ? v : v - 128);
+const ccSeen = new Map();
+/* 이 CC는 어떤 노브인가: 배운 노브는 그 방식, 아니면 들어오는 값으로 짐작한다 (모를 때는 조금씩 움직여 값이 튀지 않게) */
+function ccMode(ch, cc, v) {
+  const k = MC.knobs.find(x => x && x.ch === ch && x.cc === cc);
+  if (k && k.mode !== 'auto') return k.mode;
+  const key = ch + ':' + cc, sn = ccSeen.get(key) || { vals: [], mode: null };
+  ccSeen.set(key, sn);
+  if (!sn.mode) {
+    sn.vals.push(v);
+    if (sn.vals.length > 4) sn.vals.shift();
+    if (!REL2(v) && !REL64(v)) sn.mode = 'abs';   // 가운데 값이 나오면 보통 노브
+    else if (sn.vals.length >= 3 && sn.vals.every(x => x === v)) sn.mode = REL64(v) ? 'rel64' : 'rel2';
+    if (sn.mode && k) { k.mode = sn.mode; saveCfg(); }
+  }
+  return sn.mode || (REL64(v) ? 'rel64' : 'rel2');
+}
+function knobTrack() { const ids = liveTargets(); return ids.length ? U.trackById(pr(), ids[0]) : null; }
+function knobGet(t, id) {
+  if (!t) return null;
+  if (id === 'fader') return U.dbToPos(t.vol);
+  return U.shapeKnob ? U.shapeKnob.get(t, id) : null;
+}
+const commitKnob = U.debounce(() => U.commit('MIDI 노브'), 600);
+function knobTurn(i, val, mode) {
+  const t = knobTrack(), id = KNOBS[i][0];
+  const cur = knobGet(t, id);
+  if (cur == null) return null;   // 이 소리에는 없는 손잡이 (앰프가 없으면 드라이브처럼)
+  const m = mode === 'abs' ? val / 127 : U.clamp(cur + relDelta(mode, val) / 100, 0, 1);
+  if (id === 'fader') A.setMixer(t.id, 'vol', U.round(U.posToDb(m), 1), false);
+  else U.shapeKnob.set(t, id, m, false);
+  commitKnob();
+  return m;
+}
+/* 노브 알아보기: 1번부터 차례로 오른쪽으로 돌리면 그 CC와 방식을 배운다 */
+function learnKnob(ch, cc, v) {
+  const L = learn;
+  if (L.cc == null || L.cc !== cc || L.ch !== ch) {
+    if (MC.knobs.some((k, j) => j < L.i && k && k.cc === cc && k.ch === ch)) return;   // 앞에서 배운 노브를 아직 돌리는 중
+    if (L.cc != null) finishKnob();
+    if (!learn) return;
+    L.cc = cc; L.ch = ch; L.vals = [];
+  }
+  L.vals.push(v);
+  clearTimeout(L.timer);
+  if (L.vals.length >= 4) finishKnob();
+  else L.timer = setTimeout(finishKnob, 450);
+}
+function finishKnob() {
+  const L = learn;
+  if (!L || L.what !== 'knob' || L.cc == null) return;
+  clearTimeout(L.timer);
+  const vals = L.vals, v = vals[vals.length - 1], same = vals.length >= 2 && vals.every(x => x === vals[0]);
+  // 오른쪽으로 돌리면 보통 노브는 값이 커지고, 끝없는 노브는 같은 작은 값(1 또는 65)이 이어진다. 하나만 왔으면 쓰면서 알아낸다
+  const mode = same && REL2(v) ? 'rel2' : same && REL64(v) ? 'rel64' : vals.length >= 2 || (!REL2(v) && !REL64(v)) ? 'abs' : 'auto';
+  const i = L.i, cc = L.cc;
+  MC.knobs[i] = { ch: L.ch, cc, mode };
+  saveCfg();
+  ccSeen.delete(L.ch + ':' + cc);
+  L.i++;
+  L.cc = null;
+  L.vals = [];
+  if (L.i >= KNOBS.length) { learn = null; U.toast('노브 8개를 모두 이었어요.'); }
+  U.emit('midi', { k: 'learn', what: 'knob', i, cc, mode, done: !learn });
+}
+function startLearn(what) {
+  if (learn && learn.timer) clearTimeout(learn.timer);
+  learn = what === 'knob' ? { what, i: 0, cc: null, vals: [] } : what === 'pad' ? { what } : null;
+  if (what === 'knob') MC.knobs = [];
+  U.emit('midi', { k: 'learn', what, start: true });
+}
+function stopLearn() {
+  if (learn && learn.what === 'knob') { finishKnob(); saveCfg(); }
+  learn = null;
+  U.emit('midi', { k: 'learn', done: true });
+}
+
 /* ================= MIDI 매핑 =================
    매핑 모드에서 노브를 누르고 장치의 손잡이를 돌리면 이어진다 */
 function mapKey(m) { return JSON.stringify(m.t); }
@@ -228,45 +424,74 @@ U.unmapTarget = function () {
   return true;
 };
 const commitCC = U.debounce(() => U.commit('MIDI 컨트롤'), 500);
-function applyCC(m, val) {
-  const n = val / 127, t = m.t;
+/* 이은 노브로 값을 바꾼다. 끝없이 도는 노브면 지금 값에서 조금씩 */
+function applyCC(m, val, mode) {
+  const t = m.t;
+  const to = cur => (mode === 'abs' ? val / 127 : U.clamp(cur + relDelta(mode, val) / 100, 0, 1));
   if (t.k === 'dev') {
     const r = U.deviceById(pr(), t.d);
     if (!r) return;
     const spec = U.DEV[r.dev.kind].byId[t.p];
-    if (spec) A.setParam(t.d, t.p, U.fromNorm(spec, n), false);
-  } else if (t.k === 'vol') A.setMixer(t.tr, 'vol', U.round(U.posToDb(n), 1), false);
-  else if (t.k === 'pan') A.setMixer(t.tr, 'pan', U.round(n * 2 - 1, 3), false);
-  else if (t.k === 'send') {
-    const i = pr().returns.findIndex(r => r.id === t.r);
-    if (i >= 0) A.setMixer(t.tr, 'send', U.round(U.posToDb(n * U.dbToPos(0)), 1), false, i);
+    if (spec) A.setParam(t.d, t.p, U.fromNorm(spec, to(U.toNorm(spec, r.dev.p[t.p]))), false);
+  } else {
+    const tr = U.trackById(pr(), t.tr);
+    if (!tr) return;
+    if (t.k === 'vol') A.setMixer(t.tr, 'vol', U.round(U.posToDb(to(U.dbToPos(tr.vol))), 1), false);
+    else if (t.k === 'pan') A.setMixer(t.tr, 'pan', U.round(to((tr.pan + 1) / 2) * 2 - 1, 3), false);
+    else if (t.k === 'send') {
+      const i = pr().returns.findIndex(r => r.id === t.r), top = U.dbToPos(0);
+      if (i >= 0) A.setMixer(t.tr, 'send', U.round(U.posToDb(to(U.dbToPos(tr.sends[i] == null ? U.OFF_DB : tr.sends[i]) / top) * top), 1), false, i);
+    }
   }
   const json = JSON.stringify(t);
   document.querySelectorAll('[data-map]').forEach(el => { if (el.dataset.map === json && el.update) el.update(); });
   commitCC();
 }
 function onCC(ch, cc, val) {
+  if (learn && learn.what === 'knob' && cc !== 1 && cc !== 64 && cc < 120) { learnKnob(ch, cc, val); act({ k: 'cc', ch, cc, v: val, learning: true }); return; }
   if (ui.mapMode && ui.mapTarget) { learnCC(ch, cc); return; }
-  for (const m of pr().midimap || []) if (m.cc === cc && m.ch === ch) applyCC(m, val);
+  const maps = (pr().midimap || []).filter(m => m.cc === cc && m.ch === ch);
+  if (maps.length) { const mode = ccMode(ch, cc, val); for (const m of maps) applyCC(m, val, mode); act({ k: 'cc', ch, cc, v: val, mapped: true }); return; }
+  if (cc === 1) { modWheel(val); return; }
+  if (cc === 64) { setSustain(val >= 64); return; }
+  if (cc === 120 || cc === 123) { midiAllOff(); return; }
+  const i = MC.knobs.findIndex(k => k && k.cc === cc && k.ch === ch);
+  const m = i >= 0 ? knobTurn(i, val, ccMode(ch, cc, val)) : null;
+  act({ k: 'cc', ch, cc, v: val, knob: i, m });
 }
 
 function midiCount() { return midi ? [...midi.inputs.values()].filter(i => i.state === 'connected').length : 0; }
 function onMidi(ev) {
-  const [st, d1, d2] = ev.data;
-  const type = st & 0xf0;
-  if (type === 0xb0) { onCC(st & 0x0f, d1, d2); return; }
-  if (type === 0x90 && d2 > 0) {
-    U.ensureAudio();
-    const ids = liveTargets();
-    for (const id of ids) U.engine.liveOn(id, d1, d2);
-    midiHeld.set(d1, ids);
-    U.emit('livenote', { p: d1, on: true });
-  } else if (type === 0x80 || (type === 0x90 && d2 === 0)) {
-    const ids = midiHeld.get(d1) || liveTargets();
-    for (const id of ids) U.engine.liveOff(id, d1);
-    midiHeld.delete(d1);
-    U.emit('livenote', { p: d1, on: false });
+  const d = ev.data, st = d[0];
+  if (st >= 0xf0) return;   // 클럭 · 시스템 메시지
+  const type = st & 0xf0, ch = st & 0x0f, d1 = d[1], d2 = d[2];
+  switch (type) {
+    case 0x90:
+      if (d2 > 0) { if (learn && learn.what === 'pad') learnPad(ch); noteOn(ch, d1, d2); }
+      else noteOff(ch, d1);
+      return;
+    case 0x80: noteOff(ch, d1); return;
+    case 0xb0: onCC(ch, d1, d2); return;
+    case 0xe0: if (ch !== MC.padCh) pitchBend((d2 << 7) | d1); return;
+    case 0xd0: if (ch !== MC.padCh) pressure(d1); else act({ k: 'press', v: d1 / 127, pad: true }); return;
+    case 0xa0: polyPressure(ch, d1, d2); return;
+    case 0xc0: act({ k: 'pc', ch, v: d1 }); return;
   }
+}
+/* 건반이 주로 오는 채널 (아직 안 쳤으면 1번) */
+function keysChannel() { let best = 0, n = 0; for (const [c, k] of X.keyCh) if (k > n) { n = k; best = c; } return best; }
+function learnPad(ch) {
+  if (ch === keysChannel() && ch !== MC.padCh) {
+    learn = null;
+    U.emit('midi', { k: 'learn', what: 'pad', same: true, ch, done: true });
+    U.toast('패드가 건반과 같은 ' + (ch + 1) + '번 채널로 와요. 이대로면 패드도 건반 트랙으로 가요. M-VAVE 편집 앱에서 패드 채널을 10번으로 바꾸면 드럼 트랙으로 갈라져요.');
+    return;
+  }
+  MC.padCh = ch;
+  saveCfg();
+  learn = null;
+  U.emit('midi', { k: 'learn', what: 'pad', ch, done: true });
+  U.toast('패드는 ' + (ch + 1) + '번 채널이에요. 이제 패드는 드럼 트랙으로 가요.');
 }
 
 function init() {
@@ -276,5 +501,8 @@ function init() {
   document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
   connectMidi(false);
 }
-U.input = { init, connectMidi, midiCount, liveTargets, onMidi };
+U.input = {
+  init, connectMidi, midiCount, liveTargets, onMidi, devices, isSMK, cfg: MC, saveCfg, curveVel, CURVES, KNOBS,
+  startLearn, stopLearn, learning: () => learn, padTarget, knobTrack, knobGet, state: X, supported: () => !!navigator.requestMIDIAccess, connected: () => !!midi
+};
 })(window.U = window.U || {});
