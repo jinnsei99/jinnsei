@@ -35,11 +35,11 @@ const PIANO = ['piano', '건반', '피아노 건반으로 쳐요.'];
 const FAMS = {
   drums: { name: '드럼', lays: [['kit', '드럼', '드럼 세트 모양으로 쳐요. 스네어 테두리는 사이드 스틱, 하이햇 가장자리는 열린 햇, 라이드 가운데는 벨이에요.'], ['pads', '패드', '패드 16개를 4×4로 늘어놓아요. 글자 키와 노트 리피트로 MPC처럼 쳐요.']] },
   looppad: { name: '패드', lays: [['pads', '패드', '패드 16개를 4×4로 늘어놓아요.']] },
-  guitar: { name: '기타', lays: [['strum', '코드', '키에 맞는 코드가 세로 줄로 늘어서요. 코드 이름을 누르면 한 번에 긁고, 줄 위를 위아래로 쓸면 지나가는 줄이 차례로 울려요. 한 줄만 눌러 아르페지오도 돼요.'],
+  guitar: { name: '기타', lays: [['strum', '코드', '키에 맞는 코드가 세로 줄로 늘어서요. 코드 이름을 누르면 한 번에 긁고, 줄 위를 위아래로 쓸면 지나가는 줄이 차례로 울려요. 한 줄만 눌러 아르페지오도 돼요. MIDI 건반은 누른 음이 근음인 코드를 긁어요: 아래 옥타브는 다운, 위 옥타브는 업 스트럼.'],
     ['fret', '지판', '진짜 기타 지판이에요. 줄과 프렛을 눌러 한 음씩 치고, 줄을 가로질러 쓸면 긁어요. 점은 키에 맞는 음, 색 점은 으뜸음이에요.'], PIANO] },
-  bass: { name: '베이스', lays: [['strum', '코드', '코드마다 줄 네 개에 근음 · 5도 · 옥타브 · 3도를 놓았어요. 코드 이름을 누르면 근음이 울려요.'],
+  bass: { name: '베이스', lays: [['strum', '코드', '코드마다 줄 네 개에 근음 · 5도 · 옥타브 · 3도를 놓았어요. 코드 이름을 누르면 근음이 울려요. MIDI 건반은 누른 음의 코드 근음(위 옥타브는 한 옥타브 위)을 쳐요.'],
     ['fret', '지판', '베이스 지판이에요. 줄과 프렛을 눌러 쳐요. 점은 키에 맞는 음이에요.'], PIANO] },
-  strings: { name: '현악', lays: [['strum', '코드', '코드 이름을 누르고 있는 동안 현악 합주가 화음을 켜요. 줄마다 첼로 · 비올라 · 제2 바이올린 · 제1 바이올린이에요.'],
+  strings: { name: '현악', lays: [['strum', '코드', '코드 이름을 누르고 있는 동안 현악 합주가 화음을 켜요. 줄마다 첼로 · 비올라 · 제2 바이올린 · 제1 바이올린이에요. MIDI 건반도 누른 음이 근음인 코드를 누르고 있는 동안 켜요.'],
     ['fret', '지판', '프렛 없는 현악기 지판이에요. 누르고 있는 동안 활로 켜고, 미끄러뜨리면 음이 따라가요.'], PIANO] },
   solo: { name: '현악', lays: [['fret', '지판', '프렛 없는 지판이에요. 누르고 있는 동안 활로 켜고, 미끄러뜨리면 음이 따라가요.'], PIANO] },
   harp: { name: '하프', lays: [['harp', '하프', '키에 맞춘 하프 줄이에요. 줄을 뜯거나 가로로 쓸어 글리산도로 울려요. 빨간 줄이 으뜸음이에요.'], PIANO] },
@@ -87,7 +87,7 @@ function setLayout(t, v) {
    slot(줄 · 음판 · 손가락)마다 한 음만 울린다. 같은 slot을 다시 치면 앞 음을 멈추고 새로 친다.
    ring초 뒤에 저절로 멈춘다 (뜯는 악기는 손을 떼도 울리니까). ring이 0이면 손을 뗄 때 멈춘다 (활로 켜는 악기) */
 const V = { tid: null, refs: new Map(), slots: new Map() };
-const vel = f => clamp(Math.round(ui.padVel * (f == null ? 1 : f)), 1, 127);
+const vel = f => clamp(Math.round((V.vo || ui.padVel) * (f == null ? 1 : f)), 1, 127);   // V.vo: MIDI 건반의 세기 (치는 동안만)
 const now = () => U.engine.ctx.currentTime;
 const wait = at => (at ? Math.max(0, at - now()) : 0);   // 화면 효과를 소리에 맞춰 늦출 시간
 const instNow = () => { const n = U.engine.nodes.get(V.tid); return n && n.inst; };
@@ -255,6 +255,14 @@ function stripChords(n) {
   const keep = new Set(KEEP[minorish() ? 'minor' : 'major'].slice(0, n));
   return list.filter(c => keep.has(c.id));
 }
+/* MIDI 건반으로 코드 줄 치기: 누른 건반의 음이 근음인 코드 줄 (화면이 좁아 안 보이는 줄도).
+   같은 근음이 둘이면(단조의 v와 V) 자주 쓰는 쪽, 키에 없는 근음이면 장3화음(♭II · ♭III · ♭VI 같은 빌린 화음) */
+const FLAT = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+function chordFor(pc) {
+  const order = KEEP[minorish() ? 'minor' : 'major'];
+  const cands = stripChords(8).filter(c => c.pc === pc).sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  return cands[0] || { id: 'b' + pc, pc, iv: [0, 4, 7], roman: '', borrowed: true, name: FLAT[pc] };
+}
 /* 기타 코드 모양: 열린 코드가 있으면 그것, 없으면 E 모양(6번 줄 근음)과 A 모양(5번 줄 근음) 바레 중 낮은 자리 */
 const OPEN = { '0maj': [null, 3, 2, 0, 1, 0], '2maj': [null, null, 0, 2, 3, 2], '2min': [null, null, 0, 2, 3, 1], '4maj': [0, 2, 2, 1, 0, 0], '4min': [0, 2, 2, 0, 0, 0], '7maj': [3, 2, 0, 0, 0, 3], '9maj': [null, 0, 2, 2, 2, 0], '9min': [null, 0, 2, 2, 1, 0] };
 const SHAPES = {
@@ -385,8 +393,7 @@ function neckView(t, lay, fam) {
     if (p == null) { stop('s' + s, at); return; }   // 짚지 않는 줄은 손으로 막는다
     play('s' + s, p, f, at, ring);
     shake(G.strs[s], wait(at));
-    spark(neckEl, midX(c), yOf(s), wait(at));
-    markStrip(c);
+    if (c < G.fr.length) { spark(neckEl, midX(c), yOf(s), wait(at)); markStrip(c); }   // 화면 밖 코드(MIDI)는 소리만
   }
   /* 여러 줄을 차례로 [[줄, 칸, 세기] …]: 소리를 먼저 계산하고 한 시각에서 gap초씩 */
   function run(list, gap) {
@@ -419,7 +426,7 @@ function neckView(t, lay, fam) {
     const ss = [];
     G.notes[c].forEach((p, s) => { if (p != null) { play(id + ':' + s, p, 0.85, 0, 0); ss.push(s); } });
     G.bowed.set(id, ss);
-    markStrip(c);
+    if (c < G.fr.length) markStrip(c);
     showBowed();
   }
   function bowEnd(id) {
@@ -496,6 +503,24 @@ function neckView(t, lay, fam) {
     return true;
   }
 
+  /* ---------- MIDI 건반 (코드 줄) ----------
+     누른 건반의 음이 근음인 코드: 기타는 아래 옥타브 다운 · 위 옥타브 업 스트럼, 베이스는 근음 · 옥타브, 현악 합주는 누르고 있는 동안 켠다 */
+  function midi(p, v, on, up) {
+    if (!strum) return null;
+    const id = 'km' + p;
+    if (!on) { if (bow) bowEnd(id); return null; }
+    const ch = chordFor(((p % 12) + 12) % 12);
+    let c = G.chords.findIndex(x => x.id === ch.id);
+    if (c < 0) { c = G.chords.length + 1; G.notes[c] = stripNotes(fam, ch, neck, lo); }   // 화면 밖 자리에 그 코드 음
+    V.vo = v;
+    try {
+      if (bow) bowChord(id, c);
+      else if (fam === 'bass') pluck(up ? 2 : 0, c, 0.95, 0);
+      else strumChord(c, up);
+    } finally { V.vo = 0; }
+    return { name: ch.name, roman: ch.roman, up, kind: bow ? 'bow' : fam === 'bass' ? 'bass' : 'strum' };
+  }
+
   /* ---------- 도구 막대 ---------- */
   function controls(rerender) {
     const out = [];
@@ -513,7 +538,7 @@ function neckView(t, lay, fam) {
     }
     return out;
   }
-  return { el, fill, keyDown, keyUp, controls };
+  return { el, fill, keyDown, keyUp, controls, midi, fam, bow };
 }
 
 /* ================= 하프 · 가야금: 줄을 뜯거나 쓸어서 =================
@@ -762,6 +787,16 @@ function keyUp(e) { const c = active(); return c ? c.keyUp(e) : false; }
 /* 누르고 있는 음(활 · 글자 키)만 멈춘다. 뜯어서 울리는 줄은 저절로 사라지게 둔다 */
 function releaseHeld() { stopWhere(isHeld); }
 function stopAll() { stopWhere(() => true); }
+/* MIDI 건반이 칠 코드 줄: 연주 화면이 보이고, 그 화면이 이 트랙들 가운데 하나의 코드 줄일 때 */
+function stripTarget(ids) {
+  const c = active();
+  if (!c || c.lay !== 'strum' || !c.midi || !U.padsView.active() || !ids.includes(c.t.id)) return null;
+  return c;
+}
+function midi(tid, p, v, on, up) {
+  const c = active();
+  return c && c.midi && c.t.id === tid ? c.midi(p, v, on, up) : null;
+}
 
-U.play = { family, famName, layouts, layoutOf, setLayout, isKeyLay, view, controls, keyDown, keyUp, releaseHeld, stopAll, guitarFrets, stripChords, stripNotes };
+U.play = { family, famName, layouts, layoutOf, setLayout, isKeyLay, view, controls, keyDown, keyUp, releaseHeld, stopAll, guitarFrets, stripChords, stripNotes, chordFor, stripTarget, midi };
 })(window.U = window.U || {});

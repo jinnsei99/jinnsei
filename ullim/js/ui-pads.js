@@ -753,6 +753,6 @@ U.on('select', s => {
 });
 window.addEventListener('resize', () => { if (R.ed && U.padsShown()) R.ed.draw(); });
 
-U.padsView = { build, render, keyDown, keyUp, releaseAll, curTrack, kbPads };
+U.padsView = { build, render, keyDown, keyUp, releaseAll, curTrack, kbPads, active: viewActive };
 U.padsUI = { compact, keyOf };
 })(window.U = window.U || {});
