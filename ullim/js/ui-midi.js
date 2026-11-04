@@ -128,6 +128,8 @@ function drawKeys() {
 /* 건반이 드럼 · 루프 패드 트랙을 치면 건반마다 그 패드를 적는다 (킥 · 스네어 · 햇 … / 루프 패드는 번호) */
 function labelKeys() {
   if (!V || !V.keysEl) return;
+  const st = U.play.stripTarget(I().liveTargets()) || U.touchKeys.chordTarget(I().liveTargets());
+  if (st) { labelChords(st); return; }
   const t = I().keysPad(), d = t && U.instrumentOf(t), pads = (d && d.data && d.data.pads) || [], drum = !!d && d.kind === 'drums';
   V.keysEl.classList.toggle('drum', !!t);
   for (const [p, k] of V.keys) {
@@ -141,8 +143,28 @@ function labelKeys() {
   const base = U.noteName(I().cfg.drumBase);
   info(V.keysEl, '건반', t ? '건반이 ' + (drum ? '드럼' : '루프 패드') + ' 트랙(' + U.trackLabel(pr(), t) + ')을 쳐요. 컴퓨터 키보드의 글자 키처럼 건반 하나가 패드 하나예요: ' + base + '부터 반음씩 패드 1~16' + (drum ? ' (킥 · 사이드 스틱 · 스네어 · 클랩 … 크래시 · 라이드)' : '') + ', 그 위 E~B는 패드 5~12를 한 번 더. 아래 \'드럼 건반\'에서 시작 C를 바꿔요.' : '누른 세기(키압)만큼 건반이 차올라요. 드럼 트랙을 고르면 건반으로 드럼을 쳐요.');
 }
+/* 연주 화면이 코드 줄이면 건반마다 그 코드 (위 옥타브는 ↑ 업 스트럼) */
+function labelChords(st) {
+  V.keysEl.classList.add('drum');
+  const pads = st.kind === 'pad';
+  for (const [p, k] of V.keys) {
+    const old = k.querySelector('.mid-dk');
+    if (old) old.remove();
+    const pc = ((p % 12) + 12) % 12, upKey = I().isUpKey(p);
+    const ch = pads ? U.touchKeys.midiChord(pc, upKey) : U.play.chordFor(pc), up = upKey && !pads && !st.bow;
+    k.prepend(h('em', { class: 'mid-dk' + (ch.borrowed ? ' far' : ''), text: ch.name + (up ? '↑' : '') }));
+  }
+  const what = pads ? '누르고 있는 동안 그 화음이 울려요: 아래 옥타브는 위 줄(키 안의 화음), 위 옥타브는 아래 줄(세컨더리 도미넌트)' : st.bow ? '누르고 있는 동안 현악 합주가 그 코드를 켜요' : st.fam === 'bass' ? '그 코드의 근음을 쳐요 (위 옥타브는 한 옥타브 위)' : '그 코드를 긁어요: 아래 옥타브는 다운, 위 옥타브(↑)는 업 스트럼';
+  info(V.keysEl, pads ? '건반 → 코드 패드' : '건반 → 코드 줄', '연주 화면의 ' + (pads ? '코드 패드' : '코드 줄') + '(' + U.trackLabel(pr(), st.t) + ')이 열려 있어서, 누른 건반의 음이 근음인 화음을 쳐요. ' + what + '. 흐린 이름은 키 밖의 빌린 화음이에요. 아래 \'드럼 · 코드 건반\'에서 시작 C를 바꿔요.');
+}
 const relabel = () => { if (V && V.keysEl) requestAnimationFrame(labelKeys); };
 function nowLine() {
+  const st = U.play.stripTarget(I().liveTargets()), ct = !st && U.touchKeys.chordTarget(I().liveTargets());
+  if (st || ct) {
+    V.now = h('div', { class: 'mid-now', text: ct ? '건반을 눌러 보세요. 코드 패드(' + U.trackLabel(pr(), ct.t) + ')가 열려 있어서 누른 음이 근음인 화음이 누르는 동안 울려요 (아래 옥타브 키 안의 화음 · 위 옥타브 세컨더리 도미넌트).'
+      : '건반을 눌러 보세요. 코드 줄(' + U.trackLabel(pr(), st.t) + ')이 열려 있어서 누른 음이 근음인 코드를 ' + (st.bow ? '켜요.' : st.fam === 'bass' ? '근음으로 쳐요.' : '긁어요 (아래 옥타브 다운 · 위 옥타브 업).') });
+    return V.now;
+  }
   const t = I().keysPad();
   V.now = h('div', { class: 'mid-now', text: t ? '건반을 눌러 보세요. ' + U.trackLabel(pr(), t) + ' 트랙을 골라 두어서 건반 하나가 패드 하나예요 (' + U.noteName(I().cfg.drumBase) + ' = 패드 1).' : '건반을 눌러 보세요. 세게 누를수록 건반이 더 차올라요.' });
   return V.now;
@@ -189,15 +211,15 @@ function settings() {
   // 피치 벤드 · 누르는 힘
   const pb = U.seg([[2, '±2반음', '벤드를 끝까지 올리면 2반음(온음) 올라가요. 기타 초킹 정도예요.'], [12, '±1옥타브', '끝까지 올리면 한 옥타브 올라가요.']], M.pb, v => { M.pb = v; I().saveCfg(); });
   const at = U.seg([['vib', '비브라토', '건반을 누른 채 더 세게 누르면 떨림이 깊어져요.'], ['off', '쓰지 않기', '누르는 힘은 그림에만 보여요.']], M.at, v => { M.at = v; I().saveCfg(); });
-  // 드럼 건반: 패드 1(킥)이 오는 C
+  // 드럼 · 코드 건반: 패드 1(킥)과 다운 스트럼 옥타브가 시작하는 C
   const db = U.seg([
-    [48, 'C2부터', '25건반(MPK mini · SMK-25)을 처음 옥타브 그대로 쓰면 맨 왼쪽 건반이 C2예요. 거기서부터 킥 · 사이드 스틱 · 스네어 … 패드 1~16이에요.'],
-    [36, 'C1부터 (GM)', '드럼 표준(GM) 자리예요. 49 · 61건반이나 옥타브를 한 칸 내린 25건반의 맨 왼쪽이 C1이에요.']], M.drumBase, v => { M.drumBase = v; I().saveCfg(); labelKeys(); });
+    [48, 'C2부터', '25건반(MPK mini · SMK-25)을 처음 옥타브 그대로 쓰면 맨 왼쪽 건반이 C2예요. 드럼은 거기서부터 킥 · 사이드 스틱 · 스네어 … 패드 1~16, 기타 코드 줄은 C2~B2가 다운 · C3~B3가 업 스트럼이에요.'],
+    [36, 'C1부터 (GM)', '드럼 표준(GM) 자리예요. 49 · 61건반이나 옥타브를 한 칸 내린 25건반의 맨 왼쪽이 C1이에요. 코드 줄은 C1~B1이 다운 · C2~B2가 업.']], M.drumBase, v => { M.drumBase = v; I().saveCfg(); labelKeys(); });
   const box = h('div', { class: 'mid-set' },
     row('터치 감도', '건반을 누르는 세기(키압)가 소리 크기로 바뀌는 정도예요. 장치 쪽 감도와 함께 써요.', curve, curveBox, fixedBox),
     row('패드', '장치의 패드를 드럼 트랙으로 보내요.', V.padLbl, padLearn),
     row('노브 8개', '노브 1~8은 건반이 치는 트랙의 밝기 · 길이 · 두께 · 드라이브 · 공간 · 세기 반응 · 음량 · 트랙 볼륨이에요.', V.learnLbl, knobLearn, V.knobStop, knobClear),
-    row('드럼 건반', '드럼 · 루프 패드 트랙을 고르면 건반이 컴퓨터 키보드의 글자 키처럼 패드를 쳐요. 패드 1(킥)이 오는 C를 골라요.', db),
+    row('드럼 · 코드 건반', '드럼 · 루프 패드 트랙을 고르면 건반이 컴퓨터 키보드의 글자 키처럼 패드를 치고, 연주 화면에 기타 코드 줄이나 코드 패드를 열면 화음을 쳐요. 패드 1(킥)과 화음의 아래 옥타브(다운 스트럼 · 키 안의 화음)가 시작하는 C를 골라요.', db),
     row('피치 벤드', '벤드 버튼(휠)의 범위예요.', pb),
     row('누르는 힘', '애프터터치를 보내는 장치에서, 누른 채 더 세게 누르는 힘으로 할 일이에요.', at));
   showLearn();
@@ -248,7 +270,7 @@ function onEvent(ev) {
       if (k) { k.style.setProperty('--v', ev.vel / 127); k.classList.add('on'); }
       V.vel.querySelector('b').textContent = ev.v + (ev.vel !== ev.v ? ' → ' + ev.vel : '');
       V.vel.style.setProperty('--v', ev.vel / 127);
-      V.now.textContent = U.noteName(ev.p) + (ev.drum ? ' → ' + ev.drum.name : '') + ' · 세기 ' + ev.v + (ev.vel !== ev.v ? ' → ' + ev.vel : '') + ' · ' + trackName(ev.ids) + (ev.ch ? ' · ' + (ev.ch + 1) + '번 채널' : '');
+      V.now.textContent = U.noteName(ev.p) + (ev.chord ? ' → ' + ev.chord.name + ({ strum: ev.chord.up ? ' ↑ 업' : ' ↓ 다운', bass: ev.chord.up ? ' 옥타브' : ' 근음', bow: '', pad: ev.chord.target ? ' (→ ' + ev.chord.target + ')' : '' }[ev.chord.kind] || '') : ev.drum ? ' → ' + ev.drum.name : '') + ' · 세기 ' + ev.v + (ev.vel !== ev.v ? ' → ' + ev.vel : '') + ' · ' + trackName(ev.ids) + (ev.ch ? ' · ' + (ev.ch + 1) + '번 채널' : '');
       return;
     }
     case 'off': {

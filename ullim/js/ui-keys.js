@@ -57,16 +57,19 @@ function chordList() { return { dia: U.chords.diatonic(key(), KS.ctype), sec: U.
 function chordPitches(id) {
   const { dia, sec } = chordList();
   const ch = dia.concat(sec).find(c => c.id === id);
-  if (!ch) return [];
+  return ch ? voiceOf(ch) : [];
+}
+function voiceOf(ch) {
   const v = U.chords.voice(ch, baseOf(track) + 2, KS.smooth ? KS.lastTop : null, { smooth: KS.smooth, bass: KS.bass });
   KS.lastTop = v.top;
   return v.all;
 }
-function on(p) {
+/* v: 세기 (MIDI 건반이 누른 세기, 없으면 도구 막대의 세기) */
+function on(p, v) {
   const n = count.get(p) || 0;
   count.set(p, n + 1);
   if (n || !track) return;
-  U.engine.liveOn(track.id, p, clamp(Math.round(ui.padVel), 1, 127));
+  U.engine.liveOn(track.id, p, clamp(Math.round(v || ui.padVel), 1, 127));
   U.emit('livenote', { p, on: true });
 }
 function off(p) {
@@ -77,10 +80,10 @@ function off(p) {
   U.engine.liveOff(track.id, p);
   U.emit('livenote', { p, on: false });
 }
-function press(id, el, pitches) {
+function press(id, el, pitches, v) {
   const prev = fingers.get(id);
   if (prev) lift(id);
-  for (const p of pitches) on(p);
+  for (const p of pitches) on(p, v);
   fingers.set(id, { pitches, el });
   if (el) el.classList.add('on');
 }
@@ -273,5 +276,31 @@ function keyDown(e) {
 }
 function keyUp(e) { if (!fingers.has(e.code)) return false; lift(e.code); return true; }
 
-U.touchKeys = { view, controls, chordControls, releaseAll, keyDown, keyUp, redraw, get track() { return track; } };
+/* ================= MIDI 건반으로 코드 패드 =================
+   누른 건반의 음이 근음인 화음을 누르고 있는 동안: 아래 옥타브는 위 줄(키 안의 화음),
+   위 옥타브는 아래 줄(세컨더리 도미넌트, 그 근음에 없으면 키 안의 화음). 키 밖의 근음은 장3화음(♭II · ♭III · ♭VI …) */
+const FLAT = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+const BORROW = { triad: [[0, 4, 7], ''], seventh: [[0, 4, 7, 11], 'maj7'], ninth: [[0, 4, 7, 11, 14], 'maj9'] };
+function midiChord(pc, upper) {
+  const { dia, sec } = chordList();
+  const ch = (upper && sec.find(c => c.pc === pc)) || dia.find(c => c.pc === pc);
+  if (ch) return ch;
+  const [iv, q] = BORROW[KS.ctype] || BORROW.triad;
+  return { id: 'b' + pc, pc, iv, roman: '', borrowed: true, name: FLAT[pc] + q };
+}
+function chordTarget(ids) {
+  if (!track || lay !== 'chords' || !root || !root.isConnected || !U.padsView.active() || !ids.includes(track.id)) return null;
+  return { t: track, kind: 'pad' };
+}
+function midi(p, v, isOn, upper) {
+  const id = 'm' + p;
+  if (!isOn) { lift(id); return null; }
+  if (!track) return null;
+  const ch = midiChord(((p % 12) + 12) % 12, upper);
+  const el = !ch.borrowed && root ? root.querySelector('.tk-surface [data-chord="' + ch.id + '"]') : null;
+  press(id, el, voiceOf(ch).filter(x => x >= 0 && x <= 127), v);
+  return { name: ch.name, up: upper, kind: 'pad', target: ch.sec ? ch.target : null };
+}
+
+U.touchKeys = { view, controls, chordControls, releaseAll, keyDown, keyUp, redraw, chordTarget, midi, midiChord, get track() { return track; } };
 })(window.U = window.U || {});
