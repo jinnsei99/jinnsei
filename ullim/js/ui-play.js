@@ -506,9 +506,19 @@ function neckView(t, lay, fam) {
   /* ---------- MIDI 건반 (코드 줄) ----------
      누른 건반의 음이 근음인 코드: 기타는 아래 옥타브 다운 · 위 옥타브 업 스트럼, 베이스는 근음 · 옥타브, 현악 합주는 누르고 있는 동안 켠다 */
   function midi(p, v, on, up) {
-    if (!strum) return null;
     const id = 'km' + p;
     if (!on) { if (bow) bowEnd(id); return null; }
+    if (!strum) {
+      // 지판: 컴퓨터 건반처럼 지금 보이는 자리에서 그 음을 짚어 뜯는다 (활은 누르는 동안). 뜯은 줄은 손을 떼도 울린다
+      const pos = findPos(p);
+      V.vo = v;
+      try {
+        if (bow) { if (pos) bowNote(id, pos.s, pos.c); else play(id, p, 1, 0, 0); }
+        else if (pos) pluck(pos.s, pos.c, 1, 0);
+        else play(id, p, 1, 0, ring);
+      } finally { V.vo = 0; }
+      return null;
+    }
     const ch = chordFor(((p % 12) + 12) % 12);
     let c = G.chords.findIndex(x => x.id === ch.id);
     if (c < 0) { c = G.chords.length + 1; G.notes[c] = stripNotes(fam, ch, neck, lo); }   // 화면 밖 자리에 그 코드 음
@@ -519,6 +529,16 @@ function neckView(t, lay, fam) {
       else strumChord(c, up);
     } finally { V.vo = 0; }
     return { name: ch.name, roman: ch.roman, up, kind: bow ? 'bow' : fam === 'bass' ? 'bass' : 'strum' };
+  }
+  /* MIDI 장치 창의 건반에 적을 것: 코드 줄은 코드 이름(업 스트럼 ↑), 지판은 그대로 치는 음이라 없음 */
+  function label(p, up) {
+    if (!strum) return null;
+    const ch = chordFor(((p % 12) + 12) % 12);
+    return { text: ch.name + (up && !bow ? '↑' : ''), far: !!ch.borrowed };
+  }
+  function what() {
+    if (!strum) return (bow ? '프렛 없는 지판' : '지판') + '이 열려 있어서 누른 음을 지금 보이는 자리에서 짚어 ' + (bow ? '누르는 동안 켜요' : '뜯어요 (손을 떼도 울려요)');
+    return '코드 줄이 열려 있어서 누른 음이 근음인 코드를 ' + (bow ? '누르는 동안 켜요' : fam === 'bass' ? '근음으로 쳐요 (위 옥타브는 한 옥타브 위)' : '긁어요: 아래 옥타브는 다운, 위 옥타브(↑)는 업 스트럼');
   }
 
   /* ---------- 도구 막대 ---------- */
@@ -538,7 +558,7 @@ function neckView(t, lay, fam) {
     }
     return out;
   }
-  return { el, fill, keyDown, keyUp, controls, midi, fam, bow };
+  return { el, fill, keyDown, keyUp, controls, midi, label, what, fam, bow, kind: strum ? 'strip' : 'neck' };
 }
 
 /* ================= 하프 · 가야금: 줄을 뜯거나 쓸어서 =================
@@ -629,7 +649,23 @@ function harpView(t, fam) {
     const move = k => { PS.oct[t.id] = clamp((PS.oct[t.id] || 0) + k, -2, 2); fill(); };
     return [btn({ text: '−', cls: 'sm tk-oct', title: '한 옥타브 아래로 (Z)', onclick: () => move(-1) }), btn({ text: '+', cls: 'sm tk-oct', title: '한 옥타브 위로 (X)', onclick: () => move(1) })];
   }
-  return { el, fill, keyDown, keyUp, controls };
+  /* MIDI 건반: 줄에 없는 음은 가까운 줄 음으로 (같이 가까우면 아래로). 보이는 줄이면 그 줄을 뜯는다 */
+  const tuning = () => (gay ? (minorish() ? [0, 3, 5, 7, 10] : [0, 2, 4, 7, 9]) : scaleSteps());
+  function snap(p) {
+    const st = tuning(), root = keyOf().root, ok = q => st.includes(((q - root) % 12 + 12) % 12);
+    for (let d = 0; d < 12; d++) { if (ok(p - d)) return p - d; if (ok(p + d)) return p + d; }
+    return p;
+  }
+  function midi(p, v, on) {
+    if (!on) return null;
+    const q = snap(p), i = G.ps.indexOf(q);
+    V.vo = v;
+    try { if (i >= 0) pluck(i, 1, 0); else play('km' + q, q, 1, 0, ring); } finally { V.vo = 0; }
+    return q !== p ? { name: U.noteName(q), kind: 'snap' } : null;
+  }
+  const label = p => { const q = snap(p); return q !== p ? { text: letter(q), far: true } : null; };
+  const what = () => (gay ? '가야금' : '하프') + ' 줄이 열려 있어서 누른 음의 줄을 뜯어요. 줄에 없는 음은 가까운 줄 음(흐린 이름)으로 쳐요';
+  return { el, fill, keyDown, keyUp, controls, midi, label, what, kind: 'harp' };
 }
 
 /* ================= 말렛 · 벨: 그 악기 모양의 음판 =================
@@ -754,7 +790,23 @@ function malletView(t) {
     const move = k => { PS.oct[t.id] = clamp((PS.oct[t.id] || 0) + k, -2, 2); fill(); };
     return [btn({ text: '−', cls: 'sm tk-oct', title: '한 옥타브 아래로 (Z)', onclick: () => move(-1) }), btn({ text: '+', cls: 'sm tk-oct', title: '한 옥타브 위로 (X)', onclick: () => move(1) })];
   }
-  return { el, fill, keyDown, keyUp, controls };
+  /* MIDI 건반: 그 음의 음판을 친다 (칼림바는 키 안의 음만 있어서 가까운 건으로). 음판은 손을 떼도 울린다 */
+  function snap(p) {
+    if (style !== 'tines') return p;
+    for (let d = 0; d < 12; d++) { if (inKey(p - d)) return p - d; if (inKey(p + d)) return p + d; }
+    return p;
+  }
+  function midi(p, v, on) {
+    if (!on) return null;
+    const q = snap(p), b = field.querySelector('.mv-t[data-p="' + q + '"]');
+    V.vo = v;
+    try { play('m' + q, q, 1, 0, ring); } finally { V.vo = 0; }
+    if (b) { b.classList.remove('hit'); void b.offsetWidth; b.classList.add('hit'); }
+    return q !== p ? { name: U.noteName(q), kind: 'snap' } : null;
+  }
+  const label = p => { const q = snap(p); return q !== p ? { text: letter(q), far: true } : null; };
+  const what = () => (style === 'tines' ? '칼림바가 열려 있어서 누른 음의 건을 튕겨요. 키 밖의 음은 가까운 건(흐린 이름)으로 쳐요' : '음판 화면이 열려 있어서 누른 음의 음판을 쳐요 (손을 떼도 울려요)');
+  return { el, fill, keyDown, keyUp, controls, midi, label, what, kind: 'mallet' };
 }
 
 /* ================= 화면 붙이기 ================= */
@@ -787,16 +839,17 @@ function keyUp(e) { const c = active(); return c ? c.keyUp(e) : false; }
 /* 누르고 있는 음(활 · 글자 키)만 멈춘다. 뜯어서 울리는 줄은 저절로 사라지게 둔다 */
 function releaseHeld() { stopWhere(isHeld); }
 function stopAll() { stopWhere(() => true); }
-/* MIDI 건반이 칠 코드 줄: 연주 화면이 보이고, 그 화면이 이 트랙들 가운데 하나의 코드 줄일 때 */
-function stripTarget(ids) {
+/* MIDI 건반이 칠 연주 화면 (코드 줄 · 지판 · 하프 · 가야금 · 말렛): 패드 화면이 보이고, 건반이 이 화면의 트랙을 칠 때 */
+function midiTarget(ids) {
   const c = active();
-  if (!c || c.lay !== 'strum' || !c.midi || !U.padsView.active() || !ids.includes(c.t.id)) return null;
+  if (!c || !c.midi || !U.padsView.active() || !ids.includes(c.t.id)) return null;
   return c;
 }
+const stripTarget = ids => { const c = midiTarget(ids); return c && c.lay === 'strum' ? c : null; };
 function midi(tid, p, v, on, up) {
   const c = active();
   return c && c.midi && c.t.id === tid ? c.midi(p, v, on, up) : null;
 }
 
-U.play = { family, famName, layouts, layoutOf, setLayout, isKeyLay, view, controls, keyDown, keyUp, releaseHeld, stopAll, guitarFrets, stripChords, stripNotes, chordFor, stripTarget, midi };
+U.play = { family, famName, layouts, layoutOf, setLayout, isKeyLay, view, controls, keyDown, keyUp, releaseHeld, stopAll, guitarFrets, stripChords, stripNotes, chordFor, stripTarget, midiTarget, midi };
 })(window.U = window.U || {});

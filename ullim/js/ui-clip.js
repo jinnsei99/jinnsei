@@ -229,8 +229,30 @@ function chordsTab(body, c) {
   body.append(row('넣을 자리', pos, back));
   body.append(row('길이', U.select(CHORD_LENS, U.pref('chordLen', 'bar'), v => U.setPref('chordLen', v), { cls: 'sm', label: '한 화음 길이', info: ['한 화음 길이', '화음 하나를 넣는 길이예요. 넣고 나면 이만큼 뒤로 넘어가요.'] }), over));
   body.append(row('짚기', smooth, bass));
+  // MIDI 건반으로 넣기: 누른 음이 근음인 화음 (아래 옥타브 키 안의 화음 · 위 옥타브 세컨더리 도미넌트)
+  if (U.input.midiCount()) {
+    const mk = btn({ text: 'MIDI 건반으로 넣기', cls: 'tg sm', toggle: true, on: U.pref('chordMidi', true), info: ['MIDI 건반으로 넣기', '켜면 MIDI 건반(MPK mini 등)을 누를 때마다 그 음이 근음인 화음을 넣을 자리에 넣어요. 맨 왼쪽 C부터 12건반은 키 안의 화음, 그 위 12건반은 세컨더리 도미넌트예요. 패드 화면이 보이면 건반은 그 화면을 쳐요.'],
+      onclick: () => { const v = !U.pref('chordMidi', true); U.setPref('chordMidi', v); U.setPressed(mk, v); } });
+    body.append(row('MIDI', mk));
+  }
   body.append(h('p', { class: 'hint', text: '차례로 누르면 코드 진행이 돼요. 하나씩 지우려면 되돌리기(' + U.MOD + '+Z). 패드 화면의 코드 패드로 쳐서 녹음해도 돼요.' }));
 }
+/* MIDI 건반으로 코드 넣기: 코드 탭이 보이면 누를 때마다 그 음이 근음인 화음을 넣을 자리에 넣는다 */
+function midiTarget(ids) {
+  const c = clip();
+  if (!c || c.type !== 'midi' || R.tab !== 'chords' || isDrums() || !props || !props.isConnected || !props.offsetParent || !U.pref('chordMidi', true)) return null;
+  if (!ids.includes(cur.track.id)) return null;
+  return { t: cur.track, kind: 'tab', midi: tabMidi, label: tabLabel, what: () => '클립의 코드 넣기 탭이 열려 있어서 누를 때마다 그 음이 근음인 화음을 넣을 자리에 넣어요: 아래 옥타브는 키 안의 화음, 위 옥타브는 세컨더리 도미넌트' };
+}
+const tabChordOf = (p, upper) => U.chords.forRoot(U.clipKey(clip()), ui.keys.ctype, ((p % 12) + 12) % 12, upper);
+function tabMidi(p, v, on, upper) {
+  if (!on || !clip()) return null;
+  const ch = tabChordOf(p, upper);
+  insertChord(clip(), ch);
+  renderProps();
+  return { name: ch.name, kind: 'tab', target: ch.sec ? ch.target : null };
+}
+function tabLabel(p, upper) { const ch = tabChordOf(p, upper); return { text: ch.name, far: !!ch.borrowed }; }
 function chordBtn(c, ch) {
   const b = h('button', { type: 'button', class: 'chd-b' + (ch.primary ? ' prim' : '') + (ch.sec ? ' sec' : '') },
     h('span', { class: 'chd-n', text: ch.name }), h('span', { class: 'chd-r', text: ch.sec ? '→ ' + ch.target : ch.roman }));
@@ -1168,7 +1190,7 @@ function bindWave() {
 
 U.on('media', () => { if (cur && clip() && clip().type === 'audio') drawWaveEditor(); });
 U.clipView = {
-  render, drawAll, selectAll, deleteSel, duplicateSel, muteSel, nudge, copySel, paste, quantizeSel, gridNarrow, viewSeg, playhead: playheadBeat,
+  render, drawAll, selectAll, deleteSel, duplicateSel, muteSel, nudge, copySel, paste, quantizeSel, gridNarrow, viewSeg, playhead: playheadBeat, midiTarget,
   get open() { return !!(cur && clip()); }, get midi() { return !!(cur && clip() && clip().type === 'midi'); },
   toggleTri() { R.tri = !R.tri; drawAll(); }, toggleSnap() { R.snap = !R.snap; U.toast(R.snap ? '스냅 켬' : '스냅 끔'); }
 };
