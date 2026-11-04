@@ -8,6 +8,19 @@ const pr = () => U.project;
 const I = () => U.input;
 const BLACK = [1, 3, 6, 8, 10];
 let dlg = null, off = null, V = null, devT = 0;
+/* 건반 위에 적는 드럼 이름 (짧게) */
+const DRUM_SHORT = { kick: '킥', akick: '킥', snare: '스네어', asnare: '스네어', clap: '클랩', snap: '스냅', arim: '림샷', rim: '림', astick: '스틱',
+  chh: '햇', ahat: '햇', ohh: '오픈햇', aohat: '오픈햇', apedal: '페달햇', shaker: '셰이커', cow: '카우벨', abell: '벨', conga: '콩가', atamb: '탬버린',
+  crash: '크래시', acrash: '크래시', ride: '라이드', aride: '라이드', sub: '808', zap: '잽', noise: '노이즈', brush: '브러시', swish: '스위시' };
+function drumShort(pd) {
+  if (!pd) return '';
+  const n = pd.name || '';
+  if (pd.type === 'tom' || pd.type === 'atom') return /floor/i.test(n) ? '플로어' : /low/i.test(n) ? '로우탐' : /mid/i.test(n) ? '미드탐' : /hi/i.test(n) ? '하이탐' : '탐';
+  if (/crash 2/i.test(n)) return '크래시2';
+  if (/cross stick/i.test(n)) return '스틱';
+  if (pd.src === 'sample' && pd.sample) return n.slice(0, 5);
+  return DRUM_SHORT[pd.type] || n.slice(0, 5);
+}
 
 function open() {
   if (dlg) return;
@@ -15,7 +28,8 @@ function open() {
   dlg = U.dialog({ title: 'MIDI 장치', body, width: '780px', actions: [{ label: '닫기', primary: true }],
     onclose: () => { if (off) off(); off = null; dlg = null; V = null; if (I().learning()) I().stopLearn(); } });
   render(body);
-  off = U.on('midi', onEvent);
+  const offs = [U.on('midi', onEvent), U.on('select', relabel), U.on('change', relabel)];
+  off = () => offs.forEach(f => f());
 }
 const trackName = ids => (ids && ids.length ? ids.map(id => U.trackLabel(pr(), U.trackById(pr(), id))).join(', ') : '없음');
 
@@ -109,9 +123,27 @@ function drawKeys() {
       V.keysEl.append(kb);
     }
   });
+  labelKeys();
 }
+/* 건반이 드럼 트랙을 치면 건반마다 그 드럼 이름을 적는다 (C 킥 · D 스네어 · F# 햇 …) */
+function labelKeys() {
+  if (!V || !V.keysEl) return;
+  const t = I().keysDrum(), d = t && U.instrumentOf(t), pads = (d && d.data && d.data.pads) || [];
+  V.keysEl.classList.toggle('drum', !!t);
+  for (const [p, k] of V.keys) {
+    const old = k.querySelector('.mid-dk');
+    if (old) old.remove();
+    if (!t) continue;
+    const pd = pads[I().drumNote(p) - 36];
+    if (!pd) continue;
+    k.prepend(h('em', { class: 'mid-dk', text: drumShort(pd) }));
+  }
+  info(V.keysEl, '건반', t ? '건반이 드럼 트랙(' + U.trackLabel(pr(), t) + ')을 쳐요. 건반마다 드럼 소리가 적혀 있어요: C 킥 · D 스네어 · F# 닫힌 햇 · A# 열린 햇, 위 옥타브의 C#·D#는 크래시 · 라이드. 두 옥타브마다 같은 킷 한 벌이라 건반의 옥타브와 상관없이 쳐요.' : '누른 세기(키압)만큼 건반이 차올라요. 드럼 트랙을 고르면 건반으로 드럼을 쳐요.');
+}
+const relabel = () => { if (V && V.keysEl) requestAnimationFrame(labelKeys); };
 function nowLine() {
-  V.now = h('div', { class: 'mid-now', text: '건반을 눌러 보세요. 세게 누를수록 건반이 더 차올라요.' });
+  const t = I().keysDrum();
+  V.now = h('div', { class: 'mid-now', text: t ? '건반을 눌러 보세요. 드럼 트랙(' + U.trackLabel(pr(), t) + ')을 골라 두어서 건반마다 드럼 소리가 나요.' : '건반을 눌러 보세요. 세게 누를수록 건반이 더 차올라요.' });
   return V.now;
 }
 
@@ -210,7 +242,7 @@ function onEvent(ev) {
       if (k) { k.style.setProperty('--v', ev.vel / 127); k.classList.add('on'); }
       V.vel.querySelector('b').textContent = ev.v + (ev.vel !== ev.v ? ' → ' + ev.vel : '');
       V.vel.style.setProperty('--v', ev.vel / 127);
-      V.now.textContent = U.noteName(ev.p) + ' · 세기 ' + ev.v + (ev.vel !== ev.v ? ' → ' + ev.vel : '') + ' · ' + trackName(ev.ids) + (ev.ch ? ' · ' + (ev.ch + 1) + '번 채널' : '');
+      V.now.textContent = U.noteName(ev.p) + (ev.drum ? ' → ' + ev.drum.name : '') + ' · 세기 ' + ev.v + (ev.vel !== ev.v ? ' → ' + ev.vel : '') + ' · ' + trackName(ev.ids) + (ev.ch ? ' · ' + (ev.ch + 1) + '번 채널' : '');
       return;
     }
     case 'off': {

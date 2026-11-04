@@ -67,7 +67,7 @@ function build(root) {
   refs.swing = numBox({ cls: 'swing', label: '스윙', get: () => pr().swing || 0, set: (v, f) => { pr().swing = v; f ? U.commit('스윙') : U.touch(); }, fmt: v => 'Swing ' + Math.round(50 + v * 25) + '%', parse: s => (parseFloat(s) - 50) / 25, min: 0, max: 1, step: 0.01, def: 0, range: 300 });
   info(refs.swing, '스윙 (그루브)', '16분음표 엇박을 뒤로 밀어 출렁이는 느낌을 줘요. 50%는 똑바로, 66%는 셋잇단 느낌이에요. 클립마다 끌 수 있어요.');
   refs.pads = btn({ icon: 'pads', cls: 'tg padsbtn', toggle: true, on: U.padsShown(), title: '패드 화면 (P)', info: ['패드 화면', '고른 트랙을 손가락으로 치는 화면이에요. 드럼은 드럼 세트, 기타·베이스는 코드 줄과 지판, 하프·가야금은 줄, 말렛은 음판, 루프 패드는 패드, 신스는 건반으로 나와요. 다시 누르면 앞 화면으로 돌아가요.'], onclick: () => U.togglePads() });
-  refs.kbd = btn({ icon: 'keys', cls: 'tg', toggle: true, on: ui.keyboard, title: '컴퓨터 건반 (M)', info: ['컴퓨터 건반', '켜면 A~K 줄이 건반이 돼요. W, E, T, Y, U는 검은 건반, Z/X는 옥타브, C/V는 세기예요.'], onclick: () => U.setKeyboard(!ui.keyboard) });
+  refs.kbd = btn({ icon: 'keys', cls: 'tg', toggle: true, on: ui.keyboard, title: '컴퓨터 건반 (M)', info: ['컴퓨터 건반', '켜면 A~K 줄이 건반이 돼요. W, E, T, Y, U는 검은 건반, Z/X는 옥타브, C/V는 세기예요. 드럼 트랙을 고르면 어느 화면에서나 글자 키(기본 1234 · QWER · ASDF · ZXCV)가 드럼 패드예요.'], onclick: () => U.setKeyboard(!ui.keyboard) });
   refs.map = btn({ text: 'MIDI', cls: 'tg map', toggle: true, on: !!ui.mapMode, title: 'MIDI 매핑 모드', info: ['MIDI 매핑 모드', '켜고 노브·페이더를 누른 뒤 MIDI 장치의 손잡이를 돌리면 둘이 이어져요. 다시 누르면 매핑 모드를 끝내요.'], onclick: () => U.setMapMode(!ui.mapMode) });
 
   // A(컨트롤 룸): 세션 · 곡 · 패드를 위에서 바로 바꾼다
