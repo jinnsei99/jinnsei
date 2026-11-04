@@ -172,7 +172,7 @@ function moveSlot(dx, dy) {
    건반(세기 → 터치 감도), 패드(드럼 트랙으로), 노브 8개(소리 다듬기 손잡이), 피치 벤드 · 모드 휠 · 누르는 힘(애프터터치), 서스테인.
    M-VAVE SMK-25 mini · Akai MPK mini MK3 같은 작은 건반을 꽂으면 바로 쓰도록 맞췄다. 패드 채널과 노브 번호가 장치마다 다르면 'MIDI 장치' 창에서 알아낸다 */
 let midi = null;
-const MC = Object.assign({ padCh: 9, curve: 'normal', fixed: 100, pb: 2, at: 'vib', knobs: [], devKnobs: {} }, U.pref('midiCfg', null) || {});
+const MC = Object.assign({ padCh: 9, curve: 'normal', fixed: 100, pb: 2, at: 'vib', knobs: [], devKnobs: {}, drumBase: 48 }, U.pref('midiCfg', null) || {});
 if (!MC.devKnobs) MC.devKnobs = {};   // 장치 이름 → 알아본 노브 (장치를 바꿔 꽂아도 그 장치의 노브로)
 const saveCfg = () => U.setPref('midiCfg', MC);
 /* 터치 감도: 들어온 세기 → 칠 세기 */
@@ -237,7 +237,7 @@ function devices() { return midi ? [...midi.inputs.values()].map(i => ({ id: i.i
 const PROFILES = [
   { id: 'mpk3', name: 'Akai MPK mini MK3', test: d => /mpk\s*mini\s*(3|iii|mk\s*3|play)/i.test(d.name), knobs: [70, 71, 72, 73, 74, 75, 76, 77], pads: 'mpc',
     hello: '건반은 누른 세기대로, 패드(A·B 뱅크)는 드럼 트랙으로, 노브 8개는 소리 다듬기 손잡이로, 조이스틱은 피치 벤드 · 모드로 바로 써요.',
-    panel: '노브 8개(CC 70~77)는 이어 두었어요 · 조이스틱 좌우 = 피치 벤드, 위 = 모드 · 패드 A·B 뱅크 = 드럼 패드 1~16 · 노트 리피트 · 아르페지에이터는 건반 쪽에서' },
+    panel: '노브 8개(CC 70~77)는 이어 두었어요 · 조이스틱 좌우 = 피치 벤드, 위 = 모드 · 패드 A·B 뱅크 = 드럼 패드 1~16 · 드럼 트랙을 고르면 건반도 패드(맨 왼쪽 C2 = 킥) · 노트 리피트 · 아르페지에이터는 건반 쪽에서' },
   { id: 'smk', name: 'M-VAVE SMK-25 mini', test: d => /smk|m-?vave/i.test(d.name + ' ' + (d.maker || '')), pref: 'midiSMK',
     hello: '건반은 누른 세기대로, 패드는 드럼 트랙으로 가요. 노브는 MIDI 장치 창에서 한 번 알아보기를 해 주세요.',
     panel: '노브는 장치 설정에 따라 번호가 달라서 한 번 알아보기를 해 주세요 · 피치 벤드 · 모드 버튼, 서스테인 버튼도 돼요' }
@@ -283,19 +283,25 @@ function clearKnobs() {
 
 /* ---------- 건반 · 패드 ---------- */
 const isPadTrack = t => !!t && t.type === 'midi' && ['drums', 'looppad'].includes((U.instrumentOf(t) || {}).kind);
-/* 건반으로 드럼 치기: 드럼 머신의 패드 16개는 GM 자리(C1 36 ~ D#2 51)에 있다 (C 킥 · D 스네어 · F# 닫힌 햇 · A# 열린 햇 …).
-   그 자리의 음은 그대로 치고, 바깥 음은 두 옥타브씩 접어서 건반이 어느 옥타브에 있든 킷 한 벌이 손 밑에 온다.
-   두 옥타브 가운데 아래 옥타브는 C1~B1(킥 · 스네어 · 햇 · 탐), 위 옥타브의 C~D#는 C2~D#2(탬버린 · 크래시 · 라이드), E~B는 다시 햇 · 탐 */
-function drumNote(p) {
-  if (p === 35) return 36;   // GM의 어쿠스틱 베이스 드럼 → 킥
-  let q = 36 + (((p - 36) % 24) + 24) % 24;
-  if (q >= 52) q -= 12;
-  return q;
+/* 건반으로 드럼 치기 (컴퓨터 키보드의 글자 키처럼 건반 하나가 패드 하나).
+   드럼 머신 · 루프 패드의 패드 16개는 C1(36)~D#2(51)에 있다. 드럼은 GM 배치라 C 킥 · D 스네어 · F# 닫힌 햇 · A# 열린 햇 · 위 C# 크래시 · D# 라이드.
+   건반은 맨 왼쪽 C(drumBase, 기본 C2 = 48: MPK mini · SMK-25 같은 25건반의 기본 옥타브)부터 반음씩 패드 1~16,
+   그다음 E~B는 패드 5~12(햇 · 탐)를 한 번 더 치고, 두 옥타브마다 되풀이한다 (옥타브를 바꿔도 킷 한 벌이 손 밑에) */
+function keyPadNote(p, base) {
+  const off = (((p - (base == null ? MC.drumBase : base)) % 24) + 24) % 24;
+  return 36 + (off < 16 ? off : off - 12);
 }
-const drumTrack = id => { const t = U.trackById(pr(), id), d = t && U.instrumentOf(t); return d && d.kind === 'drums' ? t : null; };
-const noteFor = (id, p) => (drumTrack(id) ? drumNote(p) : p);
-/* 건반이 치는 드럼 트랙 (MIDI 장치 창이 건반 위에 드럼 이름을 적는다) */
-function keysDrum() { for (const id of liveTargets()) { const t = drumTrack(id); if (t) return t; } return null; }
+/* 패드 채널로 오는 음: GM 자리(36~51)는 그대로, 바깥 음은 C1에 맞춰 접는다 */
+function drumNote(p) { return p === 35 ? 36 : keyPadNote(p, 36); }   // 35 = GM의 어쿠스틱 베이스 드럼 → 킥
+const padTrackOf = id => { const t = U.trackById(pr(), id); return isPadTrack(t) ? t : null; };
+function noteFor(id, p, pad) {
+  const t = padTrackOf(id);
+  if (!t) return p;
+  if (pad) return U.instrumentOf(t).kind === 'drums' ? drumNote(p) : p;
+  return keyPadNote(p);
+}
+/* 건반이 치는 패드 트랙 (드럼 · 루프 패드). MIDI 장치 창이 건반 위에 패드 이름을 적는다 */
+function keysPad() { for (const id of liveTargets()) { const t = padTrackOf(id); if (t) return t; } return null; }
 function drumPadName(t, q) { const d = t && U.instrumentOf(t), pd = d && d.data && d.data.pads && d.data.pads[q - 36]; return pd ? pd.name || '패드 ' + (q - 35) : ''; }
 const heldOff = h => { h.ids.forEach((id, i) => U.engine.liveOff(id, h.ps ? h.ps[i] : h.p)); };
 /* 패드가 칠 트랙: 녹음 준비한 패드 트랙 → 고른 트랙(드럼 · 루프 패드면) → 연주 화면에 띄운 패드 트랙 → 첫 드럼 머신 → 첫 루프 패드 */
@@ -318,13 +324,13 @@ function noteOn(ch, p, v) {
   // 서스테인으로 붙잡아 둔 같은 음은 놓고 새로 친다
   const s = sustained.get(key);
   if (s) { sustained.delete(key); heldOff(s); }
-  // 드럼 트랙으로 가는 음은 킷의 패드 자리로 (건반으로 드럼 치기)
-  const ps = ids.map(id => noteFor(id, p));
+  // 드럼 · 루프 패드 트랙으로 가는 음은 패드 자리로 (건반으로 드럼 치기)
+  const ps = ids.map(id => noteFor(id, p, pad));
   ids.forEach((id, i) => U.engine.liveOn(id, ps[i], vel));
   midiHeld.set(key, { ids, p, ps });
   U.emit('livenote', { p, on: true, src: 'midi' });
-  const dt = !pad && drumTrack(ids[0]);
-  act({ k: pad ? 'pad' : 'note', ch, p, v, vel, ids, drum: dt ? { q: ps[0], name: drumPadName(dt, ps[0]) } : null });
+  const pt = !pad && padTrackOf(ids[0]);
+  act({ k: pad ? 'pad' : 'note', ch, p, v, vel, ids, drum: pt ? { q: ps[0], name: drumPadName(pt, ps[0]) } : null });
 }
 function noteOff(ch, p) {
   const key = ch + ':' + p, h = midiHeld.get(key);
@@ -573,7 +579,7 @@ function init() {
 }
 U.input = {
   init, connectMidi, midiCount, liveTargets, onMidi, devices, isSMK, profileOf, PROFILES, cfg: MC, saveCfg, curveVel, CURVES, KNOBS,
-  knobs, clearKnobs, curDev, startLearn, stopLearn, learning: () => learn, padTarget, knobTrack, knobGet, state: X, drumNote, keysDrum, drumPadName,
+  knobs, clearKnobs, curDev, startLearn, stopLearn, learning: () => learn, padTarget, knobTrack, knobGet, state: X, drumNote, keyPadNote, keysPad, drumPadName,
   supported: () => !!navigator.requestMIDIAccess, connected: () => !!midi
 };
 })(window.U = window.U || {});
