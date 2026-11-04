@@ -279,28 +279,49 @@ function keyUp(e) { if (!fingers.has(e.code)) return false; lift(e.code); return
 /* ================= MIDI 건반으로 코드 패드 =================
    누른 건반의 음이 근음인 화음을 누르고 있는 동안: 아래 옥타브는 위 줄(키 안의 화음),
    위 옥타브는 아래 줄(세컨더리 도미넌트, 그 근음에 없으면 키 안의 화음). 키 밖의 근음은 장3화음(♭II · ♭III · ♭VI …) */
-const FLAT = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
-const BORROW = { triad: [[0, 4, 7], ''], seventh: [[0, 4, 7, 11], 'maj7'], ninth: [[0, 4, 7, 11, 14], 'maj9'] };
-function midiChord(pc, upper) {
-  const { dia, sec } = chordList();
-  const ch = (upper && sec.find(c => c.pc === pc)) || dia.find(c => c.pc === pc);
-  if (ch) return ch;
-  const [iv, q] = BORROW[KS.ctype] || BORROW.triad;
-  return { id: 'b' + pc, pc, iv, roman: '', borrowed: true, name: FLAT[pc] + q };
+const midiChord = (pc, upper) => U.chords.forRoot(key(), KS.ctype, pc, upper);
+/* 스케일 칸: 키 밖의 음은 가까운 키 안의 음으로 (같이 가까우면 아래로) */
+function snapScale(p) {
+  const k = key();
+  for (let d = 0; d < 12; d++) { if (U.inScale(p - d, k.root, k.scale)) return p - d; if (U.inScale(p + d, k.root, k.scale)) return p + d; }
+  return p;
 }
-function chordTarget(ids) {
-  if (!track || lay !== 'chords' || !root || !root.isConnected || !U.padsView.active() || !ids.includes(track.id)) return null;
-  return { t: track, kind: 'pad' };
+/* MIDI 건반의 음 → 이 화면이 칠 음 (건반은 그대로, 스케일 칸은 키 안으로) */
+const midiNote = p => (lay === 'grid' ? snapScale(p) : p);
+/* MIDI 건반이 이 화면으로 칠 때: 패드 화면이 보이고, 건반이 이 트랙을 칠 때 (건반 · 스케일 · 코드 패드 모두) */
+function midiTarget(ids) {
+  if (!track || !root || !root.isConnected || !U.padsView.active() || !ids.includes(track.id)) return null;
+  return { t: track, kind: lay === 'chords' ? 'pad' : 'keys', midi, label, what };
 }
+const chordTarget = ids => { const m = midiTarget(ids); return m && m.kind === 'pad' ? m : null; };
+/* 손가락 · 컴퓨터 키보드와 똑같이: 코드 패드는 화음, 건반 · 스케일은 '코드'를 켜면 3화음, 스케일 칸은 키 안의 음. 누른 칸이 밝아진다 */
 function midi(p, v, isOn, upper) {
   const id = 'm' + p;
   if (!isOn) { lift(id); return null; }
   if (!track) return null;
-  const ch = midiChord(((p % 12) + 12) % 12, upper);
-  const el = !ch.borrowed && root ? root.querySelector('.tk-surface [data-chord="' + ch.id + '"]') : null;
-  press(id, el, voiceOf(ch).filter(x => x >= 0 && x <= 127), v);
-  return { name: ch.name, up: upper, kind: 'pad', target: ch.sec ? ch.target : null };
+  if (lay === 'chords') {
+    const ch = midiChord(((p % 12) + 12) % 12, upper);
+    const el = !ch.borrowed && root ? root.querySelector('.tk-surface [data-chord="' + ch.id + '"]') : null;
+    press(id, el, voiceOf(ch).filter(x => x >= 0 && x <= 127), v);
+    return { name: ch.name, up: upper, kind: 'pad', target: ch.sec ? ch.target : null };
+  }
+  const q = midiNote(p), ps = pitchesOf(q);
+  press(id, root ? root.querySelector('.tk-surface [data-p="' + q + '"]') : null, ps, v);
+  if (KS.chord && ps.length === 3) return { name: chordName(ps), kind: 'chord' };
+  return q !== p ? { name: U.noteName(q), kind: 'snap' } : null;
+}
+/* MIDI 장치 창의 건반에 적을 것 (그대로 치는 음이면 없음) */
+function label(p, upper) {
+  if (lay === 'chords') { const ch = midiChord(((p % 12) + 12) % 12, upper); return { text: ch.name, far: !!ch.borrowed }; }
+  const q = midiNote(p);
+  if (KS.chord) { const ps = pitchesOf(q); return ps.length === 3 ? { text: chordName(ps), far: q !== p } : null; }
+  return q !== p ? { text: U.NOTE_NAMES[((q % 12) + 12) % 12], far: true } : null;
+}
+function what() {
+  if (lay === 'chords') return '코드 패드가 열려 있어서 누른 음이 근음인 화음이 누르는 동안 울려요: 아래 옥타브는 위 줄(키 안의 화음), 위 옥타브는 아래 줄(세컨더리 도미넌트)';
+  const base = lay === 'grid' ? '스케일 칸이 열려 있어서 키 밖의 음은 가까운 키 안의 음(흐린 이름)으로 쳐요' : '건반 화면이 열려 있어서 누른 음을 그대로 쳐요';
+  return base + (KS.chord ? '. \'코드\'가 켜져 있어서 한 건반으로 그 음의 3화음을 쳐요' : '');
 }
 
-U.touchKeys = { view, controls, chordControls, releaseAll, keyDown, keyUp, redraw, chordTarget, midi, midiChord, get track() { return track; } };
+U.touchKeys = { view, controls, chordControls, releaseAll, keyDown, keyUp, redraw, midiTarget, chordTarget, midi, midiChord, label, get track() { return track; } };
 })(window.U = window.U || {});

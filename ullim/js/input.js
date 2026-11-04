@@ -237,7 +237,7 @@ function devices() { return midi ? [...midi.inputs.values()].map(i => ({ id: i.i
 const PROFILES = [
   { id: 'mpk3', name: 'Akai MPK mini MK3', test: d => /mpk\s*mini\s*(3|iii|mk\s*3|play)/i.test(d.name), knobs: [70, 71, 72, 73, 74, 75, 76, 77], pads: 'mpc',
     hello: '건반은 누른 세기대로, 패드(A·B 뱅크)는 드럼 트랙으로, 노브 8개는 소리 다듬기 손잡이로, 조이스틱은 피치 벤드 · 모드로 바로 써요.',
-    panel: '노브 8개(CC 70~77)는 이어 두었어요 · 조이스틱 좌우 = 피치 벤드, 위 = 모드 · 패드 A·B 뱅크 = 드럼 패드 1~16 · 드럼 트랙을 고르면 건반도 패드(맨 왼쪽 C2 = 킥) · 연주 화면에 코드 줄 · 코드 패드를 열면 건반이 화음 · 노트 리피트 · 아르페지에이터는 건반 쪽에서' },
+    panel: '노브 8개(CC 70~77)는 이어 두었어요 · 조이스틱 좌우 = 피치 벤드, 위 = 모드 · 패드 A·B 뱅크 = 드럼 패드 1~16 · 드럼 트랙을 고르면 건반도 패드(맨 왼쪽 C2 = 킥) · 패드 화면이 열려 있으면 건반도 그 화면대로(코드 · 스케일 · 코드 줄 · 하프 …) · 노트 리피트 · 아르페지에이터는 건반 쪽에서' },
   { id: 'smk', name: 'M-VAVE SMK-25 mini', test: d => /smk|m-?vave/i.test(d.name + ' ' + (d.maker || '')), pref: 'midiSMK',
     hello: '건반은 누른 세기대로, 패드는 드럼 트랙으로 가요. 노브는 MIDI 장치 창에서 한 번 알아보기를 해 주세요.',
     panel: '노브는 장치 설정에 따라 번호가 달라서 한 번 알아보기를 해 주세요 · 피치 벤드 · 모드 버튼, 서스테인 버튼도 돼요' }
@@ -307,13 +307,11 @@ const heldOff = h => {
   h.ids.forEach((id, i) => U.engine.liveOff(id, h.ps ? h.ps[i] : h.p));
   if (h.off) h.off();   // 연주 화면의 화음: 코드 패드 · 활로 켜던 화음을 놓는다 (뜯은 줄은 저절로 사라진다)
 };
-/* 건반으로 화음을 칠 연주 화면: 기타 · 베이스 · 현악의 코드 줄, 건반 악기의 코드 패드 (그 화면이 보이고 건반이 그 트랙을 칠 때) */
+/* 건반이 거쳐 갈 연주 화면: 패드 화면에 보이는 그 트랙의 화면 (코드 줄 · 지판 · 하프 · 가야금 · 말렛 · 건반 · 스케일 · 코드 패드).
+   손가락이나 컴퓨터 키보드로 칠 때와 똑같이 그 화면이 음을 정한다 ('코드'를 켜면 3화음, 스케일 칸은 키 안의 음 …) */
 function screenTarget(ids) {
-  const st = U.play && U.play.stripTarget(ids);
-  if (st) return { tid: st.t.id, fn: (p, v, on, up) => U.play.midi(st.t.id, p, v, on, up) };
-  const ct = U.touchKeys && U.touchKeys.chordTarget(ids);
-  if (ct) return { tid: ct.t.id, fn: (p, v, on, up) => U.touchKeys.midi(p, v, on, up) };
-  return null;
+  const v = (U.play && U.play.midiTarget(ids)) || (U.touchKeys && U.touchKeys.midiTarget(ids)) || (U.clipView && U.clipView.midiTarget && U.clipView.midiTarget(ids));
+  return v ? { tid: v.t.id, view: v, fn: (p, vel, on, up) => v.midi(p, vel, on, up) } : null;
 }
 /* 코드 줄에서 아래 옥타브(맨 왼쪽 C부터 12건반)는 다운, 위 옥타브는 업 스트럼 */
 const isUpKey = p => (((p - MC.drumBase) % 24) + 24) % 24 >= 12;
@@ -337,7 +335,7 @@ function noteOn(ch, p, v) {
   // 서스테인으로 붙잡아 둔 같은 음은 놓고 새로 친다
   const s = sustained.get(key);
   if (s) { sustained.delete(key); heldOff(s); }
-  // 연주 화면이 코드 줄이나 코드 패드면 그 트랙에는 화음을 친다 (컴퓨터 키보드의 1~8 · Q~Y처럼)
+  // 패드 화면이 그 트랙의 연주 화면이면 그 화면을 거쳐 친다 (손가락 · 컴퓨터 키보드와 같은 소리, 화면도 따라 움직인다)
   const scr = pad ? null : screenTarget(ids);
   const rest = scr ? ids.filter(id => id !== scr.tid) : ids;
   const chord = scr ? scr.fn(p, vel, true, isUpKey(p)) : null;

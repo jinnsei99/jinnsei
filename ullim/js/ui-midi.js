@@ -128,8 +128,8 @@ function drawKeys() {
 /* 건반이 드럼 · 루프 패드 트랙을 치면 건반마다 그 패드를 적는다 (킥 · 스네어 · 햇 … / 루프 패드는 번호) */
 function labelKeys() {
   if (!V || !V.keysEl) return;
-  const st = U.play.stripTarget(I().liveTargets()) || U.touchKeys.chordTarget(I().liveTargets());
-  if (st) { labelChords(st); return; }
+  const sc = I().screenTarget(I().liveTargets());
+  if (sc) { labelScreen(sc.view); return; }
   const t = I().keysPad(), d = t && U.instrumentOf(t), pads = (d && d.data && d.data.pads) || [], drum = !!d && d.kind === 'drums';
   V.keysEl.classList.toggle('drum', !!t);
   for (const [p, k] of V.keys) {
@@ -143,26 +143,25 @@ function labelKeys() {
   const base = U.noteName(I().cfg.drumBase);
   info(V.keysEl, '건반', t ? '건반이 ' + (drum ? '드럼' : '루프 패드') + ' 트랙(' + U.trackLabel(pr(), t) + ')을 쳐요. 컴퓨터 키보드의 글자 키처럼 건반 하나가 패드 하나예요: ' + base + '부터 반음씩 패드 1~16' + (drum ? ' (킥 · 사이드 스틱 · 스네어 · 클랩 … 크래시 · 라이드)' : '') + ', 그 위 E~B는 패드 5~12를 한 번 더. 아래 \'드럼 건반\'에서 시작 C를 바꿔요.' : '누른 세기(키압)만큼 건반이 차올라요. 드럼 트랙을 고르면 건반으로 드럼을 쳐요.');
 }
-/* 연주 화면이 코드 줄이면 건반마다 그 코드 (위 옥타브는 ↑ 업 스트럼) */
-function labelChords(st) {
-  V.keysEl.classList.add('drum');
-  const pads = st.kind === 'pad';
+/* 패드 화면이 그 트랙의 연주 화면이면: 건반마다 그 화면이 칠 것 (코드 이름 · 바뀌는 음). 그대로 치는 건반은 비워 둔다 */
+function labelScreen(v) {
+  let any = false;
   for (const [p, k] of V.keys) {
     const old = k.querySelector('.mid-dk');
     if (old) old.remove();
-    const pc = ((p % 12) + 12) % 12, upKey = I().isUpKey(p);
-    const ch = pads ? U.touchKeys.midiChord(pc, upKey) : U.play.chordFor(pc), up = upKey && !pads && !st.bow;
-    k.prepend(h('em', { class: 'mid-dk' + (ch.borrowed ? ' far' : ''), text: ch.name + (up ? '↑' : '') }));
+    const L = v.label(p, I().isUpKey(p));
+    if (!L) continue;
+    any = true;
+    k.prepend(h('em', { class: 'mid-dk' + (L.far ? ' far' : ''), text: L.text }));
   }
-  const what = pads ? '누르고 있는 동안 그 화음이 울려요: 아래 옥타브는 위 줄(키 안의 화음), 위 옥타브는 아래 줄(세컨더리 도미넌트)' : st.bow ? '누르고 있는 동안 현악 합주가 그 코드를 켜요' : st.fam === 'bass' ? '그 코드의 근음을 쳐요 (위 옥타브는 한 옥타브 위)' : '그 코드를 긁어요: 아래 옥타브는 다운, 위 옥타브(↑)는 업 스트럼';
-  info(V.keysEl, pads ? '건반 → 코드 패드' : '건반 → 코드 줄', '연주 화면의 ' + (pads ? '코드 패드' : '코드 줄') + '(' + U.trackLabel(pr(), st.t) + ')이 열려 있어서, 누른 건반의 음이 근음인 화음을 쳐요. ' + what + '. 흐린 이름은 키 밖의 빌린 화음이에요. 아래 \'드럼 · 코드 건반\'에서 시작 C를 바꿔요.');
+  V.keysEl.classList.toggle('drum', any);
+  info(V.keysEl, v.kind === 'tab' ? '건반 → 코드 넣기' : '건반 → 연주 화면', (v.kind === 'tab' ? '' : '패드 화면의 ' + U.trackLabel(pr(), v.t) + ' 화면을 거쳐 쳐요. 손가락이나 컴퓨터 키보드로 칠 때와 같아요: ') + v.what() + '. 아래 \'드럼 · 코드 건반\'에서 아래 · 위 옥타브가 시작하는 C를 바꿔요.');
 }
 const relabel = () => { if (V && V.keysEl) requestAnimationFrame(labelKeys); };
 function nowLine() {
-  const st = U.play.stripTarget(I().liveTargets()), ct = !st && U.touchKeys.chordTarget(I().liveTargets());
-  if (st || ct) {
-    V.now = h('div', { class: 'mid-now', text: ct ? '건반을 눌러 보세요. 코드 패드(' + U.trackLabel(pr(), ct.t) + ')가 열려 있어서 누른 음이 근음인 화음이 누르는 동안 울려요 (아래 옥타브 키 안의 화음 · 위 옥타브 세컨더리 도미넌트).'
-      : '건반을 눌러 보세요. 코드 줄(' + U.trackLabel(pr(), st.t) + ')이 열려 있어서 누른 음이 근음인 코드를 ' + (st.bow ? '켜요.' : st.fam === 'bass' ? '근음으로 쳐요.' : '긁어요 (아래 옥타브 다운 · 위 옥타브 업).') });
+  const sc = I().screenTarget(I().liveTargets());
+  if (sc) {
+    V.now = h('div', { class: 'mid-now', text: '건반을 눌러 보세요. ' + U.trackLabel(pr(), sc.view.t) + ': ' + sc.view.what() + '.' });
     return V.now;
   }
   const t = I().keysPad();
@@ -270,7 +269,7 @@ function onEvent(ev) {
       if (k) { k.style.setProperty('--v', ev.vel / 127); k.classList.add('on'); }
       V.vel.querySelector('b').textContent = ev.v + (ev.vel !== ev.v ? ' → ' + ev.vel : '');
       V.vel.style.setProperty('--v', ev.vel / 127);
-      V.now.textContent = U.noteName(ev.p) + (ev.chord ? ' → ' + ev.chord.name + ({ strum: ev.chord.up ? ' ↑ 업' : ' ↓ 다운', bass: ev.chord.up ? ' 옥타브' : ' 근음', bow: '', pad: ev.chord.target ? ' (→ ' + ev.chord.target + ')' : '' }[ev.chord.kind] || '') : ev.drum ? ' → ' + ev.drum.name : '') + ' · 세기 ' + ev.v + (ev.vel !== ev.v ? ' → ' + ev.vel : '') + ' · ' + trackName(ev.ids) + (ev.ch ? ' · ' + (ev.ch + 1) + '번 채널' : '');
+      V.now.textContent = U.noteName(ev.p) + (ev.chord ? ' → ' + ev.chord.name + ({ strum: ev.chord.up ? ' ↑ 업' : ' ↓ 다운', bass: ev.chord.up ? ' 옥타브' : ' 근음', bow: '', pad: ev.chord.target ? ' (→ ' + ev.chord.target + ')' : '', chord: ' (코드)', snap: ' (키 안의 음)', tab: ' 넣기' + (ev.chord.target ? ' (→ ' + ev.chord.target + ')' : '') }[ev.chord.kind] || '') : ev.drum ? ' → ' + ev.drum.name : '') + ' · 세기 ' + ev.v + (ev.vel !== ev.v ? ' → ' + ev.vel : '') + ' · ' + trackName(ev.ids) + (ev.ch ? ' · ' + (ev.ch + 1) + '번 채널' : '');
       return;
     }
     case 'off': {

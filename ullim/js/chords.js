@@ -116,5 +116,16 @@ function voice(ch, center, prev, o) {
   return { top, all: extra.concat(top).filter(p => p >= 12 && p <= 115) };
 }
 
-U.chords = { TYPES, diatonic, secondary, voice, quality, parentScale, spell };
+/* MIDI 건반의 한 음 → 그 음이 근음인 화음 (코드 패드 · 코드 넣기).
+   아래 옥타브는 키 안의 화음, 위 옥타브(upper)는 그 근음의 세컨더리 도미넌트(없으면 키 안의 화음),
+   키 밖의 근음은 장3화음(7 · 9화음이면 maj7 · maj9): ♭II · ♭III · ♭VI 같은 빌린 화음 */
+const FLAT = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+const BORROW = { triad: [[0, 4, 7], ''], seventh: [[0, 4, 7, 11], 'maj7'], ninth: [[0, 4, 7, 11, 14], 'maj9'] };
+function forRoot(key, type, pc, upper) {
+  const ch = (upper && secondary(key, type).find(c => c.pc === pc)) || diatonic(key, type).find(c => c.pc === pc);
+  if (ch) return ch;
+  const [iv, q] = BORROW[type] || BORROW.triad;
+  return { id: 'b' + pc, pc, iv, roman: '', borrowed: true, name: FLAT[pc] + q };
+}
+U.chords = { TYPES, diatonic, secondary, voice, quality, parentScale, spell, forRoot };
 })(window.U = window.U || {});
