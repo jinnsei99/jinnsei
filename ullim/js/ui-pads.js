@@ -107,13 +107,13 @@ function stopAll(t) {
 
 /* ================= 키보드 ================= */
 function viewActive() { return U.padsShown() && !(ui.narrow && ui.pane !== 'main'); }
-/* 글자 키가 칠 패드 트랙: 패드 화면이면 그 트랙, 컴퓨터 건반이 켜져 있으면 건반이 가는 루프 패드 트랙 */
+/* 글자 키가 칠 패드 트랙: 패드 화면이면 그 트랙, 컴퓨터 건반이 켜져 있으면 건반이 가는 드럼 · 루프 패드 트랙 (어느 화면에서나) */
 function kbTarget() {
   if (viewActive()) { const t = curTrack(); return t && !isKeysTrack(t) ? { t, d: U.instrumentOf(t) } : null; }
   if (!ui.keyboard) return null;
   for (const id of U.input.liveTargets()) {
     const t = U.trackById(pr(), id), d = t && U.instrumentOf(t);
-    if (d && d.kind === 'looppad') return { t, d };
+    if (isPadInst(d)) return { t, d };
   }
   return null;
 }
@@ -132,6 +132,7 @@ function keyDown(e) {
   if (lay && lay !== 'pads' && lay !== 'kit') return U.play.keyDown(e) || (U.padKeyOk(e.code) && e.code !== 'KeyP');
   const tg = kbTarget();
   if (!tg) return false;
+  if (e.code === 'KeyM' && !viewActive()) return false;   // 다른 화면에서는 M이 컴퓨터 건반 끄기로 남는다
   let i = -1;
   for (let j = 0; j < 16; j++) if (keyOf(tg.d, j) === e.code) { i = j; break; }
   // 패드 화면에서는 주인 없는 글자 키가 다른 단축키로 새지 않게 막는다 (P는 화면 바꾸기로 남긴다)
@@ -140,6 +141,16 @@ function keyDown(e) {
   return true;
 }
 function keyUp(e) { return release(e.code) || (U.touchKeys ? U.touchKeys.keyUp(e) : false) || (viewActive() && U.play.keyUp(e)); }
+/* 컴퓨터 건반을 켰을 때 글자 키로 치는 패드 트랙과 그 글자 배치 (상태 줄 · 알림에 쓴다) */
+function kbPads() {
+  if (!ui.keyboard) return null;
+  const tg = kbTarget();
+  if (!tg) return null;
+  const ks = [];
+  for (let i = 0; i < 16; i++) ks.push(keyOf(tg.d, i));
+  const lay = U.PAD_LAYOUTS.find(L => L.keys.every((k, i) => k === ks[i]));
+  return { t: tg.t, d: tg.d, drums: tg.d.kind === 'drums', keys: lay ? lay.name.split(' · ')[1] : ks.some(Boolean) ? '패드마다 정한 글자' : '' };
+}
 
 /* ================= 키 지정 ================= */
 function waitFor(t, i) {
@@ -742,6 +753,6 @@ U.on('select', s => {
 });
 window.addEventListener('resize', () => { if (R.ed && U.padsShown()) R.ed.draw(); });
 
-U.padsView = { build, render, keyDown, keyUp, releaseAll, curTrack };
+U.padsView = { build, render, keyDown, keyUp, releaseAll, curTrack, kbPads };
 U.padsUI = { compact, keyOf };
 })(window.U = window.U || {});

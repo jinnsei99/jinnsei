@@ -203,7 +203,7 @@ function renderStatus() {
     on.addEventListener('click', () => U.ensureAudio());
     right.append(on);
   }
-  if (ui.keyboard) right.append(h('span', { class: 'st-kb', text: '⌨ C' + ui.octave + ' · ' + ui.velocity }));
+  if (ui.keyboard) { const kp = U.padsView.kbPads(); right.append(h('span', { class: 'st-kb', text: kp ? '⌨ ' + (kp.drums ? '드럼' : '패드') + ' · 글자 키' : '⌨ C' + ui.octave + ' · ' + ui.velocity })); }
   if (U.isTouch) {
     // 키보드가 없을 때를 위해 되돌리기·다시 실행을 눈에 보이게
     // 길게 누르면 되돌리기 기록이 열린다
@@ -240,7 +240,9 @@ function renderStatus() {
 /* ================= 정보 창 기본 글 ================= */
 function infoDefault() {
   if (ui.view === 'pads') return ['패드 화면', '고른 트랙의 악기 모양으로 쳐요: 드럼 세트 · 패드 · 기타 코드 줄과 지판 · 하프 · 가야금 · 말렛 · 건반. 위의 화면 버튼으로 바꾸고, 패드와 드럼은 글자 키로도 쳐요. 기타 코드는 1~8 키. Tab은 세션 뷰로 돌아가요.'];
-  if (ui.keyboard) return ['컴퓨터 건반 켜짐', 'A·S·D·F·G·H·J·K가 흰 건반, W·E·T·Y·U가 검은 건반이에요. Z/X로 옥타브, C/V로 세기를 바꿔요.'];
+  const kp = ui.keyboard && U.padsView.kbPads();
+  if (kp) return ['컴퓨터 건반 켜짐 · ' + (kp.drums ? '드럼' : '루프 패드'), U.trackLabel(pr(), kp.t) + '을(를) 글자 키로 쳐요' + (kp.keys ? ': ' + kp.keys : '') + '. 글자는 패드 화면(P)의 키 지정에서 바꾸고, Shift를 누른 채 치면 노트 리피트예요.'];
+  if (ui.keyboard) return ['컴퓨터 건반 켜짐', 'A·S·D·F·G·H·J·K가 흰 건반, W·E·T·Y·U가 검은 건반이에요. Z/X로 옥타브, C/V로 세기를 바꿔요. 드럼 트랙을 고르면 글자 키가 드럼 패드가 돼요.'];
   return ui.view === 'session'
     ? ['세션 뷰', '클립의 ▶를 누르면 다음 마디에 맞춰 재생돼요. 오른쪽 열의 ▶는 씬(가로 한 줄)을 한꺼번에 띄워요. 마우스를 올리면 여기에 설명이 나와요.']
     : ['어레인지먼트 뷰', '클립을 시간 순서로 배치해 곡을 완성해요. 눈금자를 눌러 시작 위치를 정하고 Space로 재생해요. A를 누르면 자동화를 그려요.'];
