@@ -167,9 +167,9 @@ function items() {
       for (const g of U.GENRES) out.push({ label: g.name, sub: g.bpm + ' BPM · ' + U.scaleLabel(g.key.root, g.key.scale), infoText: g.desc + '.', icon: 'plus', load: () => U.newProjectFlow(g.id) });
       if (list.length) head(U.store.mode === 'cloud' ? 'Claude 계정에 저장됨' : '이 브라우저에 저장됨');
       for (const p of list) out.push({
-        label: p.name || '이름 없음', sub: new Date(p.updated).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) + (p.id === pr().id ? ' · 지금 열림' : ''), icon: 'file',
+        label: p.name || '이름 없음', sub: new Date(p.updated).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' }) + (p.id === pr().id ? ' · 지금 열림' : '') + (U.files.nameOf(p.id) ? ' · 파일 ' + U.files.nameOf(p.id) : ''), icon: 'file',
         load: () => U.openProject(p.id),
-        menu: [{ label: '열기', action: () => U.openProject(p.id) }, { label: '지우기', danger: true, disabled: p.id === pr().id, action: async () => { if (await U.confirm('프로젝트 지우기', '"' + p.name + '"을(를) 지울까요? 되돌릴 수 없어요.', '지우기', true)) { await U.store.deleteProject(p.id); refreshProjects(); } } }]
+        menu: [{ label: '열기', action: () => U.openProject(p.id) }, { label: '지우기', danger: true, disabled: p.id === pr().id, action: async () => { if (await U.confirm('프로젝트 지우기', '"' + p.name + '"을(를) 지울까요? 되돌릴 수 없어요.', '지우기', true)) { await U.store.deleteProject(p.id); U.files.forget(p.id); refreshProjects(); } } }]
       });
       break;
     }
@@ -369,5 +369,14 @@ async function previewSample(ref) {
 U.renderer('browser', () => { if (root) { st.userList = null; st.projList = null; renderList(); } });
 U.on('favs', () => { if (root && st.cat === 'sounds') renderList(true); });
 U.on('store', s => { if (s === 'saved' && st.cat === 'projects') refreshProjects(); });
-U.browserView = { build, importFiles, focusSearch: () => { if (searchEl) { searchEl.focus(); searchEl.select(); } } };
+U.on('files', () => { if (st.cat === 'projects') renderList(true); });
+/* 메뉴에서 분류 하나를 바로 연다 (예: 저장된 프로젝트) */
+function showCat(id) {
+  st.cat = id;
+  U.setPref('brCat', id);
+  st.sel = null;
+  if (id === 'projects') st.projList = null;
+  if (root) build(root);
+}
+U.browserView = { build, showCat, importFiles, focusSearch: () => { if (searchEl) { searchEl.focus(); searchEl.select(); } } };
 })(window.U = window.U || {});

@@ -21,6 +21,7 @@ function newProjectDialog(first) {
   if (first) grid.append(card('데모 곡 듣기', '122 BPM · A 마이너', '이미 만들어 둔 곡 "새벽 네 시"를 들어 보며 둘러봐요.', () => { U.ensureAudio(); U.engine.launchScene(1); }, 'demo'));
   for (const g of U.GENRES) grid.append(card(g.name, g.bpm + ' BPM · ' + U.scaleLabel(g.key.root, g.key.scale), g.desc, () => U.newProjectFlow(g.id)));
   grid.append(card('빈 프로젝트', '120 BPM', '빈 트랙 네 개로 처음부터 시작해요.', () => U.newProjectFlow(), 'blank'));
+  grid.append(card('파일 열기', '.ullim.json', '컴퓨터에 저장해 둔 울림 프로젝트 파일을 열어요.', () => U.files.open(), 'open'));
   body.append(grid);
   body.append(h('p', { class: 'hint', text: '장르 프로젝트는 세션 뷰의 씬(인트로·빌드업·드롭…)과 어레인지먼트의 곡 구조가 함께 들어 있어요. 고친 내용은 자동으로 저장돼요.' }));
   if (first) {

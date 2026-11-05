@@ -79,7 +79,8 @@ function onKeyDown(e) {
     switch (e.code) {
       case 'KeyZ': done(); e.shiftKey ? A.redo() : A.undo(); return;
       case 'KeyY': done(); A.redo(); return;
-      case 'KeyS': done(); U.saveNow(); return;
+      case 'KeyS': done(); if (e.shiftKey) U.files.saveAs(); else U.files.save(); return;
+      case 'KeyO': done(); U.files.open(); return;
       case 'KeyK': done(); U.quick.open(); return;
       case 'KeyF': done(); if (!ui.browserOpen) U.toggleBrowser(true); U.browserView.focusSearch(); return;
       case 'KeyD': done(); duplicate(ctx, roll); return;

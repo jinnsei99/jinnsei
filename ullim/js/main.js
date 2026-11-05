@@ -190,11 +190,11 @@ function renderStatus() {
   const st = U.store.status, mode = U.store.mode;
   const saveText = st === 'saving' ? '저장 중…' : st === 'error' ? (U.store.error || '저장하지 못했어요') : st === 'saved' ? (mode === 'cloud' ? 'Claude 계정에 저장됨' : mode === 'local' ? '이 브라우저에 저장됨' : '저장 안 됨 (이 창을 닫으면 사라져요)') : (mode === 'cloud' ? 'Claude 계정에 자동 저장' : '이 브라우저에 자동 저장');
   const save = h('span', { class: 'st-save' + (st === 'error' ? ' err' : ''), text: saveText });
-  info(save, '저장', mode === 'cloud' ? '프로젝트는 바꿀 때마다 내 Claude 계정의 비공개 공간에 저장돼요. 가져온 오디오 파일은 이 브라우저에만 있어요.' : '프로젝트는 바꿀 때마다 이 브라우저에 저장돼요. 다른 기기로 옮기려면 메뉴에서 프로젝트 파일로 내보내세요.');
+  info(save, '저장', (mode === 'cloud' ? '프로젝트는 바꿀 때마다 내 Claude 계정의 비공개 공간에 저장돼요. 가져온 오디오 파일은 이 브라우저에만 있어요.' : '프로젝트는 바꿀 때마다 이 브라우저에 저장돼요.') + (U.files.supported ? ' 컴퓨터에 파일로 남기려면 ' + U.MOD + '+S를 눌러요.' : ' 다른 기기로 옮기거나 따로 보관하려면 메뉴 › 프로젝트 파일 받기를 써요.'));
   const name = h('button', { class: 'st-proj', type: 'button', text: pr().name || '이름 없는 프로젝트' });
   info(name, '프로젝트 이름', '눌러서 이름을 바꿔요.');
   name.addEventListener('click', () => U.ask('프로젝트 이름', '이름', pr().name).then(v => { if (v) { pr().name = v; U.commit('프로젝트 이름'); } }));
-  const left = h('div', { class: 'st-l' }, name, save);
+  const left = h('div', { class: 'st-l' }, name, save, U.files.chip());
   const right = h('div', { class: 'st-r' });
   const ctx = U.engine.ctx;
   if (ctx.state !== 'running') {
@@ -250,7 +250,16 @@ function infoDefault() {
 
 /* ================= 프로젝트 ================= */
 const autosave = U.debounce(() => { U.store.saveProject(pr()); }, 1500);
-U.saveNow = function () { autosave.flush(); U.toast('저장했어요'); };
+U.saveNow = function () { autosave.flush(); U.toast(U.store.mode === 'cloud' ? 'Claude 계정에 저장했어요' : U.store.mode === 'local' ? '이 브라우저에 저장했어요' : '저장했어요'); };
+U.flushSave = () => autosave.flush();
+/* 파일에서 연 프로젝트를 띄우고 이 브라우저(계정)에도 바로 저장한다 (files.js). 되돌리기 기록은 여기서 새로 시작한다 */
+let userOpened = false;
+U.loadProjectData = function (p) {
+  userOpened = true;
+  autosave.flush();
+  loadProject(p);
+  U.store.saveProject(pr());
+};
 U.openProject = async function (id) {
   if (id === pr().id) { U.toast('지금 열려 있는 프로젝트예요.'); return; }
   autosave.flush();
@@ -289,7 +298,7 @@ U.newProjectFlow = function (genre) {
   } else U.toast('새 프로젝트를 만들었어요.');
 };
 async function saveAs() {
-  const name = await U.ask('다른 이름으로 저장', '새 이름', (pr().name || '프로젝트') + ' 사본');
+  const name = await U.ask('사본 만들기', '사본 이름', (pr().name || '프로젝트') + ' 사본');
   if (!name) return;
   autosave.flush();
   const p = JSON.parse(JSON.stringify(pr()));
@@ -297,68 +306,12 @@ async function saveAs() {
   p.name = name;
   p.created = Date.now();
   loadProject(p);
-  U.commit('다른 이름으로 저장');
-  U.toast('"' + name + '"(으)로 저장했어요.');
+  U.commit('사본 만들기');
+  U.toast('"' + name + '" 사본을 만들었어요.');
 }
-/* 프로젝트 파일 (.json) — 가져온 오디오도 함께 담는다 */
-async function exportProjectFile() {
-  const p = JSON.parse(JSON.stringify(pr()));
-  const refs = new Set();
-  for (const t of p.tracks) {
-    for (const c of t.slots) if (c && c.type === 'audio' && c.ref.startsWith('user:')) refs.add(c.ref);
-    for (const a of t.arr) if (a.clip.type === 'audio' && a.clip.ref.startsWith('user:')) refs.add(a.clip.ref);
-    for (const d of t.devices) {
-      if (d.data && d.data.sample && d.data.sample.startsWith('user:')) refs.add(d.data.sample);
-      if (d.data && d.data.src && d.data.src.startsWith('user:')) refs.add(d.data.src);
-      if (d.data && d.data.pads) for (const pd of d.data.pads) if (pd.sample && pd.sample.startsWith('user:')) refs.add(pd.sample);
-    }
-  }
-  const media = {};
-  for (const ref of refs) {
-    const rec = await U.store.getAudio(ref.slice(5));
-    if (rec) media[ref] = { name: rec.name, bpm: rec.bpm, loop: rec.loop, duration: rec.duration, type: rec.type, b64: b64(rec.bytes) };
-  }
-  const out = { app: 'ullim', v: 1, project: p, media };
-  const r = await U.store.offer(U.safeName(p.name) + '.ullim.json', new Blob([JSON.stringify(out)], { type: 'application/json' }));
-  if (r === 'saved') U.toast('프로젝트 파일을 내보냈어요.');
-}
-function b64(buf) {
-  const u8 = new Uint8Array(buf);
-  let s = '';
-  for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
-  return btoa(s);
-}
-function unb64(s) {
-  const bin = atob(s);
-  const u8 = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-  return u8.buffer;
-}
-async function importProjectFile(file) {
-  if (!file) {
-    const files = await U.store.pickFile('.json,application/json', false);
-    if (!files.length) return;
-    file = files[0];
-  }
-  try {
-    const data = JSON.parse(await file.text());
-    const p = data.project || data;
-    for (const [ref, m] of Object.entries(data.media || {})) {
-      const bytes = unb64(m.b64);
-      await U.store.putAudio({ hash: ref.slice(5), name: m.name, bytes, duration: m.duration, bpm: m.bpm, loop: m.loop, size: bytes.byteLength, type: m.type, created: Date.now() });
-      U.media.setInfo(ref, { name: m.name, bpm: m.bpm, loop: m.loop, duration: m.duration });
-    }
-    U.normalize(p);
-    p.id = U.uid('p');
-    autosave.flush();
-    loadProject(p);
-    U.commit('프로젝트 가져오기');
-    U.toast('"' + p.name + '"을(를) 가져왔어요.');
-  } catch (e) {
-    console.error(e);
-    U.toast('울림 프로젝트 파일이 아니에요.', 'error');
-  }
-}
+/* 프로젝트 파일: 저장 · 열기는 files.js가 맡는다 (가져온 오디오도 함께 담는다) */
+const exportProjectFile = () => U.files.download();
+const importProjectFile = file => file ? U.files.openFile(file, null) : U.files.open();
 
 /* ================= 내보내기 ================= */
 /* 범위·샘플레이트·비트·스템을 고르는 칸과, 그대로 내보내는 run (대화상자와 내보내기 화면이 함께 쓴다) */
@@ -450,14 +403,18 @@ function renderExportPanel() {
   go.disabled = !can;
   const card = (title, desc, ...kids) => h('section', { class: 'xpv-card' }, h('h3', { text: title }), h('p', { class: 'hint', text: desc }), ...kids);
   const midi = btn({ icon: 'midi', text: 'MIDI 파일 내보내기', cls: 'wide', onclick: () => exportMidi() });
-  const pf = btn({ icon: 'file', text: '프로젝트 파일 내보내기', cls: 'wide', onclick: () => exportProjectFile() });
-  const pi = btn({ icon: 'upload', text: '프로젝트 파일 가져오기…', cls: 'wide', onclick: () => importProjectFile() });
-  midi.disabled = pf.disabled = !can;
+  const fl = U.files;
+  const pf = btn({ icon: 'file', text: fl.supported ? '파일에 저장' : '프로젝트 파일 받기', cls: 'wide', onclick: () => fl.supported ? fl.save() : fl.download() });
+  const pa = fl.supported ? btn({ icon: 'file', text: '다른 파일로 저장…', cls: 'wide', onclick: () => fl.saveAs() }) : null;
+  const pi = btn({ icon: 'upload', text: '파일 열기…', cls: 'wide', onclick: () => fl.open() });
+  const cur = fl.supported ? h('p', { class: 'hint xpv-file', text: fl.link ? '지금 파일: ' + fl.link.name + (fl.dirty() ? ' · 저장 안 한 내용 있음' : ' · 저장됨') : '아직 파일로 저장하지 않았어요.' }) : null;
+  midi.disabled = !can;
+  pf.disabled = !fl.supported && !can;
   el.append(h('div', { class: 'xpv-grid' },
     card('오디오 (WAV)', '곡 전체나 루프 구간, 씬 하나를 WAV로 받아요. 트랙별 스템도 함께 받을 수 있어요.', f.body, go),
     h('div', { class: 'xpv-side' },
       card('MIDI 파일', '어레인지먼트의 음표를 다른 음악 앱으로 옮겨요.', midi),
-      card('프로젝트 파일', '가져온 오디오까지 담은 파일로 다른 기기나 브라우저에 옮겨요.', pf, pi),
+      card('프로젝트 파일', fl.supported ? '컴퓨터에 파일로 저장해 두고 ' + U.MOD + '+S로 같은 파일에 이어서 저장해요. 가져온 오디오도 함께 담겨요.' : '가져온 오디오까지 담은 파일로 받아 두고, 다른 기기나 브라우저에서 열어요.', cur, pf, pa, pi),
       can ? null : h('p', { class: 'hint', text: '이 화면에서는 파일을 받을 수 없어요.' }))));
 }
 async function exportMidi() {
@@ -527,7 +484,7 @@ function helpDialog() {
     ['B', '그리기 모드'], ['A', '자동화 모드 (건반이 꺼졌을 때)'], [M + '+Z', '되돌리기'], [M + '+Shift+Z', '다시 실행'], [M + '+D', '복제'], [M + '+E', '클립 나누기'],
     [M + '+L', '선택 구간을 루프로'], [M + '+U', '퀀타이즈'], [M + '+A', '모두 고르기'], [M + '+C / X / V', '음표 복사 / 잘라내기 / 붙여넣기'], ['Delete', '지우기'],
     ['↑ ↓ ← →', '음표 옮기기 (Shift: 옥타브) · 세션에서 칸 이동'], ['Enter', '고른 클립 띄우기'], ['0', '음표 켜기/끄기'], [M + '+1 / 2', '격자 좁히기 / 넓히기'],
-    [M + '+3', '셋잇단 격자'], [M + '+4', '스냅 켜기/끄기'], ['+ / −', '어레인지먼트 확대 / 축소'], [M + '+F', '브라우저 검색'], [M + '+S', '바로 저장'], ['F2', '이름 바꾸기']
+    [M + '+3', '셋잇단 격자'], [M + '+4', '스냅 켜기/끄기'], ['+ / −', '어레인지먼트 확대 / 축소'], [M + '+F', '브라우저 검색'], [M + '+S', U.files.supported ? '파일에 저장 (처음에는 자리를 물어요)' : '바로 저장'], [M + '+Shift+S', U.files.supported ? '다른 파일로 저장' : '프로젝트 파일 받기'], [M + '+O', '파일 열기'], ['F2', '이름 바꾸기']
   ];
   const tbl = h('table', { class: 'keys-tbl' }, h('tbody', null, rows.map(([k, d]) => h('tr', null, h('td', null, h('kbd', { text: k })), h('td', { text: d })))));
   const guide = h('div', { class: 'guide' },
@@ -578,14 +535,15 @@ U.appMenu = function (anchor) {
     { label: '빠른 실행…', key: U.MOD + '+K', action: () => U.quick.open() },
     { sep: true },
     { label: '새 프로젝트…', action: () => U.newProjectDialog() },
-    { label: '프로젝트 열기…', action: () => { U.toggleBrowser(true); U.setPref('brCat', 'projects'); U.browserView.build(els.browser); if (ui.narrow) setPane('browser'); } },
-    { label: '다른 이름으로 저장…', action: saveAs },
+    { label: '파일 열기…', key: U.MOD + '+O', action: () => U.files.open() },
+    U.files.supported ? { label: '파일에 저장', key: U.MOD + '+S', action: () => U.files.save() } : { label: '프로젝트 파일 받기', disabled: !U.store.canDownload(), action: () => U.files.download() },
+    U.files.supported ? { label: '다른 파일로 저장…', key: U.MOD + '+Shift+S', action: () => U.files.saveAs() } : null,
+    { label: '사본 만들기…', action: saveAs },
+    { label: (U.store.mode === 'cloud' ? 'Claude 계정' : '이 브라우저') + '의 프로젝트…', action: () => { U.toggleBrowser(true); U.browserView.showCat('projects'); if (ui.narrow) setPane('browser'); } },
     { label: '데모 곡 열기', action: () => U.openDemo() },
     { sep: true },
     { label: '오디오 내보내기 (WAV)…', disabled: !U.store.canDownload(), action: exportDialog },
     { label: 'MIDI 파일 내보내기', disabled: !U.store.canDownload(), action: exportMidi },
-    { label: '프로젝트 파일 내보내기', disabled: !U.store.canDownload(), action: exportProjectFile },
-    { label: '프로젝트 파일 가져오기…', action: () => importProjectFile() },
     { label: '오디오 파일 가져오기…', action: () => U.browserView.importFiles() },
     { sep: true },
     { label: '되돌리기', key: U.MOD + '+Z', disabled: !U.canUndo(), action: A.undo },
@@ -621,8 +579,15 @@ function bindFileDrop() {
     if (!e.dataTransfer || !e.dataTransfer.files.length) return;
     e.preventDefault();
     const files = [...e.dataTransfer.files];
-    const proj = files.find(f => /\.json$/i.test(f.name));
-    if (proj) { importProjectFile(proj); return; }
+    const pi = files.findIndex(f => /\.json$/i.test(f.name));
+    if (pi >= 0) {
+      // 크롬·엣지는 놓은 파일과도 이어서 다음 Ctrl+S가 그 파일에 저장되게 한다 (핸들은 await 전에 받아야 한다)
+      const item = [...e.dataTransfer.items].filter(it => it.kind === 'file')[pi];
+      const hp = U.files.supported && item && item.getAsFileSystemHandle ? item.getAsFileSystemHandle().catch(() => null) : null;
+      const handle = hp ? await hp : null;
+      U.files.openFile(files[pi], handle && handle.kind === 'file' ? handle : null);
+      return;
+    }
     const audio = files.filter(f => /^audio\//.test(f.type) || /\.(wav|mp3|ogg|flac|m4a|aiff?|webm)$/i.test(f.name));
     if (!audio.length) { U.toast('오디오 파일(WAV, MP3, OGG …)이나 울림 프로젝트 파일을 놓아 주세요.'); return; }
     const x = e.clientX, y = e.clientY;
@@ -740,7 +705,7 @@ function wire() {
 }
 async function pickStartProject() {
   await U.store.ready;
-  if (U.canUndo()) return; // 이미 고치기 시작했다면 그대로
+  if (U.canUndo() || userOpened) return; // 이미 고치기 시작했거나 파일을 열었다면 그대로
   let id = U.pref('last', null);
   let list = [];
   try { list = await U.store.listProjects(); } catch (e) { /* 무시 */ }
