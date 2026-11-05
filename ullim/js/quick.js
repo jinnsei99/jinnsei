@@ -179,14 +179,15 @@ function commands() {
   for (const d of U.designs) view('dz:' + d.id, '디자인 ' + d.letter + ' · ' + d.name, () => U.shell.setDesign(d.id), { on: U.design === d.id || null, keys: 'design layout 디자인 화면 ' + d.tag });
   for (const [m, l] of [['auto', '자동'], ['desktop', '컴퓨터 버전'], ['touch', '아이패드 버전']]) view('mode:' + m, '화면 버전 · ' + l, () => U.setUIMode(m), { on: U.uiMode === m || null, keys: 'mode ipad touch desktop 화면 버전' });
   // 파일
-  add('save', '바로 저장', () => U.saveNow(), { key: M + '+S', keys: 'save 저장' });
-  add('saveas', '다른 이름으로 저장…', app('saveAs'), { keys: 'save as copy 저장 사본' });
+  add('save', U.files.supported ? '파일에 저장' : '바로 저장', () => U.files.save(), { key: M + '+S', keys: 'save file 저장 파일' });
+  if (U.files.supported) add('fsaveas', '다른 파일로 저장…', () => U.files.saveAs(), { key: M + '+Shift+S', keys: 'save as file 다른 파일 저장 다른 이름' });
+  add('fopen', '파일 열기…', () => U.files.open(), { key: M + '+O', keys: 'open file import project 열기 가져오기 불러오기 프로젝트 파일' });
+  add('saveas', '사본 만들기…', app('saveAs'), { keys: 'save as copy duplicate 저장 사본 복제' });
   add('new', '새 프로젝트…', () => U.newProjectDialog(), { keys: 'new project 새 프로젝트 시작' });
   add('demo', '데모 곡 열기', () => U.openDemo(), { keys: 'demo 데모' });
   add('wav', '오디오 내보내기 (WAV)…', app('exportDialog'), { keys: 'export wav audio 내보내기 저장 bounce' });
   add('mid', 'MIDI 파일 내보내기', app('exportMidi'), { keys: 'export midi 내보내기' });
-  add('pfile', '프로젝트 파일 내보내기', app('exportProjectFile'), { keys: 'export project json 내보내기 백업' });
-  add('pimp', '프로젝트 파일 가져오기…', () => U.appCmds.importProjectFile(), { keys: 'import project open 가져오기 열기' });
+  if (!U.files.supported) add('pfile', '프로젝트 파일 받기', () => U.files.download(), { keys: 'export project json 내보내기 백업 다운로드 파일 받기' });
   add('aimp', '오디오 파일 가져오기…', () => U.browserView.importFiles(), { keys: 'import audio wav mp3 가져오기 샘플' });
   add('prefs', '환경설정…', app('prefsDialog'), { keys: 'settings preferences 설정 옵션' });
   add('help', '도움말 · 단축키', app('helpDialog'), { key: '?', keys: 'help shortcuts 도움 단축키' });

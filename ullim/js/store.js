@@ -179,7 +179,7 @@ async function saveProject(pr) {
       S.mode = 'local';
       setStatus('error', '이 링크에서는 계정에 저장할 수 없어서 이 브라우저에 저장할게요.');
       return saveProject(pr);
-    } else setStatus('error', '저장하지 못했어요. 프로젝트 파일로 내보내 두세요.');
+    } else setStatus('error', '저장하지 못했어요. 메뉴에서 파일로 저장해 두세요.');
     return false;
   }
 }

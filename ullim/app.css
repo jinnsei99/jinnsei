@@ -731,6 +731,16 @@ html.touch .amp-models .inst-b { min-height: 34px; }
 .st-proj:hover { color: var(--accent); }
 .st-save { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-save.err { color: var(--rec); }
+/* 이어진 파일 (크롬·엣지): 이름과 저장 상태, 누르면 저장 메뉴 */
+.st-file { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 300px; border: 0; background: none; padding: 0 2px; color: var(--fg-2); font: inherit; white-space: nowrap; cursor: pointer; }
+.st-file .ic { width: 12px; height: 12px; flex: none; }
+.st-file .st-fn { overflow: hidden; text-overflow: ellipsis; color: var(--fg); }
+.st-file.none .st-fn { color: var(--fg-2); }
+.st-file .st-fs { flex: none; }
+.st-file.dirty .st-fs { color: var(--accent); font-weight: 600; }
+.st-file:hover, .st-file:hover .st-fn { color: var(--accent); }
+body.narrow .st-file { max-width: 140px; }
+body.narrow .st-file:not(.none) .st-fn { display: none; }
 .st-midi, .st-audio, .st-mode { height: 18px; padding: 0 6px; border: 1px solid var(--line-2); border-radius: 3px; background: var(--panel); font-size: 10.5px; color: var(--fg-2); white-space: nowrap; }
 .st-mode:hover, .st-midi:hover { color: var(--fg); border-color: var(--fg-3); }
 .st-midi.act { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
