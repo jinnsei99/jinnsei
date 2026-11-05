@@ -283,6 +283,7 @@ const AC = {
   marimba:  { fn: strike, t60: 1.15, ts: 0.75, max: 3, modes: [[1, 1, 1], [3.99, 0.26, 0.28], [9.85, 0.09, 0.1]], hx: 1.6, click: [0.06, 0.006, 0.75], damp: false, rel: 0.25, spread: 0.45, demo: 60, range: [48, 84] },
   vibes:    { fn: strike, t60: 4.2, ts: 0.4, max: 6, modes: [[1, 1, 1], [4.0, 0.32, 0.38], [10.0, 0.11, 0.18]], hx: 1.5, click: [0.04, 0.004, 0.6], trem: [4.8, 0.36], damp: false, rel: 0.3, spread: 0.45, demo: 65, range: [53, 89] },
   glock:    { fn: strike, t60: 3, ts: 0.3, max: 4, modes: [[1, 1, 1], [2.76, 0.42, 0.55], [5.4, 0.22, 0.32], [8.93, 0.1, 0.2]], hx: 1.2, click: [0.05, 0.003, 0.3], damp: false, rel: 0.3, spread: 0.3, demo: 79, range: [72, 96] },
+  xylo:     { fn: strike, t60: 0.7, ts: 0.6, max: 2.2, modes: [[1, 1, 1], [3.0, 0.38, 0.36], [6.27, 0.12, 0.14]], hx: 1.4, click: [0.07, 0.004, 0.65], damp: false, rel: 0.2, spread: 0.4, demo: 72, range: [65, 108] },
   musicbox: { fn: strike, t60: 2.1, ts: 0.4, max: 3.5, modes: [[1, 1, 1], [6.27, 0.24, 0.22], [17.55, 0.08, 0.08]], hx: 1, click: [0.08, 0.002, 0.2], damp: false, rel: 0.3, spread: 0.2, demo: 79, range: [67, 91] },
   kalimba:  { fn: strike, t60: 1.7, ts: 0.45, max: 3, modes: [[1, 1, 1], [5.92, 0.2, 0.22], [12.7, 0.06, 0.1]], hx: 1.3, click: [0.07, 0.008, 0.7], body: [[320, 2, 0.35]], damp: false, rel: 0.3, spread: 0.25, demo: 67, range: [60, 84] },
   steeldrum:{ fn: strike, t60: 1.3, ts: 0.5, max: 2.5, modes: [[1, 1, 1], [2, 0.6, 0.8], [3, 0.3, 0.55], [4.03, 0.13, 0.32], [5.1, 0.05, 0.2]], hx: 1.2, click: [0.05, 0.005, 0.5], drop: 25, damp: false, rel: 0.3, spread: 0.3, demo: 64, range: [55, 84] },
@@ -370,15 +371,83 @@ function refGain(inst, sr) {
   return REF.get(k);
 }
 
+/* ================= 녹음한 샘플로 치는 악기 =================
+   그랜드 피아노는 Salamander Grand Piano(Alexander Holm, CC BY 3.0), 업라이트 피아노 · 하프 · 마림바 · 글로켄슈필 · 실로폰은
+   VSCO-2 Community Edition(Versilian Studios, CC0)을 녹음 그대로 쓴다 (samples/CREDITS.txt, 목록은 js/samples.js).
+   세트를 처음 쓸 때 samples/에서 받아 32 kHz로 풀어 둔다 (메모리를 아끼려고, 재생할 때 다시 맞춰진다).
+   받는 동안이나 받지 못하면(파일로 연 index.html 등) 위의 계산한 소리로 친다 */
+const SET_SR = 32000;
+const SETS = new Map();   // 세트 이름 → { ok, failed, promise, layers: [[{p, buf}]], vel, gain }
+const nearest = (list, p) => { let best = list[0]; for (const x of list) if (Math.abs(x.p - p) < Math.abs(best.p - p) - 1e-9) best = x; return best; };
+/* 샘플의 '들리는 크기': 400ms 창 RMS의 최댓값과 봉우리 */
+function loudness(buf) {
+  const x = buf.getChannelData(0), sr = buf.sampleRate;
+  let pk = 1e-6, rms = 1e-6;
+  for (let i = 0; i < x.length; i++) { const a = Math.abs(x[i]); if (a > pk) pk = a; }
+  const W = Math.round(0.4 * sr), hop = Math.round(W / 4);
+  for (let st = 0; st < x.length; st += hop) {
+    let en = 0;
+    for (let i = st, end = Math.min(x.length, st + W); i < end; i++) en += x[i] * x[i];
+    rms = Math.max(rms, Math.sqrt(en / W));
+  }
+  return { pk, rms };
+}
+/* 녹음마다 건반을 친 세기가 조금씩 달라서, 세기 칸마다 음역 전체가 고르게 들리도록 샘플마다 배율을 둔다
+   (칸의 가운데 크기에 맞추되 ±6 dB 안에서. 칸 사이의 크기 차이는 그대로라 세게 · 여리게는 남는다) */
+function evenOut(e) {
+  for (const list of e.layers) {
+    const ls = list.map(x => (x.L = loudness(x.buf)).rms).sort((a, b) => a - b);
+    const mid = ls[Math.floor(ls.length / 2)];
+    for (const x of list) x.g = clamp(mid / x.L.rms, 0.5, 2);
+  }
+}
+/* 세트의 크기 맞춤 배율: 가장 센 칸에서 대표 음과 가까운 샘플의 '들리는 크기'를 계산한 소리와 같은 기준으로 */
+function setGain(name, e) {
+  const c = AC[name] || AC.grand, s = nearest(e.layers[e.layers.length - 1], c.demo);
+  const L = s.L || loudness(s.buf), g = s.g || 1;
+  return Math.pow(10, (c.lvl || 0) / 20) * Math.min(LOUD_RMS / (L.rms * g), LOUD_PEAK / (L.pk * g));
+}
+function sampleSet(name) {
+  const S = U.SAMPLE_SETS && U.SAMPLE_SETS[name];
+  if (!S) return null;
+  let e = SETS.get(name);
+  if (e) return e;
+  e = { ok: false, failed: false, vel: S.vel };
+  SETS.set(name, e);
+  let ctx;
+  try { ctx = U.OfflineCtx(1, 1, SET_SR); } catch (err) { ctx = U.OfflineCtx(1, 1, 44100); }
+  const decode = ab => new Promise((res, rej) => { const r = ctx.decodeAudioData(ab, res, rej); if (r && r.then) r.then(res, rej); });
+  const one = ([p, l, ct]) => fetch('samples/' + name + '/' + p + '-' + l + '.mp3')
+    .then(r => { if (!r.ok) throw new Error(r.status + ' ' + r.url); return r.arrayBuffer(); })
+    .then(decode).then(buf => ({ p: p + (ct || 0) / 100, l, buf }));
+  e.promise = (typeof fetch === 'function' ? Promise.all(S.files.map(one)) : Promise.reject(new Error('fetch 없음')))
+    .then(list => {
+      const n = Math.max(...list.map(x => x.l)) + 1;
+      e.layers = Array.from({ length: n }, (_, l) => list.filter(x => x.l === l).sort((a, b) => a.p - b.p));
+      evenOut(e);
+      e.gain = setGain(name, e);
+      e.ok = true;
+      U.emit('samples', { name, ok: true });
+    })
+    .catch(err => { e.failed = true; console.warn('[울림] ' + name + ' 샘플을 받지 못해 계산한 소리로 쳐요.', err); U.emit('samples', { name, ok: false }); });
+  return e;
+}
+
 class Acoustic extends U.Instrument {
   constructor(eng, dev) {
     super(eng, dev);
     this.out.gain.value = this.on ? this.outLevel() : 0;
     this.maxVoices = 32;
     this.pw = { list: [], warm: [], timer: 0, job: null };
+    this.loadSamples();
     this.prewarmSoon();
   }
   cfg() { return AC[this.v.inst] || AC.grand; }
+  /* 이 종류의 녹음 샘플 세트 (없는 종류면 null) */
+  samples() { return sampleSet(this.v.inst); }
+  loadSamples() { const e = this.samples(); this.ready = e ? e.promise : Promise.resolve(); return this.ready; }
+  /* 샘플로 칠 수 있거나 받는 중이면 계산한 소리를 미리 만들지 않는다 */
+  usesSamples() { const e = this.samples(); return !!e && !e.failed; }
   /* 지금 값으로 이 음을 계산할 때의 이름표와 재료 */
   noteSpec(p, b) {
     const P = this.v, inst = AC[P.inst] ? P.inst : 'grand', sr = this.ctx.sampleRate;
@@ -408,6 +477,8 @@ class Acoustic extends U.Instrument {
   voice(p, vel, t) {
     const P = this.v, c = this.cfg(), ctx = this.ctx;
     if (p < 12 || p > 115) return null;
+    const e = this.samples();
+    if (e && e.ok) return this.sampleVoice(e, p, vel, t);
     const buf = this.buffer(p, vbOf(vel));
     // 같은 줄·같은 건반을 다시 치면 앞소리는 짧게 멈춘다
     for (const vo of this.voices) if (vo.p === p && vo.end > t && vo.t0 < t) { vo.amp.gain.setTargetAtTime(0, t, 0.015); vo.end = Math.min(vo.end, t + 0.08); stopAt(vo.srcs[0], vo.end); }
@@ -429,6 +500,43 @@ class Acoustic extends U.Instrument {
     stopAt(src, natEnd);
     return { amp, srcs: [src], nodes, end: natEnd, natEnd };
   }
+  /* 녹음 샘플로 한 음: 세기 칸을 고르고, 가장 가까운 음의 샘플을 그만큼 높이거나 낮춘다.
+     Tone은 0.5보다 낮으면 어둡게(로우패스), 높으면 밝게(하이셸프), Body는 낮은 울림(180 Hz), Decay는 1보다 짧으면 빨리 줄인다.
+     세기 칸이 하나뿐인 세트는 여리게 칠수록 조금 어둡게 (세게 · 여리게의 소리 차이) */
+  sampleVoice(e, p, vel, t) {
+    const P = this.v, c = this.cfg(), ctx = this.ctx;
+    let l = 0;
+    for (let i = 0; i < e.vel.length; i++) if (vel >= e.vel[i]) l = i;
+    const s = nearest(e.layers[Math.min(l, e.layers.length - 1)], p);
+    for (const vo of this.voices) if (vo.p === p && vo.end > t && vo.t0 < t) { vo.amp.gain.setTargetAtTime(0, t, 0.015); vo.end = Math.min(vo.end, t + 0.08); stopAt(vo.srcs[0], vo.end); }
+    const src = ctx.createBufferSource();
+    src.buffer = s.buf;
+    const rate = Math.pow(2, (p - s.p) / 12 + (P.tune || 0) / 1200);
+    src.playbackRate.value = rate;
+    const g0 = e.gain * (s.g || 1) * velGain(vel, P.vel);
+    const amp = gainNode(ctx, g0);
+    const nodes = [src];
+    let head = src;
+    const add = n => { head.connect(n); nodes.push(n); head = n; };
+    const tone = P.tone == null ? 0.5 : P.tone, body = P.body == null ? 0.5 : P.body;
+    let cut = 19000 * Math.pow(2, -Math.max(0, 0.5 - tone) * 7);
+    if (e.layers.length === 1) cut *= 0.3 + 0.7 * Math.pow(clamp(vel, 1, 127) / 127, 0.7);
+    if (cut < 17500) { const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = Math.max(300, cut); f.Q.value = 0.5; add(f); }
+    if (tone > 0.55) { const f = ctx.createBiquadFilter(); f.type = 'highshelf'; f.frequency.value = 2500; f.gain.value = (tone - 0.5) * 18; add(f); }
+    if (Math.abs(body - 0.5) > 0.04) { const f = ctx.createBiquadFilter(); f.type = 'peaking'; f.frequency.value = 180; f.Q.value = 0.8; f.gain.value = (body - 0.5) * 12; add(f); }
+    add(amp);
+    const decay = P.decay == null ? 1 : P.decay;
+    if (decay < 0.97) amp.gain.setTargetAtTime(0, t + 0.04, Math.max(0.05, (c.t60 || 3) * decay / 6.9));
+    if (ctx.createStereoPanner) {
+      const pan = ctx.createStereoPanner();
+      pan.pan.value = clamp((p - 60) / 42, -1, 1) * (c.spread || 0);
+      amp.connect(pan); pan.connect(this.out); nodes.push(pan);
+    } else amp.connect(this.out);
+    src.start(t);
+    const natEnd = t + s.buf.duration / rate + 0.01;
+    stopAt(src, natEnd);
+    return { amp, srcs: [src], nodes, end: natEnd, natEnd, sample: s.p, layer: l };
+  }
   release(vo, t) {
     const c = this.cfg();
     if (!c.damp) return;   // 하프·말렛·종은 손을 떼도 끝까지 울린다
@@ -438,22 +546,26 @@ class Acoustic extends U.Instrument {
     stopAt(vo.srcs[0], vo.end);
   }
   /* 미리 듣기처럼 곧 칠 음들을 먼저 계산해 둔다 (계산하느라 첫 음들이 밀리지 않게) */
-  prepare(notes) { for (const n of notes) if (n.p >= 12 && n.p <= 115) this.buffer(n.p, vbOf(n.v || 100)); }
+  prepare(notes) { if (this.usesSamples()) return; for (const n of notes) if (n.p >= 12 && n.p <= 115) this.buffer(n.p, vbOf(n.v || 100)); }
   /* 연주 화면이 곧 칠 음 (기타 코드 줄 …): 쉬는 틈에 다른 미리 계산보다 먼저. 보관함이 꽉 차 가면 하지 않는다 */
   warm(notes) {
-    if (this.eng.offline) return;
+    if (this.eng.offline || this.usesSamples()) return;
     const pw = this.pw;
     pw.warm = [...new Set(notes.filter(n => n.p >= 12 && n.p <= 115).map(n => n.p + '|' + vbOf(n.v || 100)).concat(pw.warm))];
     if (!pwBusy.has(this) && pw.warm.length) { pwBusy.add(this); pw.timer = setTimeout(() => this.pwStep(), 0); }
   }
   param(id, v, t) {
     if (id === 'vol') { if (this.on) smooth(this.out.gain, this.outLevel(), t); return; }
+    if (id === 'inst') this.loadSamples();
     if (id === 'inst' || id === 'tone' || id === 'decay' || id === 'body') this.prewarmSoon();
   }
   /* 쉬는 틈에 이 트랙 클립에 쓰인 음과 가운데 음역을 미리 계산해 둔다 (재생 중에 계산하느라 늦지 않게) */
   prewarmSoon() {
     if (this.eng.offline) return;
     clearTimeout(this.pw.timer);
+    // 샘플로 치는 종류는 받는 동안만 계산한 소리로 대신하니 미리 만들지 않는다 (받지 못하면 그때 만든다)
+    const e = this.samples();
+    if (e && !e.failed) { pwBusy.delete(this); if (!e.ok) e.promise.then(() => { if (e.failed && this.samples() === e) this.prewarmSoon(); }); return; }
     pwBusy.add(this);
     this.pw.timer = setTimeout(() => this.prewarm(), 300);
   }
@@ -671,6 +783,6 @@ class Ensemble extends U.Instrument {
 /* 악기 종류의 설정 (미리 듣기 음역 등): demo 대표 음 · low 베이스 줄 · solo 혼자 부는 악기 */
 U.instMeta = (kind, inst) => kind === 'acoustic' ? AC[inst] || AC.grand : kind === 'ensemble' ? EN[inst] || EN.strings : null;
 U.instDemo = (kind, inst) => (U.instMeta(kind, inst) || {}).demo || 60;
-U.acousticDSP = { render: renderNote, AC, EN, cacheSize: () => cacheSamples, evictions: () => evicted, cacheCap: CACHE_CAP, busy: () => pwBusy.size, missed: () => missed.slice(), misses: () => missCount };
+U.acousticDSP = { render: renderNote, AC, EN, sampleSet, cacheSize: () => cacheSamples, evictions: () => evicted, cacheCap: CACHE_CAP, busy: () => pwBusy.size, missed: () => missed.slice(), misses: () => missCount };
 U.DEVICE_CLASSES = Object.assign(U.DEVICE_CLASSES || {}, { acoustic: Acoustic, ensemble: Ensemble });
 })(window.U = window.U || {});

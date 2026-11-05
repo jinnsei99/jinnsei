@@ -1,0 +1,29 @@
+울림 스튜디오 — 녹음 샘플 출처
+================================
+
+이 폴더의 MP3는 무료로 공개된 녹음 샘플을 앱에 맞게 줄인 것이에요.
+앱에 넣으면서: 세기 칸 몇 개만 골라 모노 MP3(44.1 kHz, LAME VBR)로 바꾸고,
+앞의 무음을 자르고, 음역마다 길이를 정해 끝을 줄였어요. 세트마다 크기를 하나로 맞췄고
+(피아노는 세기 칸 사이의 크기 차이를 그대로 두었어요), 실제 음높이를 재서 파일 이름(MIDI 음 번호)과
+센트 보정을 정했어요 (js/samples.js).
+
+grand/  그랜드 피아노
+  Salamander Grand Piano V3 — Alexander Holm
+  https://archive.org/details/SalamanderGrandPianoV3
+  SFZ 판: https://github.com/sfzinstruments/SalamanderGrandPiano
+  라이선스: Creative Commons Attribution 3.0 Unported (CC BY 3.0)
+  https://creativecommons.org/licenses/by/3.0/
+  쓴 것: 세기 16칸 중 v4 · v9 · v14, 단3도 간격 30음 (A0 ~ C8)
+
+upright/  업라이트 피아노 (VS Upright Nr. 1, pp · mf · f, C · G 음)
+harp/     하프 (KS Harp)
+marimba/  마림바
+glock/    글로켄슈필
+xylo/     실로폰
+  VS Chamber Orchestra: Community Edition (VSCO-2 CE) — Versilian Studios
+  녹음: Sam Gossner · Simon Dalzell, 샘플 편집: Elan Hickler / Soundemote
+  https://github.com/sgossner/VSCO-2-CE
+  라이선스: CC0 1.0 Universal (퍼블릭 도메인)
+  https://creativecommons.org/publicdomain/zero/1.0/
+
+이 밖의 소리(신스, 기타, 베이스, 현악·관악, 드럼, 효과음, 내장 루프)는 모두 앱 안에서 Web Audio로 계산해서 만들어요.
