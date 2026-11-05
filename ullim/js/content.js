@@ -154,6 +154,7 @@ SOUNDS.push(
   AC('마림바', ['말렛·벨'], { inst: 'marimba' }, [ROOM(0.15)]),
   AC('비브라폰', ['말렛·벨'], { inst: 'vibes' }, [ROOM(0.2, 2.5)]),
   AC('글로켄슈필', ['말렛·벨'], { inst: 'glock' }, [ROOM(0.25, 2.5)]),
+  AC('실로폰', ['말렛·벨'], { inst: 'xylo' }, [ROOM(0.18, 1.6)]),
   AC('오르골', ['말렛·벨'], { inst: 'musicbox' }, [ROOM(0.3, 3)]),
   AC('종', ['말렛·벨'], { inst: 'bell' }, [ROOM(0.3, 4)]),
   EN('재즈 오르간', ['오르간'], { inst: 'organ_jazz' }, [ROOM(0.12)]),
