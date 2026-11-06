@@ -345,6 +345,7 @@ function sampleMenu(anchor, t, d, i) {
   const pd = pads(d)[i];
   U.menu([
     { label: '원본 샘플 바꾸기 (파일)…', action: async () => { const ref = await pickAudio(); if (ref) setSource(t, d, ref); } },
+    { label: '옛 가요 샘플 만들어 넣기…', action: () => U.oldSample.open({ onMade: ref => setSource(t, d, ref) }) },
     { label: '이 패드에만 샘플 넣기 (파일)…', action: async () => { const ref = await pickAudio(); if (ref) dropOnPad(t, d, i, ref); } },
     { label: '이 패드를 원본으로 되돌리기', disabled: !pd.sample || !d.data.src, action: () => A.setDeviceData(d.id, data => { Object.assign(data.pads[i], { sample: null, start: i / 16, end: (i + 1) / 16, sync: false }); }, '원본 쓰기') },
     { sep: true },

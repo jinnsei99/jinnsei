@@ -731,6 +731,20 @@ html.touch .amp-models .inst-b { min-height: 34px; }
 .st-proj:hover { color: var(--accent); }
 .st-save { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-save.err { color: var(--rec); }
+/* 옛 가요 샘플 만들기 창 */
+.os { display: grid; gap: 10px; }
+.os-row { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 6px 10px; align-items: center; }
+.os-l { color: var(--fg-2); font-size: 12px; }
+.os-ctl { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; min-width: 0; }
+.os .seg { flex-wrap: wrap; }
+.os-hint { margin: -4px 0 0 calc(6.5em + 10px); font-size: 11.5px; color: var(--fg-2); }
+.os-age { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.os-age input { flex: 1; min-width: 100px; accent-color: var(--accent); }
+.os-end, .os-seed, .os-pct { font-size: 11.5px; color: var(--fg-2); white-space: nowrap; }
+.os-pct { min-width: 3em; text-align: right; font-variant-numeric: tabular-nums; }
+.os .inp { width: 100%; }
+.os-foot { margin: 0; font-size: 11.5px; color: var(--fg-2); }
+@media (max-width: 560px) { .os-row { grid-template-columns: minmax(0, 1fr); } .os-hint { margin-left: 0; } }
 /* 이어진 파일 (크롬·엣지): 이름과 저장 상태, 누르면 저장 메뉴 */
 .st-file { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 300px; border: 0; background: none; padding: 0 2px; color: var(--fg-2); font: inherit; white-space: nowrap; cursor: pointer; }
 .st-file .ic { width: 12px; height: 12px; flex: none; }
