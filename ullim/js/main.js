@@ -545,6 +545,7 @@ U.appMenu = function (anchor) {
     { label: '오디오 내보내기 (WAV)…', disabled: !U.store.canDownload(), action: exportDialog },
     { label: 'MIDI 파일 내보내기', disabled: !U.store.canDownload(), action: exportMidi },
     { label: '오디오 파일 가져오기…', action: () => U.browserView.importFiles() },
+    { label: '옛 가요 샘플 만들기…', action: () => U.oldSample.open() },
     { sep: true },
     { label: '되돌리기', key: U.MOD + '+Z', disabled: !U.canUndo(), action: A.undo },
     { label: '다시 실행', key: U.MOD + '+Shift+Z', disabled: !U.canRedo(), action: A.redo },

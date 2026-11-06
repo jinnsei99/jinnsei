@@ -24,7 +24,7 @@ function get(ref, sr) {
   } else if (ref.startsWith('user:')) {
     p = U.store.getAudio(ref.slice(5)).then(rec => {
       if (!rec) throw Object.assign(new Error('이 브라우저에 없는 오디오 파일이에요: ' + ref), { missing: true });
-      if (!meta.has(ref)) meta.set(ref, { name: rec.name, duration: rec.duration, bpm: rec.bpm, loop: rec.loop });
+      if (!meta.has(ref)) meta.set(ref, { name: rec.name, duration: rec.duration, bpm: rec.bpm, loop: rec.loop, recipe: rec.recipe || null });
       return decode(rec.bytes.slice(0), sr);
     });
   } else p = Promise.reject(new Error('알 수 없는 오디오: ' + ref));
@@ -138,15 +138,17 @@ async function importFile(file, sr) {
   U.emit('media', ref);
   return ref;
 }
-/* 녹음처럼 이미 버퍼가 있을 때 */
-async function addBuffer(buf, name, bpm) {
+/* 녹음처럼 이미 버퍼가 있을 때. o.loop: 템포에 맞춰 늘고 주는 루프, o.recipe: 옛 가요 샘플처럼 다시 만들 수 있는 설정 */
+async function addBuffer(buf, name, bpm, o) {
+  o = o || {};
   const wav = U.encodeWav([buf.getChannelData(0), buf.numberOfChannels > 1 ? buf.getChannelData(1) : buf.getChannelData(0)], buf.sampleRate, 16);
   const bytes = await wav.arrayBuffer();
   const hash = await U.hashBytes(bytes);
   const ref = 'user:' + hash;
-  const rec = { hash, name, bytes, duration: buf.duration, bpm, loop: false, size: bytes.byteLength, type: 'audio/wav', created: Date.now() };
+  const rec = { hash, name, bytes, duration: buf.duration, bpm, loop: !!o.loop, size: bytes.byteLength, type: 'audio/wav', created: Date.now() };
+  if (o.recipe) rec.recipe = o.recipe;
   try { await U.store.putAudio(rec); } catch (e) { console.warn(e); }
-  meta.set(ref, { name, duration: buf.duration, bpm, loop: false });
+  meta.set(ref, { name, duration: buf.duration, bpm, loop: !!o.loop, recipe: o.recipe || null });
   const k = key(ref, buf.sampleRate);
   done.set(k, buf);
   bufs.set(k, Promise.resolve(buf));
@@ -298,19 +300,30 @@ async function renderSung(sr, bpm, beats, notes, o) {
   }
   return foldLoop(await ctx.startRendering(), Math.ceil(loopSec * sr));
 }
-/* 여러 루프를 섞어 음반에서 딴 소리처럼: 낮은·높은 소리를 깎고(hp·lp) 살짝 일그러뜨린다.
-   layers: [{buf, gain}] (모두 secs 길이의 루프). 필터가 루프 이음매에서 끊기지 않게 두 바퀴를 돌리고 둘째 바퀴를 쓴다 */
+/* 여러 루프를 섞어 음반에서 딴 소리처럼: 낮은·높은 소리를 깎고(hp·lp) 살짝 일그러뜨리고, o.wow만큼 테이프처럼 음이 흔들린다.
+   layers: [{buf, gain}] (모두 secs 길이의 루프). 필터가 루프 이음매에서 끊기지 않게 두 바퀴를 돌리고 둘째 바퀴를 쓴다.
+   흔들림은 루프 한 바퀴에 딱 맞는 횟수로 돌고, 그 지연만큼 늦춰 읽어 박자 자리를 지킨다 */
 async function renderMix(sr, secs, layers, o) {
   o = o || {};
   const n = Math.ceil(secs * sr);
-  const ctx = U.OfflineCtx(2, n * 2, sr);
+  const D = o.wow ? Math.round(0.012 * sr) : 0;
+  const ctx = U.OfflineCtx(2, n * 2 + D, sr);
   const bus = U.gainNode(ctx, 1);
-  const hp = ctx.createBiquadFilter(), lp = ctx.createBiquadFilter(), sh = ctx.createWaveShaper(), og = U.gainNode(ctx, o.out || 1);
+  const hp = ctx.createBiquadFilter(), lp = ctx.createBiquadFilter(), lp2 = ctx.createBiquadFilter(), sh = ctx.createWaveShaper(), og = U.gainNode(ctx, o.out || 1);
   hp.type = 'highpass'; hp.frequency.value = o.hp || 30; hp.Q.value = 0.6;
-  lp.type = 'lowpass'; lp.frequency.value = o.lp || 18000; lp.Q.value = 0.6;
+  // 높은 소리는 두 번 겹쳐 가파르게 깎는다 (값싼 턴테이블·카세트처럼 위가 뚝 떨어지게)
+  for (const f of [lp, lp2]) { f.type = 'lowpass'; f.frequency.value = o.lp || 18000; f.Q.value = 0.707; }
   sh.curve = U.satCurve(o.sat || 'soft', o.drive || 0, 8);
   sh.oversample = '2x';
-  bus.connect(hp); hp.connect(lp); lp.connect(sh); sh.connect(og); og.connect(ctx.destination);
+  // 일그러뜨린 뒤에 높은 소리를 깎아서, 일그러짐이 만든 날카로운 배음까지 둥글게 (옛 음반처럼)
+  bus.connect(hp); hp.connect(sh); sh.connect(lp); lp.connect(lp2); lp2.connect(og);
+  if (D) {
+    const dl = ctx.createDelay(0.05), lfo = ctx.createOscillator(), lg = U.gainNode(ctx, 0.0018 * o.wow);
+    dl.delayTime.value = D / sr;
+    lfo.frequency.value = Math.max(1, Math.round(0.6 * secs)) / secs;
+    lfo.connect(lg); lg.connect(dl.delayTime); lfo.start(0);
+    og.connect(dl); dl.connect(ctx.destination);
+  } else og.connect(ctx.destination);
   for (const L of layers) {
     for (const at of [0, secs]) {
       const src = ctx.createBufferSource(), g = U.gainNode(ctx, L.gain == null ? 1 : L.gain);
@@ -321,7 +334,7 @@ async function renderMix(sr, secs, layers, o) {
   }
   const r = await ctx.startRendering();
   const out = new AudioBuffer({ length: n, numberOfChannels: 2, sampleRate: sr });
-  for (let c = 0; c < 2; c++) out.getChannelData(c).set(r.getChannelData(c).subarray(n, 2 * n));
+  for (let c = 0; c < 2; c++) out.getChannelData(c).set(r.getChannelData(c).subarray(n + D, 2 * n + D));
   return out;
 }
 /* 로봇 보컬: 톱니파 버즈를 모음 포먼트로 거르고(보코더 느낌), 자음은 잡음 조각으로 붙인다.

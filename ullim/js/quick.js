@@ -188,6 +188,7 @@ function commands() {
   add('wav', '오디오 내보내기 (WAV)…', app('exportDialog'), { keys: 'export wav audio 내보내기 저장 bounce' });
   add('mid', 'MIDI 파일 내보내기', app('exportMidi'), { keys: 'export midi 내보내기' });
   if (!U.files.supported) add('pfile', '프로젝트 파일 받기', () => U.files.download(), { keys: 'export project json 내보내기 백업 다운로드 파일 받기' });
+  add('oldsample', '옛 가요 샘플 만들기…', () => U.oldSample.open(), { keys: 'old kpop sample maker 옛 가요 샘플 만들기 플립 레트로 음반 판 루프' });
   add('aimp', '오디오 파일 가져오기…', () => U.browserView.importFiles(), { keys: 'import audio wav mp3 가져오기 샘플' });
   add('prefs', '환경설정…', app('prefsDialog'), { keys: 'settings preferences 설정 옵션' });
   add('help', '도움말 · 단축키', app('helpDialog'), { key: '?', keys: 'help shortcuts 도움 단축키' });

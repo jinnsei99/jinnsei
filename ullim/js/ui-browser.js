@@ -139,6 +139,7 @@ function items() {
       break;
     }
     case 'samples': {
+      out.push({ label: '옛 가요 샘플 만들기…', sub: '화음 · 건반 · 노래 훅 · 옛 음반 느낌을 골라 만들어요', icon: 'plus', infoText: '2000년대 가요 음반에서 딴 듯한 네 마디 루프를 직접 만들어요. 두 번 누르면 열려요.', load: () => U.oldSample.open() });
       const groups = [['loop', '루프'], ['texture', '질감 (LP·테이프)'], ['vox', '보컬'], ['fx', '효과음'], ['oneshot', '원샷']];
       for (const [cat, name] of groups) {
         head(name);
@@ -151,11 +152,12 @@ function items() {
     }
     case 'user': {
       const list = st.userList || [];
+      out.push({ label: '옛 가요 샘플 만들기…', sub: '화음 · 건반 · 노래 훅 · 옛 음반 느낌을 골라 만들어요', icon: 'plus', infoText: '2000년대 가요 음반에서 딴 듯한 네 마디 루프를 직접 만들어요. 두 번 누르면 열려요.', load: () => U.oldSample.open() });
       if (!list.length) out.push({ empty: '가져온 오디오가 없어요. 아래 버튼을 누르거나 파일을 화면에 끌어다 놓으세요.' });
       for (const r of list) {
         const ref = 'user:' + r.hash;
         out.push({ label: r.name, sub: U.fmtTime(r.duration) + (r.loop ? ' · ' + U.round(r.bpm, 1) + ' BPM' : ''), icon: 'wave', drag: { type: 'sample', ref }, load: () => loadSample(ref), preview: () => previewSample(ref),
-          menu: [editItem(ref, r.name, r.bpm), { label: '이 브라우저에서 지우기', danger: true, action: async () => { if (await U.confirm('오디오 지우기', '"' + r.name + '"을(를) 이 브라우저에서 지울까요? 이 파일을 쓰는 클립은 소리가 나지 않아요.', '지우기', true)) { await U.store.deleteAudio(r.hash); refreshUser(); } } }] });
+          menu: [editItem(ref, r.name, r.bpm), r.recipe ? { label: '옛 가요 샘플 고치기…', action: () => U.oldSample.open({ recipe: r.recipe, name: r.name }) } : null, { label: '이 브라우저에서 지우기', danger: true, action: async () => { if (await U.confirm('오디오 지우기', '"' + r.name + '"을(를) 이 브라우저에서 지울까요? 이 파일을 쓰는 클립은 소리가 나지 않아요.', '지우기', true)) { await U.store.deleteAudio(r.hash); refreshUser(); } } }] });
       }
       break;
     }

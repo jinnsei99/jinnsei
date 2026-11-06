@@ -112,7 +112,7 @@ async function build(project) {
   const media = {};
   for (const ref of refs) {
     const rec = await U.store.getAudio(ref.slice(5));
-    if (rec) media[ref] = { name: rec.name, bpm: rec.bpm, loop: rec.loop, duration: rec.duration, type: rec.type, b64: b64(rec.bytes) };
+    if (rec) media[ref] = Object.assign({ name: rec.name, bpm: rec.bpm, loop: rec.loop, duration: rec.duration, type: rec.type, b64: b64(rec.bytes) }, rec.recipe ? { recipe: rec.recipe } : {});
   }
   return new Blob([JSON.stringify({ app: 'ullim', v: 1, project: p, media })], { type: 'application/json' });
 }
@@ -127,8 +127,8 @@ async function putMedia(media) {
   for (const [ref, m] of Object.entries(media)) {
     if (!m || !m.b64 || !ref.startsWith('user:')) continue;
     const bytes = unb64(m.b64);
-    await U.store.putAudio({ hash: ref.slice(5), name: m.name, bytes, duration: m.duration, bpm: m.bpm, loop: m.loop, size: bytes.byteLength, type: m.type, created: Date.now() });
-    U.media.setInfo(ref, { name: m.name, bpm: m.bpm, loop: m.loop, duration: m.duration });
+    await U.store.putAudio(Object.assign({ hash: ref.slice(5), name: m.name, bytes, duration: m.duration, bpm: m.bpm, loop: m.loop, size: bytes.byteLength, type: m.type, created: Date.now() }, m.recipe ? { recipe: m.recipe } : {}));
+    U.media.setInfo(ref, { name: m.name, bpm: m.bpm, loop: m.loop, duration: m.duration, recipe: m.recipe || null });
   }
 }
 const fileName = name => U.safeName(name || '프로젝트') + '.ullim.json';
