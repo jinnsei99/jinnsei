@@ -103,7 +103,7 @@ const glue = ['comp', { thr: -16, ratio: 3, att: 0.02, rel: 0.15, makeup: 2 }];
 
 /* ================= 장르 ================= */
 const EDM = ['intro', 'build', 'drop', 'break', 'outro'];
-const ROLE_NAMES = { intro: '인트로', build: '빌드업', drop: '드롭', break: '브레이크', outro: '아웃트로', main: '메인', verse: '벌스', pre: '프리코러스', chorus: '코러스', bridge: '브릿지', solo: '기타 솔로' };
+const ROLE_NAMES = { intro: '인트로', build: '빌드업', drop: '드롭', break: '브레이크', outro: '아웃트로', main: '메인', verse: '벌스', pre: '프리코러스', chorus: '코러스', bridge: '브릿지', solo: '기타 솔로', hook: '훅' };
 const GENRES = [];
 
 /* ---------- 하우스 ---------- */
@@ -499,6 +499,48 @@ function arpeggio(key, prog, order) {
         break: () => ({ len: 8, notes: [[0, 0], [4, 2], [8, 4], [15, 6]].map(([i, s]) => nt(36 + i, s, 0.9, 90)) })
       } },
       { name: 'FX', type: 'audio', color: 3, vol: -10, a: -16, clips: { build: riser, drop: impact } }
+    ]
+  });
+})();
+
+/* ---------- 샘플 플립 ----------
+   옛 가요 샘플을 훅에서는 통째로 깔고, 벌스에서는 한 박씩 잘라 순서를 바꿔(플립) 하프타임 트랩 드럼과 808 위에 올린다.
+   샘플이 A♭ 메이저 왕도 진행(D♭△7 – E♭7 – Cm7 – Fm7)이라 키는 같은 음을 쓰는 F 마이너, 808은 마디마다 그 근음을 따라간다 */
+(() => {
+  const key = { root: 5, scale: 'minor' };   // F 마이너 (A♭ 메이저와 같은 음)
+  const prog = [5, 6, 4, 0];                 // D♭ E♭ C F
+  const sample = { audio: 'gen:loop-flip', name: '옛 가요 샘플' };
+  const chop = (i, s, d, v) => nt(36 + i, s, d || 0.5, v || 104);   // 루프 패드 i번 조각
+  // 마디마다 그 마디의 네 조각만 써서 화음은 지키고 리듬만 바꾼다: [조각, 박]
+  const FLIP = [[0, 0], [0, 0.5], [2, 1], [1, 2], [3, 2.75], [1, 3.5]];
+  const flip = () => ({ len: 16, notes: [0, 1, 2, 3].flatMap(b => FLIP.map(([i, s]) => chop(b * 4 + i, b * 4 + s, 0.5, s % 1 ? 92 : 108))) });
+  // 브레이크: 마디 첫 조각을 길게 두고 마지막 박에서 잘게 더듬는다
+  const stutter = () => ({ len: 16, notes: [0, 4, 8, 12].flatMap(i => [chop(i, i, 1, 96), chop(i, i + 1.5, 0.5, 80), chop(i + 3, i + 3, 0.25, 70), chop(i + 3, i + 3.25, 0.25, 64), chop(i + 3, i + 3.5, 0.25, 58), chop(i + 3, i + 3.75, 0.25, 52)]) });
+  GENRES.push({
+    id: 'flip', name: '샘플 플립', bpm: 150, key, swing: 0,
+    desc: '옛 가요 샘플을 잘라 다시 짜는 플립, 하프타임 트랩 드럼, 미끄러지는 808, 거친 레이지 리드',
+    roles: ['intro', 'hook', 'verse', 'break', 'outro'],
+    structure: [['intro', 4], ['hook', 8], ['verse', 16], ['hook', 8], ['break', 4], ['verse', 8], ['hook', 8], ['outro', 4]],
+    tracks: [
+      { name: '드럼', color: 1, kit: 'ktrap', vol: -4, a: -32, clips: {
+        hook: () => { const c = DR({ k: 'X.......x.x.....X.........x...x.', c: '........x...............x.......', o: '..............x...............x.' }, 8); c.notes.push(...trapHats(2)); return crash(c); },
+        verse: () => { const c = DR({ k: 'X.........x.....X.......x.x.....', c: '........x...............x.......' }, 8); c.notes.push(...trapHats(2, [15])); return c; },
+        break: () => ({ len: 8, notes: trapHats(2, [15]).filter((x, i) => i % 2 === 0) }),
+        outro: () => ({ len: 8, notes: trapHats(2).filter((x, i) => i % 2 === 0) })
+      } },
+      { name: '808', color: 0, sound: '808 베이스', vol: -1, clips: {
+        hook: () => bassline(key, prog, { base: 36, pattern: ['X-------x-x-----', 'X---------x---o-'], gate: 0.98 }),
+        verse: () => bassline(key, prog, { base: 36, pattern: ['X---------x-----', 'X-------x-x-----'], gate: 0.98 })
+      } },
+      { name: '샘플', type: 'audio', color: 10, vol: -3, a: -24, clips: { intro: sample, hook: sample, outro: sample } },
+      { name: '샘플 찹', color: 11, loopkit: 'lp-flip', vol: -2, a: -22, b: -20, clips: { verse: flip, break: stutter } },
+      { name: '레이지 리드', color: 6, sound: '레이지 리드', vol: -6, a: -16, b: -14, clips: {
+        hook: () => melody(key, [[4, 0, 0.25], [4, 0.5, 0.25], [2, 1, 0.5], [4, 1.75, 0.25], [5, 2, 0.75], [4, 3, 0.5], [2, 3.5, 0.5],
+          [3, 4, 0.25], [3, 4.5, 0.25], [1, 5, 0.5], [3, 5.75, 0.25], [6, 6, 0.75], [3, 7, 0.5], [1, 7.5, 0.5],
+          [1, 8, 0.25], [1, 8.5, 0.25], [6, 9, 0.5], [1, 9.75, 0.25], [4, 10, 0.75], [3, 11, 0.5], [1, 11.5, 0.5],
+          [2, 12, 0.5], [0, 12.75, 0.25], [2, 13, 0.5], [4, 13.75, 0.75], [2, 14.5, 0.5], [0, 15, 1]], 16, 72)
+      } },
+      { name: 'FX', type: 'audio', color: 3, vol: -10, a: -16, clips: { intro: riser, hook: impact, break: riser } }
     ]
   });
 })();

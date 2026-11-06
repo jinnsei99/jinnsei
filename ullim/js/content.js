@@ -215,6 +215,11 @@ SOUNDS.push(
   EN('밴드 오르간', ['밴드', '오르간'], { inst: 'organ_jazz' }, [AMP('crunch', { gain: 3, cab: '2x12', treble: 6 }), ROOM(0.14, 1.6)]),
   AC('밴드 로즈', ['밴드', '키'], { inst: 'rhodes', tone: 0.55 }, [AMP('clean', { gain: 4.5, cab: '2x12' }), FX('chorus', { mix: 0.25, rate: 0.6 }), ROOM(0.14, 1.6)])
 );
+/* 레이지 리드: 넓게 벌린 톱니파와 한 옥타브 위 사각파를 세게 일그러뜨린 거친 리드 (샘플 플립 장르. 뒤에 붙여서 앞 번호는 그대로) */
+SOUNDS.push(
+  { name: '레이지 리드', kind: 'polysynth', tags: ['리드'], p: { w1: 'sawtooth', w2: 'square', o2: 1, d1: -22, d2: 22, l1: 0.8, l2: 0.4, ft: 'lp12', cut: 4200, res: 0.15, fenv: 0.25, fa: 0.002, fd: 0.18, fs: 0.6, fr: 0.2, a: 0.003, d: 0.3, s: 0.75, r: 0.18, vel: 0.4, vol: -14 },
+    fx: [FX('sat', { type: 'hard', drive: 14, out: -10, mix: 0.7 }), FX('chorus', { mix: 0.35 }), FX('reverb', { mix: 0.22, decay: 1.6 })] }
+);
 U.SOUNDS = SOUNDS;
 U.sound = name => SOUNDS.find(x => x.name === name) || SOUNDS[0];
 /* 묶음(첫 태그) 순서. 브라우저와 소리 고르기 창이 이 순서로 보여 준다 */
@@ -262,6 +267,37 @@ const K909 = { tune: 2, decay: 0.32, tone: 0.75 };
 /* 로봇 보컬 16음절 (A 마이너 펜타토닉). 패드 이름은 음절을 한글로 */
 const ROBOT = [['ha', 57, '하'], ['me', 60, '메'], ['do', 62, '도'], ['ki', 64, '키'], ['ro', 57, '로'], ['bo', 55, '보'], ['tu', 60, '투'], ['ne', 57, '네'],
   ['sa', 64, '사'], ['yo', 67, '요'], ['mi', 62, '미'], ['da', 60, '다'], ['wa', 57, '와'], ['ke', 55, '케'], ['no', 52, '노'], ['ha', 57, '하~', 52]];
+/* 옛 가요 샘플: 2000년대 가요 음반에서 딴 듯한 네 마디 (샘플 플립 장르).
+   A♭ 메이저 왕도 진행 D♭△7 – E♭7 – Cm7 – Fm7을 한 마디씩, 150 BPM. 전자 피아노 화음 · 부드러운 패드 · "오~ 아~" 노래 훅을 섞고
+   낮은·높은 소리를 깎아 살짝 일그러뜨린 뒤 LP 잡음을 얹는다. 한 박씩 자르면 줄마다 한 화음이 된다 (lp-flip) */
+const FLIP_BPM = 150;
+const FLIP_CHORDS = [[56, 60, 61, 65], [55, 58, 61, 63], [55, 58, 60, 63], [56, 60, 63, 65]];   // 부드럽게 이어지는 자리
+const FLIP_ROOTS = [49, 51, 48, 53];                                                          // D♭ E♭ C F
+const FLIP_HOOK = [
+  [72, 0.5, 0.5, 'o'], [70, 1, 0.5, 'o'], [68, 1.5, 1, 'a'], [65, 3, 0.5, 'a'], [68, 3.5, 0.5, 'o'],
+  [70, 4, 1.5, 'o', 68], [72, 5.5, 0.5, 'a'], [70, 6, 1, 'a'], [67, 7, 0.5, 'o'], [68, 7.5, 0.5, 'o'],
+  [67, 8, 1.5, 'a', 65], [70, 9.5, 0.5, 'o'], [72, 10, 1, 'o'], [75, 11, 0.5, 'a'], [72, 11.5, 0.5, 'a'],
+  [68, 12, 2.5, 'o', 70], [65, 14.5, 0.5, 'a'], [68, 15, 1, 'o']
+].map(([p, s, d, v, from]) => ({ p, s, d, v, from }));
+async function renderFlip(sr) {
+  const snd = n => SOUNDS.find(x => x.name === n).p;
+  const ep = [], pad = [];
+  FLIP_CHORDS.forEach((ch, b) => {
+    const at = b * 4;
+    for (const [s, d, v] of [[0, 1.4, 100], [1.5, 0.9, 84], [2.5, 0.9, 92], [3.5, 0.45, 78]]) for (const p of ch) ep.push({ p, s: at + s, d, v });
+    ep.push({ p: FLIP_ROOTS[b], s: at, d: 1.9, v: 96 }, { p: FLIP_ROOTS[b], s: at + 2.5, d: 1.4, v: 84 });
+    for (const p of ch) pad.push({ p, s: at, d: 3.9, v: 70 });
+  });
+  const secs = 16 * 60 / FLIP_BPM;
+  const [keys, warm, voice, dust] = await Promise.all([
+    U.media.renderInstrument(sr, FLIP_BPM, 16, 'fm', snd('전자 피아노'), ep, 2),
+    U.media.renderInstrument(sr, FLIP_BPM, 16, 'polysynth', snd('따뜻한 패드'), pad, 2),
+    U.media.renderSung(sr, FLIP_BPM, 16, FLIP_HOOK),
+    U.media.renderTexture(sr, 'vinyl', secs)
+  ]);
+  return U.media.renderMix(sr, secs, [{ buf: keys, gain: 0.9 }, { buf: warm, gain: 0.3 }, { buf: voice, gain: 0.8 }, { buf: dust, gain: 0.5 }],
+    { hp: 150, lp: 7000, sat: 'tube', drive: 4, out: 0.5 });
+}
 const GEN = {
   'loop-break': { name: '브레이크 루프 96', cat: 'loop', bpm: 96, beats: 8, render: sr => U.media.renderHits(sr, 96, 8, [
     ...seq('kick', 'x.......x.x.....x.......x..x....', 0.25, 1, { tune: -1, decay: 0.4, tone: 0.5 }),
@@ -291,6 +327,7 @@ const GEN = {
     [45, 45, 57, 45, 48, 45, 55, 43, 41, 41, 53, 41, 43, 43, 55, 47].map((p, i) => ({ p, s: i * 0.5, d: 0.3, v: i % 2 ? 90 : 120 })), 0.3) },
   'loop-chords': { name: '코드 루프 100 (C)', cat: 'loop', bpm: 100, beats: 16, render: sr => U.media.renderInstrument(sr, 100, 16, 'polysynth', SOUNDS[0].p,
     [[60, 64, 67], [59, 62, 67], [57, 60, 64], [57, 60, 65]].flatMap((ch, i) => ch.map(p => ({ p, s: i * 4, d: 3.9, v: 90 }))), 2) },
+  'loop-flip': { name: '옛 가요 샘플 150 (A♭)', cat: 'loop', bpm: FLIP_BPM, beats: 16, render: renderFlip },
   'vox-a': { name: '보컬 아 (A2)', cat: 'vox', render: sr => U.media.renderVowels(sr, ['a'], 1.8, 57) },
   'vox-o': { name: '보컬 오 (A2)', cat: 'vox', render: sr => U.media.renderVowels(sr, ['o'], 1.8, 57) },
   'vox-chops': { name: '보컬 찹 8조각', cat: 'vox', render: sr => U.media.renderVowels(sr, ['a', 'o0', 'e3', 'a5', 'i7', 'o5', 'u3', 'a0'], 0.36, 57) },
@@ -320,6 +357,8 @@ const LOOPKITS = [
     src: 'gen:vox-robot', pads: chops(ROBOT.map(x => x[2]), { choke: 1 }) },
   { id: 'lp-break', name: '브레이크 찹', tags: ['드럼 찹'], info: '브레이크 루프 두 마디를 8분음표 16조각으로 잘랐어요. 순서를 바꿔 치면 새 비트가 돼요.',
     src: 'gen:loop-break', pads: chops(['킥 크래시', '햇', '스네어', '햇 고스트', '킥 고스트', '킥', '스네어', '햇', '킥', '햇', '스네어', '햇 고스트', '킥', '햇 킥', '스네어', '오픈햇'], { choke: 1 }) },
+  { id: 'lp-flip', name: '옛 가요 샘플 찹', tags: ['샘플 찹'], info: '옛 가요 샘플 네 마디를 한 박씩 16조각으로 잘랐어요. 한 줄이 한 마디(D♭△7 · E♭7 · Cm7 · Fm7)라서 줄 안에서 순서를 바꿔 치면 화음은 그대로 두고 새 리듬이 돼요. 원본 샘플을 내 파일로 바꾸면 그 샘플이 잘려 들어가요.',
+    src: 'gen:loop-flip', pads: chops(['D♭△7', 'E♭7', 'Cm7', 'Fm7'].flatMap(ch => [1, 2, 3, 4].map(k => ch + ' ' + k)), { choke: 1 }) },
   { id: 'lp-loops', name: '루프 팩', tags: ['루프'], info: '아래 두 줄은 원샷, 위 두 줄은 켜고 끄는 루프예요. 루프는 템포에 맞춰 늘고 줄며 마디 첫 박에 맞춰 시작해요.',
     src: null, p: { q: '1bar' }, pads: [
       own('킥', 'os-킥 909'), own('스네어', 'os-스네어'), own('클랩', 'os-클랩'), own('하이햇', 'os-닫힌 하이햇'),

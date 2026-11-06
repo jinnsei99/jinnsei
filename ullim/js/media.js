@@ -183,6 +183,8 @@ async function renderInstrument(sr, bpm, beats, kind, p, notes, tail) {
   const fake = { ctx, offline: true, bpm, keyOf: () => ({ root: 0, scale: 'major' }) };
   const dev = U.makeDevice(kind, { p });
   const inst = new U.DEVICE_CLASSES[kind](fake, dev);
+  // 음을 한꺼번에 미리 예약하므로, 끝난 음을 치우는 정리가 아직 울리지 않은 음까지 끊지 않게 한다 (렌더가 끝나면 통째로 버린다)
+  inst.prune = () => {};
   inst.out.connect(ctx.destination);
   await inst.ready;
   for (const n of notes) inst.playNote(n.p, n.v || 100, n.s * 60 / bpm, n.d * 60 / bpm);
@@ -235,6 +237,92 @@ async function renderVowels(sr, seq, each, pitch) {
     for (const s of [src, vib, br]) { s.start(t0); s.stop(t0 + len + 0.05); }
   });
   return U.trimBuffer(await ctx.startRendering(), total);
+}
+/* 끝을 넘친 소리(꼬리)를 루프 앞으로 감아 loopLen 샘플짜리 끊김 없는 루프로 */
+function foldLoop(buf, loopLen) {
+  const out = new AudioBuffer({ length: loopLen, numberOfChannels: 2, sampleRate: buf.sampleRate });
+  for (let c = 0; c < 2; c++) {
+    const s = buf.getChannelData(Math.min(c, buf.numberOfChannels - 1)), o = out.getChannelData(c);
+    for (let i = 0; i < s.length; i++) o[i % loopLen] += s[i];
+  }
+  return out;
+}
+/* 노래 (포먼트 합성): notes = [{v: 모음, p: 음높이, s: 시작 박, d: 길이(박), from: 미끄러져 들어오는 음, vel}].
+   두 번 녹음한 듯 살짝 늦고 음이 다른 목소리를 좌우에 겹치고, 모음 포먼트를 조금 올려 가벼운 목소리로 */
+async function renderSung(sr, bpm, beats, notes, o) {
+  o = o || {};
+  const spb = 60 / bpm, loopSec = beats * spb;
+  const ctx = U.OfflineCtx(2, Math.ceil((loopSec + 1) * sr), sr);
+  const out = U.gainNode(ctx, o.gain || 0.7);
+  out.connect(ctx.destination);
+  const shift = o.shift || 1.15;
+  for (const [cents, pan, late] of o.voices || [[0, -0.3, 0], [9, 0.3, 0.009]]) {
+    const pn = ctx.createStereoPanner();
+    pn.pan.value = pan;
+    pn.connect(out);
+    for (const n of notes) {
+      const t0 = n.s * spb + late, len = n.d * spb;
+      const src = ctx.createOscillator();
+      src.type = 'sawtooth';
+      src.detune.value = cents;
+      const f = U.mtof(n.p);
+      if (n.from != null) {
+        src.frequency.setValueAtTime(U.mtof(n.from), t0);
+        src.frequency.exponentialRampToValueAtTime(f, t0 + Math.min(0.09, len * 0.4));
+      } else src.frequency.setValueAtTime(f, t0);
+      // 긴 음일수록 떨림이 천천히 커진다
+      const vib = ctx.createOscillator(), vg = U.gainNode(ctx, 0);
+      vib.frequency.value = 5.2 + cents / 30;
+      vib.connect(vg); vg.connect(src.detune);
+      vg.gain.setValueAtTime(0, t0);
+      vg.gain.linearRampToValueAtTime(len > 0.5 ? 18 : 5, t0 + len);
+      const env = U.gainNode(ctx, 0);
+      const vow = VOWELS[n.v] || VOWELS.a;
+      [1, 0.5, 0.25, 0.12].forEach((a, i) => {
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass'; bp.frequency.value = vow[i] * shift; bp.Q.value = 7 + i * 3;
+        const g = U.gainNode(ctx, a * 4);
+        src.connect(bp); bp.connect(g); g.connect(env);
+      });
+      const br = U.noiseSource(ctx, true), bhp = ctx.createBiquadFilter(), bg = U.gainNode(ctx, 0.035);
+      bhp.type = 'highpass'; bhp.frequency.value = 3200;
+      br.connect(bhp); bhp.connect(bg); bg.connect(env);
+      env.connect(pn);
+      const a = 0.5 * (n.vel || 100) / 100;
+      env.gain.setValueAtTime(0, t0);
+      env.gain.linearRampToValueAtTime(a, t0 + 0.035);
+      env.gain.setValueAtTime(a, Math.max(t0 + 0.04, t0 + len - 0.07));
+      env.gain.linearRampToValueAtTime(0, t0 + len);
+      for (const x of [src, vib, br]) { x.start(t0); x.stop(t0 + len + 0.05); }
+    }
+  }
+  return foldLoop(await ctx.startRendering(), Math.ceil(loopSec * sr));
+}
+/* 여러 루프를 섞어 음반에서 딴 소리처럼: 낮은·높은 소리를 깎고(hp·lp) 살짝 일그러뜨린다.
+   layers: [{buf, gain}] (모두 secs 길이의 루프). 필터가 루프 이음매에서 끊기지 않게 두 바퀴를 돌리고 둘째 바퀴를 쓴다 */
+async function renderMix(sr, secs, layers, o) {
+  o = o || {};
+  const n = Math.ceil(secs * sr);
+  const ctx = U.OfflineCtx(2, n * 2, sr);
+  const bus = U.gainNode(ctx, 1);
+  const hp = ctx.createBiquadFilter(), lp = ctx.createBiquadFilter(), sh = ctx.createWaveShaper(), og = U.gainNode(ctx, o.out || 1);
+  hp.type = 'highpass'; hp.frequency.value = o.hp || 30; hp.Q.value = 0.6;
+  lp.type = 'lowpass'; lp.frequency.value = o.lp || 18000; lp.Q.value = 0.6;
+  sh.curve = U.satCurve(o.sat || 'soft', o.drive || 0, 8);
+  sh.oversample = '2x';
+  bus.connect(hp); hp.connect(lp); lp.connect(sh); sh.connect(og); og.connect(ctx.destination);
+  for (const L of layers) {
+    for (const at of [0, secs]) {
+      const src = ctx.createBufferSource(), g = U.gainNode(ctx, L.gain == null ? 1 : L.gain);
+      src.buffer = L.buf;
+      src.connect(g); g.connect(bus);
+      src.start(at);
+    }
+  }
+  const r = await ctx.startRendering();
+  const out = new AudioBuffer({ length: n, numberOfChannels: 2, sampleRate: sr });
+  for (let c = 0; c < 2; c++) out.getChannelData(c).set(r.getChannelData(c).subarray(n, 2 * n));
+  return out;
 }
 /* 로봇 보컬: 톱니파 버즈를 모음 포먼트로 거르고(보코더 느낌), 자음은 잡음 조각으로 붙인다.
    음절 하나가 칸 하나(each초)에 딱 들어가서, 같은 길이로 자르면 그대로 찹이 된다.
@@ -424,5 +512,5 @@ async function renderFx(sr, kind) {
   return c2.startRendering();
 }
 
-U.media = { get, cached, info, setInfo, peaks, reversed, guessTempo, importFile, addBuffer, decode, renderHits, renderInstrument, renderVowels, renderRobot, renderFx, renderTexture };
+U.media = { get, cached, info, setInfo, peaks, reversed, guessTempo, importFile, addBuffer, decode, renderHits, renderInstrument, renderVowels, renderSung, renderRobot, renderFx, renderTexture, renderMix };
 })(window.U = window.U || {});
