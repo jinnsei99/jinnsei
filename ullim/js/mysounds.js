@@ -46,7 +46,7 @@ function capture(t, name) {
   const fx = t.devices.slice(i + 1).filter(d => d.on !== false && type(d) === 'audio');
   const from = U.allSounds().find(s => s.kind === inst.kind && s.name === inst.preset);
   const tags = [GROUP];
-  if (from) tags.push(from.user ? from.tags[1] : from.tags[0]);
+  if (from) tags.push(U.soundRole(from));
   const s = { id: U.uid('us'), name, kind: inst.kind, p: U.clone(inst.p), pre: pre.map(take), fx: fx.map(take), tags: tags.filter(Boolean), created: Date.now(), updated: Date.now() };
   if (inst.data) s.data = U.clone(inst.data);
   return { sound: fit(s), devices: [inst].concat(pre, fx) };

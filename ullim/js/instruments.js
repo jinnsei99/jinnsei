@@ -216,22 +216,46 @@ class PolySynth extends Instrument {
     amp.connect(this.vbus);
     const srcs = [], nodes = [amp, pre, fl];
     if (fl2) nodes.push(fl2);
+    // 유니즌: 오실레이터마다 N겹을 ±uspr 센트로 고르게 벌리고 좌우로 펼친다. 겹친 만큼 커지지 않게 1/√N
+    const N = clamp(Math.round(P.uni || 1), 1, 7);
+    const pamt = P.pamt || 0;
+    // 겹친 소리가 모두 같은 위상으로 출발하면 첫 수십 ms가 한 소리처럼 좁고 크게 뭉친다.
+    // 그래서 첫 겹 말고는 한 주기 안에서 제각각 조금 늦게 출발시켜 위상을 흩는다 (같은 악기는 늘 같은 순서라 렌더가 매번 같다)
+    if (N > 1 && !this.urnd) this.urnd = U.rng(4243);
+    const f0 = (from != null ? mtof(from) : f) * Math.pow(2, pamt / 12);
     const mk = (wave, mul, det, lvl) => {
       if (lvl <= 0.001) return null;
-      const o = ctx.createOscillator();
-      o.type = wave;
-      const target = f * mul;
-      if (from != null) {
-        o.frequency.setValueAtTime(mtof(from) * mul, t);
-        o.frequency.setTargetAtTime(target, t, Math.max(0.001, P.glide) / 3);
-      } else o.frequency.setValueAtTime(target, t);
-      o.detune.value = det;
-      const g = gainNode(ctx, lvl);
-      o.connect(g); g.connect(pre);
-      this.lfoP.connect(o.detune);
-      o.start(t);
-      srcs.push(o); nodes.push(o, g);
-      return { o, g };
+      const all = [];
+      for (let k = 0; k < N; k++) {
+        const pos = N > 1 ? k / (N - 1) * 2 - 1 : 0;   // -1 … 1
+        const off = pos * (P.uspr || 0);
+        const o = ctx.createOscillator();
+        o.type = wave;
+        const target = f * mul;
+        const lag = k ? this.urnd() * Math.min(1 / (f0 * mul), 0.02) : 0;
+        if (from != null) {
+          o.frequency.setValueAtTime(mtof(from) * mul, t);
+          o.frequency.setTargetAtTime(target, t, Math.max(0.001, P.glide) / 3);
+        } else o.frequency.setValueAtTime(target, t);
+        // 피치 엔벌로프: pamt 반음 위(아래)에서 출발해 pdec 동안 제 음으로
+        if (pamt) {
+          o.detune.setValueAtTime(det + off + pamt * 100, t);
+          o.detune.setTargetAtTime(det + off, t + 0.001, Math.max(0.002, P.pdec || 0.06) / 4);
+        } else o.detune.value = det + off;
+        const g = gainNode(ctx, lvl / Math.sqrt(N));
+        o.connect(g);
+        if (N > 1 && P.uwide > 0) {
+          const pn = ctx.createStereoPanner();
+          pn.pan.value = pos * P.uwide;
+          g.connect(pn); pn.connect(pre);
+          nodes.push(pn);
+        } else g.connect(pre);
+        this.lfoP.connect(o.detune);
+        o.start(t + lag);
+        srcs.push(o); nodes.push(o, g);
+        all.push({ o, g, off });
+      }
+      return { o: all[0].o, g: all[0].g, all, n: N };
     };
     const o1 = mk(P.w1, Math.pow(2, P.o1), P.d1, P.l1);
     const o2 = mk(P.w2, Math.pow(2, P.o2 + P.s2 / 12), P.d2, P.l2);
@@ -268,7 +292,7 @@ class PolySynth extends Instrument {
   free(vo) {
     try { this.lfoF.disconnect(vo.fl.detune); } catch (e) { /* 무시 */ }
     if (vo.fl2) { try { this.lfoF.disconnect(vo.fl2.detune); } catch (e) { /* 무시 */ } }
-    for (const o of [vo.o1, vo.o2]) if (o) { try { this.lfoP.disconnect(o.o.detune); } catch (e) { /* 무시 */ } }
+    for (const o of [vo.o1, vo.o2]) if (o) for (const x of o.all) { try { this.lfoP.disconnect(x.o.detune); } catch (e) { /* 무시 */ } }
     super.free(vo);
   }
   param(id, v, t) {
@@ -288,13 +312,17 @@ class PolySynth extends Instrument {
         }
         break;
       case 'res': for (const vo of live) smooth(vo.fl.Q, filterQ(P.ft, v), t); break;
-      case 'l1': for (const vo of live) if (vo.o1) smooth(vo.o1.g.gain, v, t); break;
-      case 'l2': for (const vo of live) if (vo.o2) smooth(vo.o2.g.gain, v, t); break;
+      case 'l1': for (const vo of live) if (vo.o1) for (const x of vo.o1.all) smooth(x.g.gain, v / Math.sqrt(vo.o1.n), t); break;
+      case 'l2': for (const vo of live) if (vo.o2) for (const x of vo.o2.all) smooth(x.g.gain, v / Math.sqrt(vo.o2.n), t); break;
       case 'nz': for (const vo of live) if (vo.nz) smooth(vo.nz.g.gain, v * 0.7, t); break;
-      case 'w1': for (const vo of live) if (vo.o1) vo.o1.o.type = v; break;
-      case 'w2': for (const vo of live) if (vo.o2) vo.o2.o.type = v; break;
-      case 'd1': for (const vo of live) if (vo.o1) smooth(vo.o1.o.detune, v, t); break;
-      case 'd2': for (const vo of live) if (vo.o2) smooth(vo.o2.o.detune, v, t); break;
+      case 'w1': for (const vo of live) if (vo.o1) for (const x of vo.o1.all) x.o.type = v; break;
+      case 'w2': for (const vo of live) if (vo.o2) for (const x of vo.o2.all) x.o.type = v; break;
+      case 'd1': for (const vo of live) if (vo.o1) for (const x of vo.o1.all) smooth(x.o.detune, v + x.off, t); break;
+      case 'd2': for (const vo of live) if (vo.o2) for (const x of vo.o2.all) smooth(x.o.detune, v + x.off, t); break;
+      case 'uspr':
+        // 울리는 음의 겹친 소리 벌림을 바로 바꾼다
+        for (const vo of live) for (const [o, det] of [[vo.o1, P.d1], [vo.o2, P.d2]]) if (o) o.all.forEach((x, k) => { x.off = (o.n > 1 ? k / (o.n - 1) * 2 - 1 : 0) * v; smooth(x.o.detune, det + x.off, t); });
+        break;
     }
   }
 }

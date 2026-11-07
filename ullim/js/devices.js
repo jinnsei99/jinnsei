@@ -97,6 +97,11 @@ def('polysynth', {
     num('d2', 'Detune', -50, 50, 7, { unit: 'ct', info: '오실레이터 2를 살짝 어긋나게 해서 소리를 두껍게 만들어요.' }),
     pct('l2', 'Level', 0.6, { info: '오실레이터 2의 음량' }),
     pct('nz', 'Noise', 0, { info: '화이트 노이즈를 섞어요. 숨소리나 바람 같은 질감이 생겨요.' }),
+    num('uni', 'Unison', 1, 7, 1, { step: 1, info: '한 음에 살짝 어긋난 소리를 몇 겹 쌓을지. 올리면 슈퍼쏘우처럼 넓고 두꺼워져요.' }),
+    num('uspr', 'Spread', 0, 50, 18, { unit: 'ct', info: '겹친 소리끼리 음을 얼마나 어긋나게 할지 (센트)', show: p => p.uni > 1 }),
+    pct('uwide', 'Width', 0.6, { info: '겹친 소리를 좌우로 얼마나 벌릴지', show: p => p.uni > 1 }),
+    num('pamt', 'Pitch Env', -24, 24, 0, { step: 1, unit: 'st', info: '음이 시작될 때 이만큼 높은(또는 낮은) 데서 출발해 제 음으로 떨어져요. 808의 펀치나 "뾱" 하는 플럭에 써요.' }),
+    sec('pdec', 'Pitch Time', 0.005, 1, 0.06, { curve: 'pow2', info: '피치 엔벌로프가 제 음으로 돌아오는 시간', show: p => p.pamt !== 0 }),
     en('ft', 'Type', FTYPES, 'lp24', { info: '필터 종류. LP는 높은 소리를 깎고, HP는 낮은 소리를 깎고, BP는 가운데만 남겨요.' }),
     hz('cut', 'Freq', 30, 20000, 2400, { info: '필터가 걸리기 시작하는 주파수(컷오프). 낮출수록 소리가 어두워져요.' }),
     pct('res', 'Res', 0.15, { info: '컷오프 근처를 강조하는 레조넌스. 올리면 "뾰옹" 하는 특유의 소리가 나요.' }),
@@ -121,6 +126,7 @@ def('polysynth', {
     { title: 'Filter Env', visual: 'adsr:f', params: ['fa', 'fd', 'fs', 'fr'] },
     { title: 'Amp Env', visual: 'adsr', params: ['a', 'd', 's', 'r'] },
     { title: 'LFO', params: ['lw', 'lrate', 'lpitch', 'lfilt', 'lamp'] },
+    { title: 'Unison · Pitch', params: ['uni', 'uspr', 'uwide', 'pamt', 'pdec'] },
     { title: 'Voice', params: ['nz', 'mono', 'glide', 'vel', 'vol'] }
   ]
 });

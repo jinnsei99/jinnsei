@@ -528,7 +528,7 @@ function arpeggio(key, prog, order) {
         break: () => ({ len: 8, notes: trapHats(2, [15]).filter((x, i) => i % 2 === 0) }),
         outro: () => ({ len: 8, notes: trapHats(2).filter((x, i) => i % 2 === 0) })
       } },
-      { name: '808', color: 0, sound: '808 베이스', vol: -1, clips: {
+      { name: '808', color: 0, sound: '디스토션 808', vol: -1, clips: {
         hook: () => bassline(key, prog, { base: 36, pattern: ['X-------x-x-----', 'X---------x---o-'], gate: 0.98 }),
         verse: () => bassline(key, prog, { base: 36, pattern: ['X---------x-----', 'X-------x-x-----'], gate: 0.98 })
       } },
