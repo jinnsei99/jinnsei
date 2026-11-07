@@ -89,7 +89,7 @@ function items() {
           label: s.name, sub: U.DEV[s.kind].name + (special ? ' · ' + (s.user ? '내 사운드' : s.tags[0]) : ''), icon: 'sound', find: s.tags.join(' '), dup: special,
           key: tag + '/' + U.favs.key(s), sound: s,
           drag: { type: 'sound', item: s }, load: () => A.loadSound(loadTarget('midi'), s),
-          preview: () => previewDev(U.makeDevice(s.kind, { p: s.p, data: s.data }), s.user ? s.tags[1] || '' : s.tags[0], s),
+          preview: () => previewDev(U.makeDevice(s.kind, { p: s.p, data: s.data }), U.soundRole(s), s),
           menu: [U.favs.menuItem(s)].concat(s.user ? U.mySoundItems(s) : [])
         });
       }

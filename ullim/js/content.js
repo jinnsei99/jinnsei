@@ -39,6 +39,12 @@ const KITS = [
 ];
 /* 전자음악 키트 (뒤에 붙여서 앞 번호는 그대로) */
 KITS.push(
+  /* 레이지: 단단하게 때리는 킥, 밝게 터지는 클랩·스네어, 짧고 날카로운 하이햇, 길게 우는 808 */
+  { id: 'krage', name: '레이지', tags: ['레이지 · 트랩', '트랩'], pads: kit({
+    kick: { tune: 0, decay: 0.38, tone: 0.95 }, snare: { tune: 6, decay: 0.3, tone: 1 }, clap: { decay: 0.45, tone: 0.9 },
+    chh: { decay: 0.08, tone: 0.95, level: -3, choke: 1 }, ohh: { decay: 0.35, tone: 0.95, level: -5, choke: 1 },
+    sub: { name: '808 Sub', decay: 0.95, tone: 0.7, level: 0 }, snap: { level: -1 }, crash: { level: -6 }, rim: { tune: 3, level: -3 }
+  }) },
   { id: 'ktechno', name: '테크노', tags: ['테크노'], pads: kit({
     kick: { tune: -1, decay: 0.45, tone: 0.9 }, snare: { tune: 2, decay: 0.28, tone: 0.8 }, clap: { decay: 0.5, tone: 0.65 },
     chh: { decay: 0.16, tone: 0.9, level: -4, choke: 1 }, ohh: { decay: 0.4, tone: 0.9, level: -5, choke: 1 }, ride: { tone: 0.85, level: -6 },
@@ -217,13 +223,42 @@ SOUNDS.push(
 );
 /* 레이지 리드: 넓게 벌린 톱니파와 한 옥타브 위 사각파를 세게 일그러뜨린 거친 리드 (샘플 플립 장르. 뒤에 붙여서 앞 번호는 그대로) */
 SOUNDS.push(
-  { name: '레이지 리드', kind: 'polysynth', tags: ['리드'], p: { w1: 'sawtooth', w2: 'square', o2: 1, d1: -22, d2: 22, l1: 0.8, l2: 0.4, ft: 'lp12', cut: 4200, res: 0.15, fenv: 0.25, fa: 0.002, fd: 0.18, fs: 0.6, fr: 0.2, a: 0.003, d: 0.3, s: 0.75, r: 0.18, vel: 0.4, vol: -14 },
+  { name: '레이지 리드', kind: 'polysynth', tags: ['리드'], p: { w1: 'sawtooth', w2: 'square', o2: 1, d1: -22, d2: 22, l1: 0.8, l2: 0.4, ft: 'lp12', cut: 4200, res: 0.15, fenv: 0.25, fa: 0.002, fd: 0.18, fs: 0.6, fr: 0.2, a: 0.003, d: 0.3, s: 0.75, r: 0.18, vel: 0.4, uni: 5, uspr: 16, uwide: 0.7, vol: -12 },
     fx: [FX('sat', { type: 'hard', drive: 14, out: -10, mix: 0.7 }), FX('chorus', { mix: 0.35 }), FX('reverb', { mix: 0.22, decay: 1.6 })] }
+);
+/* 레이지 · 트랩: 유니즌으로 넓힌 슈퍼쏘우, 거칠게 반복하는 신스 키, 펀치 있는 808, 플럭 벨 같은 요즘 랩 비트 소리 (뒤에 붙여서 앞 번호는 그대로) */
+const RT = '레이지 · 트랩';
+SOUNDS.push(
+  { name: '레이지 슈퍼쏘우', kind: 'polysynth', tags: [RT, '리드'], p: { w1: 'sawtooth', w2: 'sawtooth', o2: 1, d2: 0, l1: 0.8, l2: 0.35, uni: 7, uspr: 24, uwide: 0.85, ft: 'lp24', cut: 5200, res: 0.12, fenv: 0.12, fa: 0.002, fd: 0.3, fs: 0.6, fr: 0.25, a: 0.004, d: 0.3, s: 0.85, r: 0.25, vel: 0.35, vol: -8 },
+    fx: [FX('sat', { type: 'soft', drive: 6, out: -5, mix: 0.5 }), FX('delay', { mix: 0.12, divl: '1/8D' }), FX('reverb', { mix: 0.28, decay: 2.2 })] },
+  { name: '하이프 키', kind: 'polysynth', tags: [RT, '키'], p: { w1: 'square', w2: 'sawtooth', d2: 9, l1: 0.8, l2: 0.5, uni: 3, uspr: 10, uwide: 0.5, ft: 'lp12', cut: 2600, res: 0.25, fenv: 0.45, fa: 0.001, fd: 0.22, fs: 0.35, fr: 0.2, a: 0.002, d: 0.4, s: 0.5, r: 0.18, vel: 0.45, vol: -14 },
+    fx: [FX('sat', { type: 'hard', drive: 12, out: -9, mix: 0.65 }), FX('chorus', { mix: 0.3, rate: 0.5 }), FX('reverb', { mix: 0.25, decay: 1.8 })] },
+  { name: '디스토션 808', kind: 'polysynth', tags: [RT, '베이스'], p: { w1: 'sine', w2: 'triangle', o2: 0, d2: 0, l1: 1, l2: 0.2, ft: 'lp12', cut: 1800, res: 0, fenv: 0, a: 0.002, d: 1.8, s: 0.35, r: 0.35, mono: true, glide: 0.09, pamt: 12, pdec: 0.05, vel: 0.3, vol: -14 },
+    fx: [FX('sat', { type: 'hard', drive: 18, out: -10, mix: 0.85 })] },
+  { name: '글라이드 808', kind: 'polysynth', tags: [RT, '베이스'], p: { w1: 'sine', w2: 'triangle', o2: 0, d2: 0, l1: 1, l2: 0.12, ft: 'lp12', cut: 1400, res: 0, fenv: 0, a: 0.003, d: 2.6, s: 0.45, r: 0.5, mono: true, glide: 0.18, pamt: 7, pdec: 0.03, vel: 0.3, vol: -5 },
+    fx: [FX('sat', { type: 'tube', drive: 8, out: -6, mix: 0.5 })] },
+  { name: '플럭 벨', kind: 'polysynth', tags: [RT, '말렛·벨'], p: { w1: 'triangle', w2: 'sine', o2: 2, d2: 0, l1: 0.8, l2: 0.35, ft: 'lp12', cut: 9000, res: 0, fenv: 0, a: 0.001, d: 0.5, s: 0, r: 0.5, vel: 0.5, vol: -4 },
+    fx: [FX('delay', { mix: 0.22, divl: '1/8D' }), FX('reverb', { mix: 0.3, decay: 2 })] },
+  { name: '하이퍼 플럭', kind: 'polysynth', tags: [RT, '플럭'], p: { w1: 'sawtooth', w2: 'square', o2: 1, d2: 0, l1: 0.8, l2: 0.3, uni: 5, uspr: 16, uwide: 0.7, ft: 'lp24', cut: 900, res: 0.3, fenv: 0.7, fa: 0.001, fd: 0.18, fs: 0, fr: 0.15, a: 0.001, d: 0.28, s: 0, r: 0.2, pamt: 12, pdec: 0.025, vel: 0.5, vol: -8 },
+    fx: [FX('delay', { mode: 'stereo', divl: '1/8D', divr: '1/4', mix: 0.2 }), FX('reverb', { mix: 0.2 })] },
+  { name: '사이렌 리드', kind: 'polysynth', tags: [RT, '리드'], p: { w1: 'square', w2: 'sawtooth', d2: 12, l1: 0.8, l2: 0.45, uni: 3, uspr: 12, uwide: 0.5, ft: 'lp12', cut: 3800, res: 0.3, fenv: 0.1, a: 0.01, d: 0.3, s: 0.9, r: 0.2, lpitch: 0.25, lrate: 6.5, mono: true, glide: 0.12, vel: 0.35, vol: -13 },
+    fx: [FX('sat', { type: 'hard', drive: 10, out: -8, mix: 0.5 }), FX('delay', { mix: 0.18 }), FX('reverb', { mix: 0.25 })] },
+  { name: '다크 패드', kind: 'polysynth', tags: [RT, '패드'], p: { w1: 'sawtooth', w2: 'sawtooth', o2: -1, d2: 9, l1: 0.7, l2: 0.6, uni: 5, uspr: 20, uwide: 0.9, ft: 'lp24', cut: 700, res: 0.2, fenv: 0.1, lfilt: 0.25, lrate: 0.15, a: 0.8, d: 1, s: 0.8, r: 1.6, vel: 0.2, vol: -9 },
+    fx: [FX('chorus', { mix: 0.3 }), FX('reverb', { mix: 0.45, decay: 3.5 })] },
+  { name: '브라스 스탭', kind: 'polysynth', tags: [RT, '코드'], p: { w1: 'sawtooth', w2: 'sawtooth', d2: 6, l1: 0.8, l2: 0.7, uni: 3, uspr: 14, uwide: 0.6, ft: 'lp24', cut: 600, res: 0.2, fenv: 0.55, fa: 0.02, fd: 0.25, fs: 0.25, fr: 0.2, a: 0.01, d: 0.3, s: 0.2, r: 0.15, vel: 0.5, vol: -10 },
+    fx: [FX('sat', { type: 'soft', drive: 6, out: -5, mix: 0.6 }), FX('reverb', { mix: 0.2 })] }
 );
 U.SOUNDS = SOUNDS;
 U.sound = name => SOUNDS.find(x => x.name === name) || SOUNDS[0];
+/* 소리의 쓰임(피아노 · 베이스 · 리드 · 패드 …): 미리 듣기 악절(베이스 줄 · 멜로디 · 화음)을 고를 때 쓴다.
+   장르 묶음(재즈 힙합 · 레이지 · 트랩)에 든 소리는 첫 태그가 묶음 이름이라 그다음 태그가 쓰임이다 (내 사운드는 첫 태그를 건너뛴다) */
+const GENRE_GROUPS = ['재즈 힙합', '레이지 · 트랩'];
+U.soundRole = s => {
+  const tags = ((s && s.tags) || []).slice(s && s.user ? 1 : 0);
+  return tags.find(t => !GENRE_GROUPS.includes(t)) || tags[0] || '';
+};
 /* 묶음(첫 태그) 순서. 브라우저와 소리 고르기 창이 이 순서로 보여 준다 */
-const GROUP_ORDER = ['내 사운드', '피아노', '키', '기타', '일렉 기타', '밴드', '베이스', '현악', '관악', '말렛·벨', '오르간', '콰이어', '월드', '재즈 힙합', '패드', '코드', '플럭', '리드', '보컬', 'FX', '샘플러'];
+const GROUP_ORDER = ['내 사운드', '피아노', '키', '기타', '일렉 기타', '밴드', '베이스', '현악', '관악', '말렛·벨', '오르간', '콰이어', '월드', '재즈 힙합', '레이지 · 트랩', '패드', '코드', '플럭', '리드', '보컬', 'FX', '샘플러'];
 U.soundGroups = list => {
   const groups = new Map();
   for (const s of list || SOUNDS) {
