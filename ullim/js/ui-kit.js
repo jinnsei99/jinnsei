@@ -18,6 +18,8 @@ const TYPES = {
   hat: ['ahat', 'chh'], ohat: ['aohat', 'ohh'], pedal: ['apedal'],
   tom: ['atom', 'tom'], crash: ['acrash', 'crash'], ride: ['aride', 'ride'], bell: ['abell']
 };
+// 녹음 탐 조각의 높이 (반음, 합성 킷의 로우 -5 · 미드 0 · 하이 +5와 같은 눈금)
+const TOM_REC = { tom_hi: 5, tom_mid: 0, tom_low: -5, tom_floor: -10 };
 function mapKit(d, empty) {
   const pads = (d.data && d.data.pads) || [];
   const used = new Set();
@@ -27,10 +29,12 @@ function mapKit(d, empty) {
     return -1;
   };
   const m = { kick: find(TYPES.kick), snare: find(TYPES.snare), side: find(TYPES.side), hat: find(TYPES.hat), ohat: find(TYPES.ohat), pedal: find(TYPES.pedal) };
-  // 탐은 높은 것부터: 탐 1 · 탐 2 · 플로어 탐 (둘이면 탐 1과 플로어)
+  // 탐은 높은 것부터: 탐 1 · 탐 2 · 플로어 탐 (둘이면 탐 1과 플로어).
+  // 높이는 Tune으로, 녹음 탐은 녹음한 북의 높이(하이 · 미드 · 로우 · 플로어)에 Tune을 더해서. 같으면 뒤쪽 패드(GM처럼 높은 음)가 높은 탐
   const toms = [];
   for (let i = 0; i < pads.length; i++) if (ok(i) && TYPES.tom.includes(pads[i].type)) toms.push(i);
-  toms.sort((a, b) => (pads[b].tune || 0) - (pads[a].tune || 0));
+  const pitch = p => (p.tune || 0) + (p.src === 'rec' && p.rec ? (TOM_REC[p.rec.split(':')[1]] || 0) : 0);
+  toms.sort((a, b) => pitch(pads[b]) - pitch(pads[a]) || b - a);
   const take = toms.slice(0, 3);
   take.forEach(i => used.add(i));
   m.tom1 = take.length ? take[0] : -1;
