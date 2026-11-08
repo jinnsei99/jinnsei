@@ -248,6 +248,17 @@ SOUNDS.push(
   { name: '브라스 스탭', kind: 'polysynth', tags: [RT, '코드'], p: { w1: 'sawtooth', w2: 'sawtooth', d2: 6, l1: 0.8, l2: 0.7, uni: 3, uspr: 14, uwide: 0.6, ft: 'lp24', cut: 600, res: 0.2, fenv: 0.55, fa: 0.02, fd: 0.25, fs: 0.25, fr: 0.2, a: 0.01, d: 0.3, s: 0.2, r: 0.15, vel: 0.5, vol: -10 },
     fx: [FX('sat', { type: 'soft', drive: 6, out: -5, mix: 0.6 }), FX('reverb', { mix: 0.2 })] }
 );
+/* 녹음 샘플로 치는 관악기 (VSCO-2 CE), 그리고 랩 비트에 자주 쓰는 오케스트라 소리 (뒤에 붙여서 앞 번호는 그대로) */
+SOUNDS.push(
+  EN('호른', ['관악'], { inst: 'horn' }, [ROOM(0.25, 2.6)]),
+  EN('트롬본', ['관악'], { inst: 'trombone' }, [ROOM(0.2, 2.2)]),
+  EN('튜바', ['관악'], { inst: 'tuba' }, [ROOM(0.18, 2)]),
+  EN('오보에', ['관악'], { inst: 'oboe' }, [ROOM(0.25, 2.5)]),
+  EN('바순', ['관악'], { inst: 'bassoon' }, [ROOM(0.22, 2.2)]),
+  EN('트랩 플루트', [RT, '관악'], { inst: 'flute', bright: 0.55 }, [FX('delay', { mode: 'stereo', divl: '1/8D', divr: '1/4', mix: 0.18 }), FX('reverb', { mix: 0.3, decay: 2.6 })]),
+  EN('다크 스트링', [RT, '현악'], { inst: 'strings', bright: 0.4, atk: 1.6, rel: 1.6 }, [DARK(7000, 120), FX('reverb', { mix: 0.38, decay: 3.4 })]),
+  AC('오케스트라 피치카토', [RT, '현악'], { inst: 'pizz' }, [FX('reverb', { mix: 0.3, decay: 2.4 })])
+);
 U.SOUNDS = SOUNDS;
 U.sound = name => SOUNDS.find(x => x.name === name) || SOUNDS[0];
 /* 소리의 쓰임(피아노 · 베이스 · 리드 · 패드 …): 미리 듣기 악절(베이스 줄 · 멜로디 · 화음)을 고를 때 쓴다.
