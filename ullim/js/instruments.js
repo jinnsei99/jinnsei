@@ -386,6 +386,94 @@ class FMSynth extends Instrument {
 }
 
 /* ================= Drum Machine ================= */
+/* ================= 녹음 드럼 =================
+   U.DRUM_SETS[키트] = { credit, pieces: [조각…], gains: [조각마다 dB], files: [[조각, 세기 칸, 라운드 로빈, 시작, 길이]] } (js/samples.js).
+   패드가 src 'rec' · rec '키트:조각'이면 녹음으로 친다: 세기에 맞는 칸을 고르고, 같은 칸 안에서는 칠 때마다 다른 녹음(라운드 로빈).
+   받기 전이나 받지 못하면(파일로 연 index.html 등) 패드의 type(합성 드럼)으로 친다 */
+const DSETS = new Map();
+function drumSet(name) {
+  const S = U.DRUM_SETS && U.DRUM_SETS[name];
+  if (!S || !U.acousticDSP || !U.acousticDSP.fetchPack) return null;
+  let e = DSETS.get(name);
+  if (e) return e;
+  e = { ok: false, failed: false, name, pieces: {} };
+  DSETS.set(name, e);
+  e.promise = U.acousticDSP.fetchPack(name, S.files, 44100).then(list => {
+    S.pieces.forEach((pc, pi) => {
+      const mine = list.filter(x => x.row[0] === pi);
+      if (!mine.length) return;
+      const nl = Math.max(...mine.map(x => x.row[1])) + 1;
+      const layers = Array.from({ length: nl }, (_, l) => mine.filter(x => x.row[1] === l).sort((a, b) => a.row[2] - b.row[2]).map(x => x.buf));
+      // 세기 칸마다 크기를 '보통' 칸(세기 100이 고르는 칸)에 맞춘다: 크기는 합성 드럼과 같은 세기 곡선을 따르고, 칸은 소리 색만 바꾼다
+      const med = layers.map(list => { const v = list.map(punch).sort((a, b) => a - b); return v[Math.floor(v.length / 2)] || 1e-9; });
+      const ref = med[recLayer(100, nl)];
+      e.pieces[pc] = { layers, gain: dbToGain((S.gains && S.gains[pi]) || 0), norm: med.map(m => Math.sqrt(ref / m)) };
+    });
+    e.ok = true;
+    U.emit('samples', { name, ok: true });
+  }).catch(err => { e.failed = true; console.warn('[울림] ' + name + ' 드럼 녹음을 받지 못해 합성 드럼으로 쳐요.', err); U.emit('samples', { name, ok: false }); });
+  return e;
+}
+/* 세기 → 칸 (여리게 0~47 · 보통 48~107 · 세게 108~) */
+function recLayer(vel, nl) {
+  const th = nl >= 3 ? [0, 48, 108] : nl === 2 ? [0, 72] : [0];
+  let l = 0;
+  for (let k = 0; k < th.length && k < nl; k++) if (vel >= th[k]) l = k;
+  return l;
+}
+/* 소리의 '때리는 크기': 100ms 창 평균 제곱의 최댓값 */
+function punch(buf) {
+  const x = buf.getChannelData(0), W = Math.max(1, Math.round(0.1 * buf.sampleRate)), H = Math.max(1, W >> 3);
+  let best = 0;
+  for (let s = 0; s < x.length; s += H) { let e = 0; for (let i = s, z = Math.min(x.length, s + W); i < z; i++) e += x[i] * x[i]; if (e > best) best = e; }
+  return best / W;
+}
+/* 합성 어쿠스틱 드럼 종류 → 녹음 조각 (예전 프로젝트를 열 때 저절로 바꾼다). 탐은 이름과 음높이로 크기를 고른다 */
+const AUTO_REC = { akick: 'drk_rock:kick', asnare: 'drk_rock:snare', arim: 'drk_rock:rim', astick: 'drk_rock:stick', ahat: 'drk_rock:hat', apedal: 'drk_rock:pedal',
+  aohat: 'drk_rock:open', acrash: 'drk_rock:crash', aride: 'drk_rock:ride', abell: 'drk_rock:bell', brush: 'drk_brush:snare', swish: 'drk_brush:stir' };
+function autoRec(pd) {
+  if (!pd) return null;
+  const n = pd.name || '', tn = pd.tune || 0;
+  if (pd.type === 'atom') return /floor/i.test(n) || tn <= -4 ? 'drk_rock:tom_floor' : /low/i.test(n) || tn < 0 ? 'drk_rock:tom_low' : /mid/i.test(n) || tn < 3 ? 'drk_rock:tom_mid' : 'drk_rock:tom_hi';
+  if (pd.type === 'acrash' && /2/.test(n)) return 'drk_rock:crash2';
+  return AUTO_REC[pd.type] || null;
+}
+/* 녹음 조각마다 받기 전에 대신 칠 합성 드럼 종류 */
+const REC_FALLBACK = { kick: 'akick', snare: 'asnare', rim: 'arim', stick: 'astick', tom_hi: 'atom', tom_mid: 'atom', tom_low: 'atom', tom_floor: 'atom',
+  hat: 'ahat', pedal: 'apedal', open: 'aohat', crash: 'acrash', crash2: 'acrash', ride: 'aride', bell: 'abell', stir: 'swish' };
+const REC_KITS = { drk_rock: '록 키트', drk_brush: '브러시', drk_70s: '70년대 키트', drk_lofi: '로파이 키트' };
+const REC_PIECES = { kick: '킥', snare: '스네어', rim: '림샷', stick: '사이드 스틱', tom_hi: '하이 탐', tom_mid: '미드 탐', tom_low: '로우 탐', tom_floor: '플로어 탐',
+  hat: '닫힌 하이햇', pedal: '페달 하이햇', open: '열린 하이햇', crash: '크래시', crash2: '크래시 2', ride: '라이드', bell: '라이드 벨', stir: '브러시 스윕' };
+U.drumRec = {
+  set: drumSet,
+  auto: autoRec,
+  has: (kit, piece) => !!(U.DRUM_SETS && U.DRUM_SETS[kit] && U.DRUM_SETS[kit].pieces.includes(piece)),
+  fallback: rec => { const [k, pc] = String(rec || '').split(':'); return k === 'drk_brush' && pc === 'snare' ? 'brush' : REC_FALLBACK[pc] || 'akick'; },
+  label: rec => { const [k, pc] = String(rec || '').split(':'); return (REC_KITS[k] || k) + ' · ' + (REC_PIECES[pc] || pc); },
+  /* 패드 화면의 고르기 목록 [값, 이름] */
+  options: () => Object.keys(U.DRUM_SETS || {}).flatMap(k => U.DRUM_SETS[k].pieces.map(pc => [k + ':' + pc, (REC_KITS[k] || k) + ' · ' + (REC_PIECES[pc] || pc)])),
+  /* 예전 프로젝트: 합성 어쿠스틱 드럼 · 브러시 패드를 녹음으로 (한 번만, data.rec 표시).
+     kit: 그 장치를 만든 킷(이름이 남아 있으면). 같은 자리 · 같은 패드면 그 킷의 녹음 배치를 그대로 쓴다 */
+  upgrade(data, kit) {
+    if (!data || data.rec || !Array.isArray(data.pads)) return data;
+    data.pads.forEach((pd, i) => {
+      if (!pd || pd.src !== 'synth') return;
+      const kp = kit && kit.pads && kit.pads[i];
+      if (kp && kp.src === 'rec' && kp.type === pd.type && kp.name === pd.name) {
+        Object.assign(pd, { src: 'rec', rec: kp.rec, tune: kp.tune, decay: kp.decay, tone: kp.tone });
+        return;
+      }
+      const r = autoRec(pd);
+      if (!r) return;
+      pd.src = 'rec'; pd.rec = r;
+      if (pd.type === 'atom') pd.tune = 0;   // 탐 크기는 녹음 조각이 정한다
+    });
+    data.rec = 1;
+    return data;
+  },
+  loaded: name => !!(DSETS.get(name) && DSETS.get(name).ok)
+};
+
 class Drums extends Instrument {
   constructor(eng, dev) {
     super(eng, dev);
@@ -409,9 +497,16 @@ class Drums extends Instrument {
       const lvl = pd.mute ? 0 : dbToGain(pd.level || 0), pan = pd.pan || 0;
       if (fresh) { pn.gain.gain.value = lvl; pn.pan.pan.value = pan; }
       else { const t = this.ctx.currentTime; smooth(pn.gain.gain, lvl, t); smooth(pn.pan.pan, pan, t); }
-      const key = pd.src === 'sample' ? 'S:' + (pd.sample || '') : ['D', pd.type, pd.tune, pd.decay, pd.tone].join(':');
+      const rec = pd.src === 'rec' && pd.rec ? pd.rec : null;
+      const key = pd.src === 'sample' ? 'S:' + (pd.sample || '') : [rec ? 'R:' + rec : 'D', pd.type, pd.tune, pd.decay, pd.tone].join(':');
       if (key !== pn.key) {
         pn.key = key;
+        // 녹음 드럼: 키트를 받는 동안에는 아래의 합성 드럼(type)으로 친다
+        pn.rec = null; pn.rr = -1;
+        if (rec) {
+          const [kit, piece] = rec.split(':'), e = drumSet(kit);
+          if (e) { pn.rec = { e, piece }; jobs.push(e.promise); }
+        }
         const job = pd.src === 'sample'
           ? (pd.sample ? U.media.get(pd.sample, this.ctx.sampleRate) : Promise.resolve(null))
           : U.renderDrum(pd.type, { tune: pd.tune || 0, decay: pd.decay != null ? pd.decay : 0.5, tone: pd.tone != null ? pd.tone : 0.5 }, this.ctx.sampleRate);
@@ -426,10 +521,12 @@ class Drums extends Instrument {
     if (i < 0 || i >= 16) return null;
     const pd = this.dev.data && this.dev.data.pads[i];
     const pn = this.pads[i];
-    if (!pd || !pn || !pn.buffer || pd.mute) return null;
+    const pc = pn && pn.rec && pn.rec.e.ok ? pn.rec.e.pieces[pn.rec.piece] : null;
+    if (!pd || !pn || (!pn.buffer && !pc) || pd.mute) return null;
     if (pd.choke) {
       for (const vo of this.voices) if (vo.choke === pd.choke && vo.end > t && vo.t0 < t) this.kill(vo, t);
     }
+    if (pc) return this.recVoice(pd, pn, pc, i, vel, t);
     const ctx = this.ctx;
     const src = ctx.createBufferSource();
     src.buffer = pn.buffer;
@@ -449,6 +546,42 @@ class Drums extends Instrument {
     src.start(t);
     stopAt(src, end);
     return { amp, srcs: [src], nodes: [src, amp], choke: pd.choke, end, pad: i };
+  }
+  /* 녹음 드럼 한 번: 세기 칸(여리게 · 보통 · 세게)을 고르고 칸 안에서는 칠 때마다 다음 녹음. 칸은 소리 색을, 세기 곡선은 크기를 정한다.
+     Tune은 반음, Decay 0.5면 녹음 그대로(낮추면 짧게), Tone 0.5면 그대로(낮추면 어둡게, 올리면 밝게) */
+  recVoice(pd, pn, pc, i, vel, t) {
+    const ctx = this.ctx, nl = pc.layers.length, l = recLayer(vel, nl);
+    const list = pc.layers[l];
+    pn.rr = (pn.rr + 1) % list.length;
+    const buf = list[pn.rr];
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const rate = Math.pow(2, (pd.tune || 0) / 12);
+    src.playbackRate.value = rate;
+    const amp = gainNode(ctx, 0);
+    // 크기는 합성 드럼과 같은 세기 곡선 (세기 100에서 맞춰 둔 크기 기준)
+    const g = pc.gain * pc.norm[l] * velGain(vel, 0.75) / velGain(100, 0.75);
+    amp.gain.setValueAtTime(g, t);
+    const nodes = [src, amp];
+    let head = src;
+    const tone = pd.tone == null ? 0.5 : pd.tone;
+    if (tone < 0.47 || tone > 0.53) {
+      const f = ctx.createBiquadFilter();
+      if (tone < 0.5) { f.type = 'lowpass'; f.frequency.value = clamp(20000 * Math.pow(2, -(0.5 - tone) * 10), 400, 20000); f.Q.value = 0.6; }
+      else { f.type = 'highshelf'; f.frequency.value = 4000; f.gain.value = (tone - 0.5) * 20; }
+      head.connect(f); head = f; nodes.push(f);
+    }
+    head.connect(amp); amp.connect(pn.gain);
+    let end = t + buf.duration / rate + 0.01;
+    const dec = pd.decay == null ? 0.5 : pd.decay;
+    if (dec < 0.47) {
+      const T = buf.duration / rate * (0.1 + 0.9 * Math.pow(dec / 0.5, 1.5));
+      amp.gain.setTargetAtTime(0, t + T * 0.25, T / 4);
+      end = Math.min(end, t + T * 1.5);
+    }
+    src.start(t);
+    stopAt(src, end);
+    return { amp, srcs: [src], nodes, choke: pd.choke, end, pad: i, rec: true, layer: l, take: pn.rr };
   }
   release() { /* 드럼은 끝까지 울린다 */ }
   param(id) { if (id === 'vol' && this.on) smooth(this.out.gain, this.outLevel(), this.ctx.currentTime); }

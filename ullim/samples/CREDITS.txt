@@ -67,7 +67,23 @@ wurli.mp3         우리처 — Wurlitzer EP200, Greg Sullivan (http://www.sulli
   라이선스: Creative Commons Attribution 3.0 Unported (CC BY 3.0)
   https://creativecommons.org/licenses/by/3.0/
 
+--- 녹음 드럼 키트 (키트 하나 = <키트>.mp3 한 파일) ---
+조각(킥 · 스네어 · 탐 · 하이햇 · 심벌)마다 여리게 · 보통 · 세게 친 녹음 3칸 × 서로 다른 녹음 2~3개(라운드 로빈)를 골라,
+여러 마이크(클로즈 · 오버헤드 …)를 섞어 모노 한 소리로 만들었어요. 목록은 js/samples.js의 U.DRUM_SETS.
+
+drk_rock.mp3   록 키트 (24″ 킥, 14″ 스네어, 탐 4개, 14″ 하이햇, 크래시 2개, 22″ 라이드)
+drk_brush.mp3  같은 키트를 브러시로 (브러시 스네어 · 스윕 · 탐 · 하이햇 · 라이드 · 크래시)
+  출처: Big Rusty Drums — Karoryfer Samples (1980년대 폴란드의 큰 드럼 키트)
+  https://github.com/sfzinstruments/karoryfer.big-rusty-drums
+  라이선스: CC0 1.0 Universal
+
+drk_70s.mp3    1970년대 키트 (킥 · 스네어 · 탐 3개 · 하이햇, 앞 · 위 · 옆 마이크)
+drk_lofi.mp3   같은 키트를 '레트로' 마이크로 (낮은 충실도)
+  출처: Gogodze Phu Vol II — Karoryfer Samples (김정미 'Now'(1973)의 드럼 소리를 닮게 녹음한 키트)
+  https://github.com/sfzinstruments/karoryfer.gogodze-phu-vol-ii
+  라이선스: CC0 1.0 Universal
+
 CC BY 출처(그랜드 피아노 · 테너 색소폰 · 우리처)는 그 소리를 쓴 곡이나 샘플을 공개할 때 출처를 밝혀 주세요.
 샘플을 받기 전이나 받지 못하면(파일로 연 index.html 등) 같은 악기를 계산한 소리로 쳐요.
 
-이 밖의 소리(신스, 나머지 기타 · 베이스, 콰이어, 재즈 · 록 오르간, 드럼, 효과음, 내장 루프)는 모두 앱 안에서 Web Audio로 계산해서 만들어요.
+이 밖의 소리(신스, 나머지 기타 · 베이스, 콰이어, 재즈 · 록 오르간, 전자 드럼(909 · 808 · 트랩 등), 효과음, 내장 루프)는 모두 앱 안에서 Web Audio로 계산해서 만들어요.

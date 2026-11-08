@@ -95,6 +95,29 @@ KITS.push(
     crash: { tune: -2, decay: 0.45, tone: 0.25 }, ride: { tune: -1, decay: 0.5, tone: 0.3 }, conga: { tone: 0.35 }
   }) }
 );
+/* 녹음 드럼: 아래 킷은 녹음한 드럼으로 친다 (받기 전에는 패드의 합성 드럼으로).
+   map: 패드 자리 → '녹음 키트:조각' (또는 패드를 받아 고르는 함수), o: 녹음에 쓸 tune · decay · tone (0.5면 녹음 그대로) */
+function recKit(id, map, o) {
+  const k = KITS.find(x => x.id === id);
+  if (!k || !U.drumRec) return;
+  k.pads.forEach((pd, i) => {
+    let r = typeof map === 'function' ? map(pd, i) : map[i];
+    if (!r) return;
+    const [kit, piece] = r.split(':');
+    if (!U.drumRec.has(kit, piece)) return;
+    const x = Object.assign({ tune: 0, decay: 0.5, tone: 0.5 }, o, (o && o.pad && o.pad[i]) || {});
+    Object.assign(pd, { src: 'rec', rec: r, tune: x.tune, decay: x.decay, tone: x.tone });
+  });
+}
+// 1970년대 키트(Gogodze Phu)에 있는 조각은 그것으로, 없는 심벌은 록 키트로
+const seventies = (pd) => { const r = U.drumRec && U.drumRec.auto(pd); if (!r) return null; const pc = r.split(':')[1]; return pc === 'tom_floor' ? 'drk_70s:tom_low' : U.drumRec.has('drk_70s', pc) ? 'drk_70s:' + pc : r; };
+recKit('krock', pd => U.drumRec && U.drumRec.auto(pd));
+recKit('kpop', seventies, { tone: 0.58, pad: { 5: { tune: -3 } } });
+recKit('kvintage', seventies, { tone: 0.4, decay: 0.45, pad: { 5: { tune: -3 } } });
+// 패드 자리: 0 킥 · 1 림 · 2 스네어 · 3 클랩 · 4 스냅 · 5 로우 탐 · 6 닫힌 햇 · 7 미드 탐 · 8 셰이커 · 9 하이 탐 · 10 열린 햇 · 11 카우벨 · 12 콩가 · 13 크래시 · 14 서브 · 15 라이드
+recKit('kjazz', { 0: 'drk_70s:kick', 1: 'drk_70s:stick', 2: 'drk_70s:snare', 3: 'drk_brush:snare', 5: 'drk_brush:tom_low', 6: 'drk_brush:hat', 7: 'drk_brush:tom_hi', 9: 'drk_70s:tom_hi', 10: 'drk_brush:open', 11: 'drk_brush:stir', 13: 'drk_brush:crash', 15: 'drk_brush:ride' }, { tone: 0.45 });
+recKit('klofi', { 0: 'drk_lofi:kick', 1: 'drk_lofi:stick', 2: 'drk_lofi:snare', 5: 'drk_lofi:tom_low', 6: 'drk_lofi:hat', 7: 'drk_lofi:tom_low', 9: 'drk_lofi:tom_hi', 10: 'drk_lofi:open', 13: 'drk_rock:crash', 15: 'drk_rock:ride' },
+  { pad: { 7: { tune: 3 }, 13: { tone: 0.3, decay: 0.4 }, 15: { tone: 0.3, decay: 0.4 } } });
 U.KITS = KITS;
 U.DEFAULT_KIT = KITS[0].pads;
 U.kitById = id => KITS.find(k => k.id === id) || KITS[0];
@@ -564,7 +587,7 @@ function soundDevices(s) {
   return devs;
 }
 function kitDevice(k) {
-  const d = U.makeDevice('drums', { data: { pads: U.clone(k.pads), sel: 0 } });
+  const d = U.makeDevice('drums', { data: { pads: U.clone(k.pads), sel: 0, rec: 1 } });
   d.preset = k.name;
   return d;
 }

@@ -128,7 +128,9 @@ function normalize(pr) {
       dev.p = Object.assign(U.defaults(dev.kind), dev.p || {});
       if (!dev.id) dev.id = U.uid('d');
       if (dev.on == null) dev.on = true;
-      if (dev.kind === 'drums' && (!dev.data || !Array.isArray(dev.data.pads))) dev.data = { pads: U.clone(U.DEFAULT_KIT), sel: 0 };
+      if (dev.kind === 'drums' && (!dev.data || !Array.isArray(dev.data.pads))) dev.data = { pads: U.clone(U.DEFAULT_KIT), sel: 0, rec: 1 };
+      // 예전 프로젝트의 합성 어쿠스틱 드럼 · 브러시 패드를 녹음 드럼으로 (킷 이름이 남아 있으면 그 킷의 녹음 배치대로, 한 번만)
+      if (dev.kind === 'drums' && U.drumRec && !dev.data.rec) U.drumRec.upgrade(dev.data, U.KITS && U.KITS.find(k => k.name === dev.preset));
       if (dev.kind === 'looppad') dev.data = U.fixLoopPad(dev.data);
     }
     t.devices = t.devices.filter(dev => U.DEV[dev.kind]);

@@ -671,9 +671,16 @@ function padsVisual(t, d) {
     name.addEventListener('keydown', e => e.stopPropagation());
     name.addEventListener('change', () => A.setDeviceData(d.id, data => { data.pads[i].name = name.value.trim() || pd.name; }, '패드 이름'));
     ed.append(h('div', { class: 'pad-ed-head' }, h('span', { class: 'pe-k', text: U.noteName(36 + i) }), name));
-    const src = U.select([['synth', '합성 드럼'], ['sample', '샘플']], pd.src, v => A.setDeviceData(d.id, data => { data.pads[i].src = v; }, '패드 소리'), { cls: 'sm' });
+    const recOk = !!(U.drumRec && U.drumRec.options().length);
+    const src = U.select([['synth', '합성 드럼']].concat(recOk || pd.src === 'rec' ? [['rec', '녹음 드럼']] : [], [['sample', '샘플']]), pd.src, v => A.setDeviceData(d.id, data => {
+      const p = data.pads[i];
+      p.src = v;
+      // 녹음 드럼으로 바꾸면 지금 종류에 맞는 녹음 조각을 고른다 (없으면 록 키트 킥)
+      if (v === 'rec' && !p.rec) { p.rec = U.drumRec.auto(p) || 'drk_rock:kick'; if (!U.drumRec.auto(p)) p.type = U.drumRec.fallback(p.rec); }
+    }, '패드 소리'), { cls: 'sm' });
     const row = h('div', { class: 'pe-row' }, src);
     if (pd.src === 'synth') row.append(U.select(U.PAD_TYPES.map(([v, l]) => [v, l]), pd.type, v => A.setDeviceData(d.id, data => { data.pads[i].type = v; data.pads[i].name = U.PAD_TYPES.find(x => x[0] === v)[1]; }, '패드 종류'), { cls: 'sm' }));
+    else if (pd.src === 'rec') row.append(U.select(U.drumRec.options(), pd.rec, v => A.setDeviceData(d.id, data => { data.pads[i].rec = v; data.pads[i].type = U.drumRec.fallback(v); }, '녹음 드럼 조각'), { cls: 'sm', info: ['녹음 드럼', '실제 드럼을 녹음한 소리예요. 세게 · 보통 · 여리게 친 녹음이 따로 있고, 같은 세기로 여러 번 쳐도 칠 때마다 조금씩 다른 녹음이 나와요.'] }));
     else {
       row.append(h('span', { class: 'pe-sample', text: pd.sample ? (U.media.info(pd.sample).name || pd.sample) : '샘플을 끌어다 놓으세요' }));
       if (pd.sample) row.append(btn({ text: '편집', cls: 'sm', title: '이 패드 샘플 파형 편집', onclick: () => U.audioEditor.open({ ref: pd.sample, title: pd.name, name: U.media.info(pd.sample).name, save: nref => A.setDeviceData(d.id, data => { data.pads[i].sample = nref; }, '패드 샘플 편집') }) }));
