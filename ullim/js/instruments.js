@@ -458,9 +458,11 @@ U.drumRec = {
     if (!data || data.rec || !Array.isArray(data.pads)) return data;
     data.pads.forEach((pd, i) => {
       if (!pd || pd.src !== 'synth') return;
-      const kp = kit && kit.pads && kit.pads[i];
+      const kp = kit && kit.pads && kit.pads[i], sp = kit && kit.synthPads && kit.synthPads[i];
       if (kp && kp.src === 'rec' && kp.type === pd.type && kp.name === pd.name) {
-        Object.assign(pd, { src: 'rec', rec: kp.rec, tune: kp.tune, decay: kp.decay, tone: kp.tone });
+        // 그 킷의 녹음 배치대로. 크기는 사용자가 바꾼 만큼은 그대로 두고 킷이 맞춘 차이만 더한다
+        const dl = sp ? (kp.level || 0) - (sp.level || 0) : 0;
+        Object.assign(pd, { src: 'rec', rec: kp.rec, tune: kp.tune, decay: kp.decay, tone: kp.tone, level: Math.max(-36, Math.min(6, (pd.level || 0) + dl)) });
         return;
       }
       const r = autoRec(pd);

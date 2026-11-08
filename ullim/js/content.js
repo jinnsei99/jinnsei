@@ -100,24 +100,30 @@ KITS.push(
 function recKit(id, map, o) {
   const k = KITS.find(x => x.id === id);
   if (!k || !U.drumRec) return;
+  k.synthPads = U.clone(k.pads);   // 바꾸기 전의 합성 킷 (크기 맞춤과 예전 프로젝트 바꾸기에 쓴다)
   k.pads.forEach((pd, i) => {
     let r = typeof map === 'function' ? map(pd, i) : map[i];
     if (!r) return;
     const [kit, piece] = r.split(':');
     if (!U.drumRec.has(kit, piece)) return;
     const x = Object.assign({ tune: 0, decay: 0.5, tone: 0.5 }, o, (o && o.pad && o.pad[i]) || {});
-    Object.assign(pd, { src: 'rec', rec: r, tune: x.tune, decay: x.decay, tone: x.tone });
+    // lv: 이 킷의 예전 합성 패드와 같은 크기가 되도록 더하는 dB (cal_kits로 잰 값)
+    const lv = (o && o.lv && o.lv[i]) || 0;
+    Object.assign(pd, { src: 'rec', rec: r, tune: x.tune, decay: x.decay, tone: x.tone, level: clampLv((pd.level || 0) + lv) });
   });
 }
+const clampLv = v => Math.max(-36, Math.min(6, Math.round(v * 10) / 10));
 // 1970년대 키트(Gogodze Phu)에 있는 조각은 그것으로, 없는 심벌은 록 키트로
 const seventies = (pd) => { const r = U.drumRec && U.drumRec.auto(pd); if (!r) return null; const pc = r.split(':')[1]; return pc === 'tom_floor' ? 'drk_70s:tom_low' : U.drumRec.has('drk_70s', pc) ? 'drk_70s:' + pc : r; };
-recKit('krock', pd => U.drumRec && U.drumRec.auto(pd));
-recKit('kpop', seventies, { tone: 0.58, pad: { 5: { tune: -3 } } });
-recKit('kvintage', seventies, { tone: 0.4, decay: 0.45, pad: { 5: { tune: -3 } } });
+// lv: 패드마다 더하는 dB (cal_kits로 잼). 세기 100에서 예전 합성 패드와 같은 '때리는 크기'(가장 센 100 ms, 테이크 평균)로,
+//     단 봉우리는 예전 패드보다 3 dB 넘게 높지 않게, 세기 127의 가장 뾰족한 테이크도 빈 프로젝트에서 -1.5 dBFS 아래로
+recKit('krock', pd => U.drumRec && U.drumRec.auto(pd), { lv: { 0: -0.4, 2: 0.2, 4: -3.4, 5: -0.1, 6: 0.1, 7: 0.1, 9: -0.6, 10: 0.1, 11: -1.7, 13: 0.2, 15: -2.2 } });
+recKit('kpop', seventies, { tone: 0.58, pad: { 5: { tune: -3 } }, lv: { 0: -1.1, 1: -0.8, 2: -1, 4: -1.2, 5: -1.3, 6: -1.6, 7: -0.9, 8: -1, 9: -2.3, 10: -0.7, 11: -2.6, 13: -0.4, 14: -0.5, 15: -3.7 } });
+recKit('kvintage', seventies, { tone: 0.4, decay: 0.45, pad: { 5: { tune: -3 } }, lv: { 0: -1.5, 1: -1.1, 2: -1.4, 4: -1.3, 5: -1.2, 6: -0.8, 7: -0.9, 8: -0.1, 9: -3.1, 10: -1.2, 11: -2.7, 13: -0.2, 14: -0.1, 15: -3.1 } });
 // 패드 자리: 0 킥 · 1 림 · 2 스네어 · 3 클랩 · 4 스냅 · 5 로우 탐 · 6 닫힌 햇 · 7 미드 탐 · 8 셰이커 · 9 하이 탐 · 10 열린 햇 · 11 카우벨 · 12 콩가 · 13 크래시 · 14 서브 · 15 라이드
-recKit('kjazz', { 0: 'drk_70s:kick', 1: 'drk_70s:stick', 2: 'drk_70s:snare', 3: 'drk_brush:snare', 5: 'drk_brush:tom_low', 6: 'drk_brush:hat', 7: 'drk_brush:tom_hi', 9: 'drk_70s:tom_hi', 10: 'drk_brush:open', 11: 'drk_brush:stir', 13: 'drk_brush:crash', 15: 'drk_brush:ride' }, { tone: 0.45 });
+recKit('kjazz', { 0: 'drk_70s:kick', 1: 'drk_70s:stick', 2: 'drk_70s:snare', 3: 'drk_brush:snare', 5: 'drk_brush:tom_low', 6: 'drk_brush:hat', 7: 'drk_brush:tom_hi', 9: 'drk_70s:tom_hi', 10: 'drk_brush:open', 11: 'drk_brush:stir', 13: 'drk_brush:crash', 15: 'drk_brush:ride' }, { tone: 0.45, lv: { 0: 1.6, 1: 3.7, 2: -3.3, 3: -0.2, 5: -0.7, 6: -6.2, 7: -0.9, 9: -2.1, 10: -4.6, 11: -0.5, 13: -2.2, 15: 1.2 } });
 recKit('klofi', { 0: 'drk_lofi:kick', 1: 'drk_lofi:stick', 2: 'drk_lofi:snare', 5: 'drk_lofi:tom_low', 6: 'drk_lofi:hat', 7: 'drk_lofi:tom_low', 9: 'drk_lofi:tom_hi', 10: 'drk_lofi:open', 13: 'drk_rock:crash', 15: 'drk_rock:ride' },
-  { pad: { 7: { tune: 3 }, 13: { tone: 0.3, decay: 0.4 }, 15: { tone: 0.3, decay: 0.4 } } });
+  { pad: { 7: { tune: 3 }, 13: { tone: 0.3, decay: 0.4 }, 15: { tone: 0.3, decay: 0.4 } }, lv: { 0: 1.8, 1: 4, 2: -3.2, 5: -0.8, 6: -4.3, 7: -0.6, 9: -1.8, 10: -3.6, 13: -0.8, 15: -2.9 } });
 U.KITS = KITS;
 U.DEFAULT_KIT = KITS[0].pads;
 U.kitById = id => KITS.find(k => k.id === id) || KITS[0];
