@@ -267,19 +267,19 @@ function* piano(c, f, vel, tone, dmul, body, sr, rnd, p) {
 
 /* ================= 어쿠스틱 악기 종류 =================
    damp: 건반을 떼면 멈추는 악기(피아노·기타)인지. rel: 그때 멈추는 시간. spread: 음높이에 따라 좌우로 퍼지는 정도.
-   demo: 고를 때 들려줄 음. range: 미리 계산해 둘 음역 */
+   demo: 고를 때 들려줄 음. range: 미리 계산해 둘 음역. slvl: 녹음 샘플로 칠 때만 더하는 크기(dB) */
 const GTR_BODY = [[98, 2.2, 0.55], [204, 3.5, 0.45], [410, 4, 0.25], [2600, 1.5, 0.12]];
 const AC = {
   grand:    { fn: piano, t60: 7.5, max: 6, B: 0.9e-4, partials: 22, strike: 1 / 8.3, hdecay: 0.06, beat: 3, detune: 0.7, bright: 1, thump: 1, body: [[110, 1.4, 0.18], [700, 1.2, 0.08]], damp: true, rel: 0.18, spread: 0.45, demo: 60, range: [48, 72] },
   upright:  { fn: piano, t60: 4.8, max: 5, B: 1.2e-4, partials: 18, strike: 1 / 7.5, hdecay: 0.09, beat: 3, detune: 2.4, bright: 0.72, thump: 1.4, body: [[160, 1.5, 0.3], [520, 1.6, 0.18]], damp: true, rel: 0.14, spread: 0.3, demo: 60, range: [48, 72] },
   nylon:    { fn: pluck, t60: 2.6, ts: 0.45, max: 5, S: 0.42, Sv: 0.25, exc: 0.62, pick: 0.2, body: GTR_BODY, damp: true, rel: 0.12, spread: 0.15, demo: 55, range: [40, 69] },
   steel:    { fn: pluck, t60: 3.2, ts: 0.45, max: 6, S: 0.28, Sv: 0.25, exc: 0.38, pick: 0.13, body: GTR_BODY, damp: true, rel: 0.12, spread: 0.15, demo: 55, range: [40, 69] },
-  electric: { fn: pluck, t60: 4.2, ts: 0.4, max: 4, S: 0.24, Sv: 0.25, exc: 0.42, pick: 0.15, tri: 0.9, diff: true, pickup: 0.23, pu: [3200, 1.4], damp: true, rel: 0.1, spread: 0, demo: 57, range: [40, 72] },
+  electric: { slvl: 5.5, fn: pluck, t60: 4.2, ts: 0.4, max: 4, S: 0.24, Sv: 0.25, exc: 0.42, pick: 0.15, tri: 0.9, diff: true, pickup: 0.23, pu: [3200, 1.4], damp: true, rel: 0.1, spread: 0, demo: 57, range: [40, 72] },
   mute:     { fn: pluck, t60: 0.22, ts: 0.25, max: 1, S: 0.48, Sv: 0.1, exc: 0.55, pick: 0.13, body: GTR_BODY, damp: true, rel: 0.05, spread: 0, demo: 52, range: [40, 64] },
-  bass:     { fn: pluck, low: true, lvl: 6, t60: 3.6, ts: 0.3, max: 5, S: 0.4, Sv: 0.2, exc: 0.7, pick: 0.17, tri: 0.9, diff: true, pu: [1800, 0.8], loop: 2500, body: [[60, 1.5, 0.3]], damp: true, rel: 0.09, spread: 0, demo: 40, range: [28, 52] },
+  bass:     { slvl: -1.5, fn: pluck, low: true, lvl: 6, t60: 3.6, ts: 0.3, max: 5, S: 0.4, Sv: 0.2, exc: 0.7, pick: 0.17, tri: 0.9, diff: true, pu: [1800, 0.8], loop: 2500, body: [[60, 1.5, 0.3]], damp: true, rel: 0.09, spread: 0, demo: 40, range: [28, 52] },
   harp:     { fn: pluck, t60: 5, ts: 0.5, max: 7, S: 0.4, Sv: 0.2, exc: 0.8, pick: 0.5, body: [[180, 1.6, 0.35], [520, 2, 0.15]], damp: false, rel: 0.5, spread: 0.5, demo: 60, range: [43, 79] },
   gayageum: { fn: pluck, lvl: 2, t60: 2.4, ts: 0.4, max: 5, S: 0.32, Sv: 0.25, exc: 0.5, pick: 0.24, body: [[150, 1.5, 0.4], [390, 2.2, 0.25], [1200, 2, 0.1]], vibr: [0.32, 5.2, 18, 6], damp: false, rel: 0.4, spread: 0.3, demo: 62, range: [50, 74] },
-  pizz:     { fn: pluck, t60: 0.55, ts: 0.35, max: 1.6, S: 0.47, Sv: 0.1, exc: 0.7, pick: 0.28, body: [[280, 3, 0.5], [460, 3, 0.3], [1100, 2.5, 0.25], [2900, 2, 0.12]], damp: false, rel: 0.2, spread: 0.3, demo: 60, range: [43, 76] },
+  pizz:     { slvl: -3, fn: pluck, t60: 0.55, ts: 0.35, max: 1.6, S: 0.47, Sv: 0.1, exc: 0.7, pick: 0.28, body: [[280, 3, 0.5], [460, 3, 0.3], [1100, 2.5, 0.25], [2900, 2, 0.12]], damp: false, rel: 0.2, spread: 0.3, demo: 60, range: [43, 76] },
   marimba:  { fn: strike, t60: 1.15, ts: 0.75, max: 3, modes: [[1, 1, 1], [3.99, 0.26, 0.28], [9.85, 0.09, 0.1]], hx: 1.6, click: [0.06, 0.006, 0.75], damp: false, rel: 0.25, spread: 0.45, demo: 60, range: [48, 84] },
   vibes:    { fn: strike, t60: 4.2, ts: 0.4, max: 6, modes: [[1, 1, 1], [4.0, 0.32, 0.38], [10.0, 0.11, 0.18]], hx: 1.5, click: [0.04, 0.004, 0.6], trem: [4.8, 0.36], damp: false, rel: 0.3, spread: 0.45, demo: 65, range: [53, 89] },
   glock:    { fn: strike, t60: 3, ts: 0.3, max: 4, modes: [[1, 1, 1], [2.76, 0.42, 0.55], [5.4, 0.22, 0.32], [8.93, 0.1, 0.2]], hx: 1.2, click: [0.05, 0.003, 0.3], damp: false, rel: 0.3, spread: 0.3, demo: 79, range: [72, 96] },
@@ -293,7 +293,7 @@ const AC = {
   rhodes:   { fn: epiano, t60: 6, ts: 0.6, max: 6, modes: [[1, 1, 1], [7.1, 0.17, 0.035], [20.2, 0.05, 0.012]], hx: 1.5, drive: 1.3, bias: 0.55, click: [0.025, 0.005, 0.85], lp: 6500, body: [[190, 1, 0.18]], damp: true, rel: 0.2, spread: 0.35, demo: 60, range: [41, 77] },
   wurli:    { fn: epiano, pickup: 'cap', t60: 3.4, ts: 0.6, max: 4.5, modes: [[1, 1, 1], [6.5, 0.11, 0.05]], hx: 1.4, drive: 2.4, bias: 0.35, click: [0.03, 0.004, 0.75], lp: 5200, body: [[340, 1, 0.2]], damp: true, rel: 0.12, spread: 0.3, demo: 60, range: [41, 77] },
   dbass:    { fn: pluck, low: true, lvl: 6, t60: 1.9, ts: 0.3, max: 4, S: 0.45, Sv: 0.15, exc: 0.95, pick: 0.22, tri: 0.8, thump: [0.5, 0.03, 0.93], body: [[62, 1.6, 0.45], [118, 2.2, 0.35], [240, 2.5, 0.18]], drop: 14, damp: true, rel: 0.12, spread: 0, demo: 40, range: [28, 55] },
-  jazzgtr:  { fn: pluck, t60: 2.4, ts: 0.4, max: 5, S: 0.46, Sv: 0.15, exc: 0.9, pick: 0.2, tri: 0.6, pickup: 0.26, body: [[105, 2, 0.25], [210, 2.5, 0.2], [420, 3, 0.1]], damp: true, rel: 0.12, spread: 0, demo: 55, range: [40, 72] },
+  jazzgtr:  { slvl: 2.5, fn: pluck, t60: 2.4, ts: 0.4, max: 5, S: 0.46, Sv: 0.15, exc: 0.9, pick: 0.2, tri: 0.6, pickup: 0.26, body: [[105, 2, 0.25], [210, 2.5, 0.2], [420, 3, 0.1]], damp: true, rel: 0.12, spread: 0, demo: 55, range: [40, 72] },
   /* 일렉 기타 (앰프에 넣어 쓰는 소리): 통이 없어 울림이 길고, 픽업 자리와 코일 공진이 소리 색을 정한다.
      tri: 피크로 튕긴 줄 모양(삼각형) · diff: 자석 픽업은 줄의 빠르기를 듣는다 · coil2: 험버커의 둘째 코일 자리 ·
      pu: 픽업 공진 [Hz, Q] (싱글은 높고 뾰족, 험버커는 낮고 둥글게) · loop: 높은 배음이 빨리 사라지게 (베이스·팜 뮤트) */
@@ -372,8 +372,10 @@ function refGain(inst, sr) {
 }
 
 /* ================= 녹음한 샘플로 치는 악기 =================
-   그랜드 피아노는 Salamander Grand Piano(Alexander Holm, CC BY 3.0), 업라이트 피아노 · 하프 · 마림바 · 글로켄슈필 · 실로폰은
-   VSCO-2 Community Edition(Versilian Studios, CC0)을 녹음 그대로 쓴다 (samples/CREDITS.txt, 목록은 js/samples.js).
+   그랜드 피아노는 Salamander Grand Piano(Alexander Holm, CC BY 3.0), 업라이트 피아노 · 하프 · 말렛 · 피치카토와
+   앙상블의 현악 · 금관 · 목관 · 파이프 오르간은 VSCO-2 Community Edition(Versilian Studios, CC0), 베이스 기타 · 업라이트 베이스 ·
+   재즈 기타 · 일렉 기타 · 알토 색소폰은 Karoryfer Samples(CC0), 테너 색소폰은 MTG Solo Saxophones(CC BY 4.0),
+   우리처는 Greg Sullivan의 Wurlitzer EP200(CC BY 3.0)을 녹음 그대로 쓴다 (samples/CREDITS.txt, 목록은 js/samples.js).
    세트를 처음 쓸 때 samples/에서 받아 32 kHz로 풀어 둔다 (메모리를 아끼려고, 재생할 때 다시 맞춰진다).
    받는 동안이나 받지 못하면(파일로 연 index.html 등) 위의 계산한 소리로 친다 */
 const SET_SR = 32000;
@@ -401,29 +403,52 @@ function evenOut(e) {
     for (const x of list) x.g = clamp(mid / x.L.rms, 0.5, 2);
   }
 }
-/* 세트의 크기 맞춤 배율: 가장 센 칸에서 대표 음과 가까운 샘플의 '들리는 크기'를 계산한 소리와 같은 기준으로 */
+/* 세트의 크기 맞춤 배율: 가장 센 칸에서 대표 음과 가까운 샘플의 '들리는 크기'를 계산한 소리와 같은 기준으로.
+   Acoustic 종류가 아닌 세트(앙상블용 루프 세트)는 세트 음역 가운데 음을 대표 음으로 */
 function setGain(name, e) {
-  const c = AC[name] || AC.grand, s = nearest(e.layers[e.layers.length - 1], c.demo);
+  const top = e.layers[e.layers.length - 1];
+  const c = AC[name] || { demo: top[Math.floor(top.length / 2)].p, lvl: 0 }, s = nearest(top, c.demo);
   const L = s.L || loudness(s.buf), g = s.g || 1;
-  return Math.pow(10, (c.lvl || 0) / 20) * Math.min(LOUD_RMS / (L.rms * g), LOUD_PEAK / (L.pk * g));
+  return Math.pow(10, ((c.lvl || 0) + (c.slvl || 0)) / 20) * Math.min(LOUD_RMS / (L.rms * g), LOUD_PEAK / (L.pk * g));
+}
+/* 묶음 세트: 세트 전체가 MP3 한 파일 [표시음 · 음 · 음 …]. files: [음, 세기 칸, 센트, 시작, 길이, 루프 시작, 루프 끝]
+   (위치는 44.1 kHz 샘플 수, 시작은 표시음 가운데부터). MP3를 푸는 쪽마다 앞에 붙는 지연이 달라서 표시음을 찾아 맞춘다.
+   루프 끝 뒤에는 루프 시작 부분이 덧붙어 있어서, 위치가 조금 어긋나도 이음매가 맞는다 */
+const MARK_C = 2221;
+function slicePack(S, buf, ctx) {
+  const x = buf.getChannelData(0), sr = buf.sampleRate, k = sr / 44100;
+  const lim = Math.min(x.length, Math.round(0.2 * sr));
+  let m = 0;
+  for (let i = 1; i < lim; i++) if (Math.abs(x[i]) > Math.abs(x[m])) m = i;
+  const w = Math.round(48 * k);
+  let sw = 0, sx = 0;
+  for (let i = Math.max(0, m - w); i < Math.min(lim, m + w); i++) { const a = Math.abs(x[i]); sw += a; sx += a * i; }
+  const mark = sw > 0 ? sx / sw : m;
+  return S.files.map(([p, l, ct, st, len, ls, le]) => {
+    const a = Math.max(0, Math.round(mark + st * k)), n = Math.max(1, Math.min(x.length - a, Math.round(len * k)));
+    const out = ctx.createBuffer(1, n, sr);
+    out.getChannelData(0).set(x.subarray(a, a + n));
+    return { p: p + (ct || 0) / 100, l, buf: out, ls: le ? ls / 44100 : 0, le: le ? le / 44100 : 0 };
+  });
 }
 function sampleSet(name) {
   const S = U.SAMPLE_SETS && U.SAMPLE_SETS[name];
   if (!S) return null;
   let e = SETS.get(name);
   if (e) return e;
-  e = { ok: false, failed: false, vel: S.vel };
+  e = { ok: false, failed: false, vel: S.vel, name };
   SETS.set(name, e);
   let ctx;
   try { ctx = U.OfflineCtx(1, 1, SET_SR); } catch (err) { ctx = U.OfflineCtx(1, 1, 44100); }
   const decode = ab => new Promise((res, rej) => { const r = ctx.decodeAudioData(ab, res, rej); if (r && r.then) r.then(res, rej); });
-  const one = ([p, l, ct]) => fetch('samples/' + name + '/' + p + '-' + l + '.mp3')
-    .then(r => { if (!r.ok) throw new Error(r.status + ' ' + r.url); return r.arrayBuffer(); })
-    .then(decode).then(buf => ({ p: p + (ct || 0) / 100, l, buf }));
-  e.promise = (typeof fetch === 'function' ? Promise.all(S.files.map(one)) : Promise.reject(new Error('fetch 없음')))
+  const get = url => fetch(url).then(r => { if (!r.ok) throw new Error(r.status + ' ' + r.url); return r.arrayBuffer(); });
+  const one = ([p, l, ct]) => get('samples/' + name + '/' + p + '-' + l + '.mp3').then(decode).then(buf => ({ p: p + (ct || 0) / 100, l, buf }));
+  const all = () => S.pack ? get('samples/' + name + '.mp3').then(decode).then(buf => slicePack(S, buf, ctx)) : Promise.all(S.files.map(one));
+  e.promise = (typeof fetch === 'function' ? all() : Promise.reject(new Error('fetch 없음')))
     .then(list => {
       const n = Math.max(...list.map(x => x.l)) + 1;
       e.layers = Array.from({ length: n }, (_, l) => list.filter(x => x.l === l).sort((a, b) => a.p - b.p));
+      e.lo = Math.min(...list.map(x => x.p)); e.hi = Math.max(...list.map(x => x.p));
       evenOut(e);
       e.gain = setGain(name, e);
       e.ok = true;
@@ -616,28 +641,35 @@ class Acoustic extends U.Instrument {
    lp: 로우패스 컷오프 = 음 주파수 × [어두울 때, 밝을 때] · form: 포먼트 [주파수, Q, 크기] · dry: 포먼트를 안 거친 소리
    env: [어택, 디케이, 서스테인, 릴리스] · fenv: 브라스 [시작 배율, 열리는 시간, 머무는 배율]
    vib: [빠르기, 깊이(센트), 늦게 시작] · noise: [숨소리 크기, 주파수 배율, Q] · leslie: [음량 흔들기, 음높이 흔들기(센트)]
-   perc: 오르간 퍼커션 [배음, 크기, 길이] · drive: 오버드라이브 · gain: 크기 맞춤 · trim: 드라이브 뒤 크기(dB) */
+   perc: 오르간 퍼커션 [배음, 크기, 길이] · drive: 오버드라이브 · gain: 크기 맞춤 · trim: 드라이브 뒤 크기(dB)
+   smp: 녹음 샘플 세트(여럿이면 음역대로 겹친다) · sg: 녹음으로 칠 때 더하는 크기(dB, 트랙에서 들리는 계산한 소리와 같게) */
 const EN = {
-  strings:   { osc: [['sawtooth', 0, 0.55], ['sawtooth', -12, 0.5], ['sawtooth', 11, 0.5]], lp: [2.2, 8], q: 0.5, form: [[300, 1.2, 0.6], [1100, 1.4, 0.35], [3000, 2, 0.2]], dry: 0.7, env: [0.3, 0.4, 0.9, 0.5], vib: [5.4, 10, 0.35], gain: 0.32, demo: 60 },
-  violin:    { solo: true, osc: [['sawtooth', 0, 1]], lp: [3, 12], q: 0.7, form: [[290, 3, 0.9], [540, 3, 0.5], [2900, 2.5, 0.7]], dry: 0.45, env: [0.09, 0.3, 0.9, 0.25], vib: [6, 22, 0.25], gain: 0.41, demo: 72 },
-  cello:     { solo: true, osc: [['sawtooth', 0, 1]], lp: [2.5, 9], q: 0.7, form: [[200, 2.5, 0.9], [420, 3, 0.45], [1500, 2, 0.4]], dry: 0.5, env: [0.14, 0.4, 0.9, 0.35], vib: [5.2, 18, 0.3], gain: 0.45, demo: 48 },
-  brass:     { osc: [['sawtooth', 0, 0.7], ['sawtooth', 7, 0.6]], lp: [3, 10], q: 1.2, fenv: [1.2, 0.06, 0.65], env: [0.05, 0.3, 0.85, 0.2], vib: [5.5, 8, 0.4], gain: 0.4, demo: 55 },
-  trumpet:   { solo: true, osc: [['sawtooth', 0, 1]], lp: [4, 13], q: 1.6, fenv: [1.1, 0.045, 0.7], env: [0.035, 0.2, 0.85, 0.15], vib: [5.8, 14, 0.35], gain: 0.38, demo: 67 },
-  flute:     { solo: true, pw: [1, 0.14, 0.05, 0.02], lp: [4, 10], q: 0.5, env: [0.07, 0.2, 0.9, 0.15], vib: [5, 14, 0.3], noise: [0.16, 2, 1.4], gain: 0.25, demo: 79 },
-  clarinet:  { solo: true, pw: [1, 0.03, 0.62, 0.03, 0.36, 0.02, 0.22, 0.02, 0.12, 0.01, 0.06], lp: [3, 9], q: 0.6, env: [0.05, 0.2, 0.9, 0.12], vib: [5, 6, 0.4], gain: 0.28, demo: 62 },
+  strings:   { smp: ['vln_sec', 'vla_sec', 'vc_sec'], sg: -1.4, osc: [['sawtooth', 0, 0.55], ['sawtooth', -12, 0.5], ['sawtooth', 11, 0.5]], lp: [2.2, 8], q: 0.5, form: [[300, 1.2, 0.6], [1100, 1.4, 0.35], [3000, 2, 0.2]], dry: 0.7, env: [0.3, 0.4, 0.9, 0.5], vib: [5.4, 10, 0.35], gain: 0.32, demo: 60 },
+  violin:    { smp: ['violin'], solo: true, osc: [['sawtooth', 0, 1]], lp: [3, 12], q: 0.7, form: [[290, 3, 0.9], [540, 3, 0.5], [2900, 2.5, 0.7]], dry: 0.45, env: [0.09, 0.3, 0.9, 0.25], vib: [6, 22, 0.25], gain: 0.41, demo: 72 },
+  cello:     { smp: ['vc_sec'], sg: -1.4, solo: true, osc: [['sawtooth', 0, 1]], lp: [2.5, 9], q: 0.7, form: [[200, 2.5, 0.9], [420, 3, 0.45], [1500, 2, 0.4]], dry: 0.5, env: [0.14, 0.4, 0.9, 0.35], vib: [5.2, 18, 0.3], gain: 0.45, demo: 48 },
+  brass:     { smp: ['trumpet', 'horn', 'trombone'], sg: 2.7, osc: [['sawtooth', 0, 0.7], ['sawtooth', 7, 0.6]], lp: [3, 10], q: 1.2, fenv: [1.2, 0.06, 0.65], env: [0.05, 0.3, 0.85, 0.2], vib: [5.5, 8, 0.4], gain: 0.4, demo: 55 },
+  trumpet:   { smp: ['trumpet'], sg: -1.5, solo: true, osc: [['sawtooth', 0, 1]], lp: [4, 13], q: 1.6, fenv: [1.1, 0.045, 0.7], env: [0.035, 0.2, 0.85, 0.15], vib: [5.8, 14, 0.35], gain: 0.38, demo: 67 },
+  flute:     { smp: ['flute'], sg: 1.8, solo: true, pw: [1, 0.14, 0.05, 0.02], lp: [4, 10], q: 0.5, env: [0.07, 0.2, 0.9, 0.15], vib: [5, 14, 0.3], noise: [0.16, 2, 1.4], gain: 0.25, demo: 79 },
+  clarinet:  { smp: ['clarinet'], sg: -0.5, solo: true, pw: [1, 0.03, 0.62, 0.03, 0.36, 0.02, 0.22, 0.02, 0.12, 0.01, 0.06], lp: [3, 9], q: 0.6, env: [0.05, 0.2, 0.9, 0.12], vib: [5, 6, 0.4], gain: 0.28, demo: 62 },
   choir_a:   { osc: [['sawtooth', 0, 0.6], ['sawtooth', -9, 0.5], ['sawtooth', 8, 0.5]], form: [[800, 6, 1], [1150, 7, 0.65], [2900, 9, 0.32], [3900, 10, 0.16]], dry: 0, lp: [8, 16], q: 0.5, env: [0.28, 0.4, 0.9, 0.45], vib: [5, 9, 0.3], noise: [0.04, 3, 0.8], gain: 1.2, demo: 60 },
   choir_u:   { osc: [['sawtooth', 0, 0.6], ['sawtooth', -9, 0.5], ['sawtooth', 8, 0.5]], form: [[325, 6, 1], [700, 7, 0.45], [2530, 9, 0.14]], dry: 0, lp: [8, 16], q: 0.5, env: [0.3, 0.4, 0.9, 0.5], vib: [5, 9, 0.3], noise: [0.03, 2, 0.8], gain: 1, demo: 60 },
   organ_jazz:  { drawbars: '888000000', lp: [10, 24], q: 0.4, perc: [3, 0.42, 0.24], env: [0.004, 0.05, 1, 0.04], leslie: [0.16, 5], gain: 0.37, demo: 60 },
   organ_rock:  { drawbars: '888800008', lp: [12, 30], q: 0.4, env: [0.004, 0.05, 1, 0.05], leslie: [0.22, 7], drive: 2.6, gain: 0.34, trim: -4.5, demo: 55 },
-  organ_church:{ drawbars: '806808046', lp: [8, 22], q: 0.4, env: [0.07, 0.1, 1, 0.3], gain: 0.36, demo: 60 },
+  organ_church:{ smp: ['organ_church'], sg: -1, drawbars: '806808046', lp: [8, 22], q: 0.4, env: [0.07, 0.1, 1, 0.3], gain: 0.36, demo: 60 },
   accordion: { osc: [['square', -8, 0.5], ['square', 8, 0.5], ['sawtooth', 0, 0.25]], lp: [3, 9], q: 0.8, form: [[1100, 2, 0.4]], dry: 0.8, env: [0.03, 0.1, 0.95, 0.08], vib: [5.5, 3, 0.3], gain: 0.32, demo: 62 },
   harmonica: { solo: true, osc: [['square', 0, 1]], lp: [3, 8], q: 0.9, form: [[1300, 2.2, 0.7]], dry: 0.6, env: [0.03, 0.1, 0.9, 0.1], vib: [5.5, 24, 0.4], noise: [0.05, 2, 1], gain: 0.3, demo: 67 },
   /* 재즈 힙합에 자주 쓰는 관악기: 색소폰은 리드가 떨리는 원뿔 관이라 배음이 고루 있고 숨소리가 섞인다.
      뮤트 트럼펫(하몬 뮤트)은 낮은 소리가 빠지고 1.5 kHz 근처만 가늘게 울리고, 플루겔혼은 어둡고 둥글다 */
-  sax_tenor:   { solo: true, osc: [['sawtooth', 0, 1]], lp: [2.4, 7], q: 1, form: [[520, 2.2, 0.85], [1350, 2.8, 0.5], [2700, 3.5, 0.22]], dry: 0.4, fenv: [1.5, 0.05, 0.85], env: [0.045, 0.25, 0.85, 0.12], vib: [5.2, 12, 0.45], noise: [0.08, 7, 0.8], gain: 0.58, demo: 55 },
-  sax_alto:    { solo: true, osc: [['sawtooth', 0, 1]], lp: [2.6, 8], q: 1, form: [[650, 2.2, 0.85], [1750, 2.8, 0.5], [3100, 3.5, 0.22]], dry: 0.4, fenv: [1.5, 0.05, 0.85], env: [0.04, 0.25, 0.85, 0.12], vib: [5.4, 12, 0.4], noise: [0.08, 6, 0.8], gain: 0.535, demo: 67 },
-  trumpet_mute:{ solo: true, osc: [['sawtooth', 0, 1]], lp: [6, 16], q: 0.8, form: [[1500, 3, 1], [2700, 4, 0.5], [700, 2, 0.2]], dry: 0.06, fenv: [1.2, 0.04, 0.85], env: [0.03, 0.2, 0.85, 0.12], vib: [5.5, 8, 0.5], noise: [0.03, 6, 1], gain: 1.02, demo: 67 },
-  flugel:      { solo: true, osc: [['sawtooth', 0, 0.7], ['triangle', 0, 0.6]], lp: [1.8, 5], q: 0.9, fenv: [0.9, 0.06, 0.85], env: [0.06, 0.3, 0.88, 0.2], vib: [5.2, 10, 0.4], noise: [0.025, 5, 0.8], gain: 0.28, demo: 62 }
+  sax_tenor:   { smp: ['sax_tenor'], sg: 1.7, solo: true, osc: [['sawtooth', 0, 1]], lp: [2.4, 7], q: 1, form: [[520, 2.2, 0.85], [1350, 2.8, 0.5], [2700, 3.5, 0.22]], dry: 0.4, fenv: [1.5, 0.05, 0.85], env: [0.045, 0.25, 0.85, 0.12], vib: [5.2, 12, 0.45], noise: [0.08, 7, 0.8], gain: 0.58, demo: 55 },
+  sax_alto:    { smp: ['sax_alto'], sg: 1.7, solo: true, osc: [['sawtooth', 0, 1]], lp: [2.6, 8], q: 1, form: [[650, 2.2, 0.85], [1750, 2.8, 0.5], [3100, 3.5, 0.22]], dry: 0.4, fenv: [1.5, 0.05, 0.85], env: [0.04, 0.25, 0.85, 0.12], vib: [5.4, 12, 0.4], noise: [0.08, 6, 0.8], gain: 0.535, demo: 67 },
+  trumpet_mute:{ smp: ['trumpet_mute'], sg: 4.3, solo: true, osc: [['sawtooth', 0, 1]], lp: [6, 16], q: 0.8, form: [[1500, 3, 1], [2700, 4, 0.5], [700, 2, 0.2]], dry: 0.06, fenv: [1.2, 0.04, 0.85], env: [0.03, 0.2, 0.85, 0.12], vib: [5.5, 8, 0.5], noise: [0.03, 6, 1], gain: 1.02, demo: 67 },
+  flugel:      { solo: true, osc: [['sawtooth', 0, 0.7], ['triangle', 0, 0.6]], lp: [1.8, 5], q: 0.9, fenv: [0.9, 0.06, 0.85], env: [0.06, 0.3, 0.88, 0.2], vib: [5.2, 10, 0.4], noise: [0.025, 5, 0.8], gain: 0.28, demo: 62 },
+  /* 녹음 샘플로 치는 관악기 (VSCO-2 CE). 아래 값은 샘플을 받기 전에 쓰는 계산한 소리 */
+  horn:      { smp: ['horn'], solo: true, osc: [['sawtooth', 0, 0.6], ['triangle', 0, 0.7]], lp: [1.6, 5], q: 0.8, fenv: [0.9, 0.08, 0.85], env: [0.06, 0.3, 0.88, 0.25], vib: [5, 6, 0.5], gain: 0.35, demo: 55 },
+  trombone:  { smp: ['trombone'], solo: true, osc: [['sawtooth', 0, 1]], lp: [2.5, 9], q: 1.2, fenv: [1.1, 0.06, 0.7], env: [0.05, 0.25, 0.85, 0.18], vib: [5.5, 8, 0.4], gain: 0.44, demo: 50 },
+  tuba:      { smp: ['tuba'], solo: true, osc: [['sawtooth', 0, 0.7], ['triangle', 0, 0.6]], lp: [1.5, 4], q: 0.8, fenv: [0.9, 0.08, 0.8], env: [0.06, 0.3, 0.9, 0.2], vib: [5, 5, 0.5], gain: 0.3, demo: 38 },
+  oboe:      { smp: ['oboe'], solo: true, pw: [0.5, 1, 0.8, 0.6, 0.5, 0.35, 0.25, 0.15, 0.1], form: [[1100, 3, 0.8], [2900, 3, 0.4]], dry: 0.5, lp: [3, 9], q: 0.6, env: [0.04, 0.2, 0.9, 0.12], vib: [5.2, 10, 0.3], gain: 0.64, demo: 69 },
+  bassoon:   { smp: ['bassoon'], solo: true, osc: [['sawtooth', 0, 1]], form: [[440, 2.5, 0.9], [1200, 3, 0.4]], dry: 0.4, lp: [2, 6], q: 0.7, env: [0.05, 0.2, 0.9, 0.12], vib: [5, 8, 0.4], gain: 0.63, demo: 50 },
 };
 /* 드로바 9개(16′ 5⅓′ 8′ 4′ 2⅔′ 2′ 1⅗′ 1⅓′ 1′)는 한 옥타브 아래 음의 1·3·2·4·6·8·10·12·16번째 배음이에요 */
 const DRAW_H = [1, 3, 2, 4, 6, 8, 10, 12, 16];
@@ -669,8 +701,70 @@ class Ensemble extends U.Instrument {
     this.waves = new Map();
     this.out.gain.value = this.on ? this.outLevel() : 0;
     this.applyType(ctx.currentTime);
+    this.loadSamples();
   }
   cfg() { return EN[this.v.inst] || EN.strings; }
+  /* 이 종류의 녹음 샘플 세트들 (현악 합주 · 브라스 섹션은 여러 세트를 음역대로 겹친다). 없는 종류면 [] */
+  sets() { return (this.cfg().smp || []).map(sampleSet).filter(Boolean); }
+  loadSamples() { const es = this.sets(); this.ready = Promise.all(es.map(e => e.promise)); return this.ready; }
+  /* 샘플 소리의 밝기: Bright 0.5면 녹음 그대로, 낮추면 로우패스로 어둡게 */
+  scut() {
+    const b = clamp(this.v.bright, 0, 1);
+    return clamp(16000 * Math.pow(2, -Math.max(0, 0.5 - b) * 10), 300, 16000);
+  }
+  /* 녹음 샘플로 한 음: 세트마다 가까운 음의 샘플을 그만큼 높이거나 낮추고, 서스테인은 루프로 이어 간다.
+     Attack 1이면 녹음된 어택 그대로(늘리면 천천히 커지고, 줄이면 어택 앞부분을 건너뛴다).
+     Vibrato는 녹음에 이미 떨림이 있어서 0.5를 넘긴 만큼만 더한다. 섹션 악기는 Ensemble만큼 두 겹으로 벌린다 */
+  sampleVoice(es, p, vel, t) {
+    const ctx = this.ctx, P = this.v, c = this.cfg();
+    const dist = e => p < e.lo ? e.lo - p : p > e.hi ? p - e.hi : 0;
+    let use = es.filter(e => dist(e) <= 5);
+    if (!use.length) use = [es.reduce((b, e) => dist(e) < dist(b) ? e : b)];
+    const amp = gainNode(ctx, 0), lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.Q.value = 0.5; lp.frequency.value = this.scut();
+    const vg = gainNode(ctx, 0);   // 이 음의 비브라토 깊이(센트)
+    this.lfo.connect(vg);
+    const nodes = [amp, lp, vg], srcs = [];
+    let head = lp;
+    const b = clamp(P.bright, 0, 1);
+    if (b > 0.55) { const hs = ctx.createBiquadFilter(); hs.type = 'highshelf'; hs.frequency.value = 3000; hs.gain.value = (b - 0.5) * 16; head.connect(hs); head = hs; nodes.push(hs); }
+    // 세기 한 칸뿐인 녹음이라 여리게 칠수록 높은 소리를 깎아 부드럽게 (세기 100 이상은 녹음 그대로)
+    const soft = Math.max(0, (100 - clamp(vel, 1, 127)) / 100);
+    if (soft > 0.02) { const vs = ctx.createBiquadFilter(); vs.type = 'highshelf'; vs.frequency.value = 1200; vs.gain.value = -12 * soft; head.connect(vs); head = vs; nodes.push(vs); }
+    head.connect(amp); amp.connect(this.vbus);
+    const w = clamp(P.width, 0, 1), copies = !c.solo && w > 0.05 ? 2 : 1;
+    const skip = P.atk < 1 ? (1 - P.atk) * 0.06 : 0;
+    const sg = Math.pow(10, (c.sg || 0) / 20) / Math.sqrt(use.length * copies);
+    for (const e of use) {
+      let l = 0;
+      for (let i = 0; i < e.vel.length; i++) if (vel >= e.vel[i]) l = i;
+      const s = nearest(e.layers[Math.min(l, e.layers.length - 1)], p);
+      for (let k = 0; k < copies; k++) {
+        const src = ctx.createBufferSource();
+        src.buffer = s.buf;
+        if (s.le > s.ls) { src.loop = true; src.loopStart = s.ls; src.loopEnd = s.le; }
+        src.playbackRate.value = Math.pow(2, (p - s.p) / 12);
+        if (src.detune) { src.detune.value = copies > 1 ? (k ? 7 : -7) * w : 0; vg.connect(src.detune); }
+        const g = gainNode(ctx, e.gain * (s.g || 1) * sg);
+        src.connect(g);
+        if (copies > 1 && ctx.createStereoPanner) {
+          const pn = ctx.createStereoPanner();
+          pn.pan.value = (k ? 0.5 : -0.5) * w;
+          g.connect(pn); pn.connect(lp); nodes.push(pn);
+        } else g.connect(lp);
+        // 둘째 겹은 조금 늦게 들어간 연주자처럼 녹음의 31ms 뒤부터
+        src.start(t, Math.min(skip + (k ? 0.031 : 0), s.buf.duration * 0.5));
+        srcs.push(src); nodes.push(src, g);
+      }
+    }
+    if (c.vib && !c.leslie) {
+      vg.gain.setValueAtTime(0, t);
+      vg.gain.setTargetAtTime(c.vib[1] * 2 * Math.max(0, clamp(P.vib, 0, 1) - 0.5), t + c.vib[2], 0.25);
+    }
+    const a = P.atk > 1 ? c.env[0] * (P.atk - 1) : 0;
+    envOn(amp.gain, t, velGain(vel, P.vel), 0.004 + a, 0.05, 1);
+    return { amp, lp, vg, srcs, nodes, smp: true };
+  }
   /* 종류가 바뀌면 함께 쓰는 흔들기(비브라토·회전 스피커)와 드라이브를 맞춘다 */
   applyType(t) {
     const c = this.cfg(), P = this.v;
@@ -691,6 +785,8 @@ class Ensemble extends U.Instrument {
     return clamp(f * (lo + (hi - lo) * b) * (0.75 + 0.5 * vel / 127), 120, 18000);
   }
   voice(p, vel, t) {
+    const es = this.sets();
+    if (es.length && es.every(e => e.ok)) return this.sampleVoice(es, p, vel, t);
     const ctx = this.ctx, P = this.v, c = this.cfg();
     const f = mtof(p);
     const mix = gainNode(ctx, 1), post = gainNode(ctx, 1), amp = gainNode(ctx, 0);
@@ -771,7 +867,8 @@ class Ensemble extends U.Instrument {
   param(id, v, t) {
     if (id === 'vol') { if (this.on) smooth(this.out.gain, this.outLevel(), t); return; }
     if (id === 'inst' || id === 'vib') this.applyType(t);
-    if (id === 'bright') { const c = this.cfg(); for (const vo of this.activeVoices(t)) smooth(vo.lp.frequency, this.cutoff(c, mtof(vo.p), 100), t); }
+    if (id === 'inst') this.loadSamples();
+    if (id === 'bright') { const c = this.cfg(); for (const vo of this.activeVoices(t)) smooth(vo.lp.frequency, vo.smp ? this.scut() : this.cutoff(c, mtof(vo.p), 100), t); }
   }
   dispose() {
     super.dispose();
@@ -783,6 +880,6 @@ class Ensemble extends U.Instrument {
 /* 악기 종류의 설정 (미리 듣기 음역 등): demo 대표 음 · low 베이스 줄 · solo 혼자 부는 악기 */
 U.instMeta = (kind, inst) => kind === 'acoustic' ? AC[inst] || AC.grand : kind === 'ensemble' ? EN[inst] || EN.strings : null;
 U.instDemo = (kind, inst) => (U.instMeta(kind, inst) || {}).demo || 60;
-U.acousticDSP = { render: renderNote, AC, EN, sampleSet, cacheSize: () => cacheSamples, evictions: () => evicted, cacheCap: CACHE_CAP, busy: () => pwBusy.size, missed: () => missed.slice(), misses: () => missCount };
+U.acousticDSP = { render: renderNote, AC, EN, sampleSet, loaded: n => !!(SETS.get(n) && SETS.get(n).ok), cacheSize: () => cacheSamples, evictions: () => evicted, cacheCap: CACHE_CAP, busy: () => pwBusy.size, missed: () => missed.slice(), misses: () => missCount };
 U.DEVICE_CLASSES = Object.assign(U.DEVICE_CLASSES || {}, { acoustic: Acoustic, ensemble: Ensemble });
 })(window.U = window.U || {});

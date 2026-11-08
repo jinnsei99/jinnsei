@@ -26,4 +26,48 @@ xylo/     실로폰
   라이선스: CC0 1.0 Universal (퍼블릭 도메인)
   https://creativecommons.org/publicdomain/zero/1.0/
 
-이 밖의 소리(신스, 기타, 베이스, 현악·관악, 드럼, 효과음, 내장 루프)는 모두 앱 안에서 Web Audio로 계산해서 만들어요.
+--- 묶음 세트 (세트 하나 = <세트>.mp3 한 파일) ---
+누르는 동안 이어지는 악기는 소리가 고른 구간에서 파형이 가장 잘 맞는 자리를 찾아 루프를 만들고
+(이음매는 크로스페이드로 굽고, 루프 끝 뒤에 루프 시작을 덧붙임), 한 세트를 [표시음 · 음 · 음 …]으로
+이어 붙여 MP3 한 파일로 묶었어요. 목록과 위치는 js/samples.js에 있어요.
+
+vln_sec.mp3 · vla_sec.mp3 · vc_sec.mp3  바이올린 · 비올라 · 첼로 섹션 (서스테인 비브라토) — 현악 합주 · 첼로
+violin.mp3        솔로 바이올린 (아르코 비브라토, f)
+trumpet.mp3       트럼펫 (서스테인)        trumpet_mute.mp3  트럼펫 하몬 뮤트 — 뮤트 트럼펫
+horn.mp3          호른                     trombone.mp3      테너 트롬본       tuba.mp3  튜바
+                  (브라스 섹션은 트럼펫 · 호른 · 트롬본을 음역대로 겹쳐요)
+flute.mp3         플루트 (비브라토)        clarinet.mp3      클라리넷          oboe.mp3  오보에 (비브라토)
+bassoon.mp3       바순 (비브라토)
+organ_church.mp3  파이프 오르간 (손건반 + 발건반 낮은 음) — Simon Dalzell (Ivy Audio)
+pizz.mp3          피치카토 (바이올린 섹션 + 낮은 음은 첼로 섹션)
+  출처: VS Chamber Orchestra: Community Edition (VSCO-2 CE) — Versilian Studios
+  https://github.com/sgossner/VSCO-2-CE
+  라이선스: CC0 1.0 Universal
+
+bass.mp3          베이스 기타 — Growlybass (Squier 재즈 베이스, 손가락으로 뜯음, p · f)
+                  https://github.com/sfzinstruments/karoryfer.growlybass
+dbass.mp3         업라이트 베이스 — Meatbass (1958 Otto Rubner 더블 베이스, 피치카토)
+                  https://github.com/sfzinstruments/karoryfer.meatbass
+jazzgtr.mp3       재즈 기타 — Shinyguitar (아치톱 기타, 픽업 소리)
+                  https://github.com/sfzinstruments/karoryfer.shinyguitar
+electric.mp3      일렉 기타 — Emilyguitar (Epiphone, 앰프 없이 바로 녹음한 소리)
+                  https://github.com/sfzinstruments/karoryfer.emilyguitar
+sax_alto.mp3      알토 색소폰 — Weresax
+                  https://github.com/sfzinstruments/karoryfer.weresax
+  출처: Karoryfer Samples (D. Smolken)
+  라이선스: CC0 1.0 Universal
+
+sax_tenor.mp3     테너 색소폰 — MTG Solo Saxophones, Music Technology Group (Universitat Pompeu Fabra), freesound.org
+                  SFZ: kinwie — https://github.com/sfzinstruments/MTG.SoloSax
+  라이선스: Creative Commons Attribution 4.0 International (CC BY 4.0)
+  https://creativecommons.org/licenses/by/4.0/
+
+wurli.mp3         우리처 — Wurlitzer EP200, Greg Sullivan (http://www.sullivang.net/)
+                  SFZ: kinwie — https://github.com/sfzinstruments/GregSullivan.E-Pianos
+  라이선스: Creative Commons Attribution 3.0 Unported (CC BY 3.0)
+  https://creativecommons.org/licenses/by/3.0/
+
+CC BY 출처(그랜드 피아노 · 테너 색소폰 · 우리처)는 그 소리를 쓴 곡이나 샘플을 공개할 때 출처를 밝혀 주세요.
+샘플을 받기 전이나 받지 못하면(파일로 연 index.html 등) 같은 악기를 계산한 소리로 쳐요.
+
+이 밖의 소리(신스, 나머지 기타 · 베이스, 콰이어, 재즈 · 록 오르간, 드럼, 효과음, 내장 루프)는 모두 앱 안에서 Web Audio로 계산해서 만들어요.
