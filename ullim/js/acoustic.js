@@ -431,6 +431,17 @@ function slicePack(S, buf, ctx) {
     return { p: p + (ct || 0) / 100, l, buf: out, ls: le ? ls / 44100 : 0, le: le ? le / 44100 : 0 };
   });
 }
+/* 묶음 파일 하나를 받아 조각으로 (녹음 드럼 키트도 쓴다). rows는 [_, _, _, 시작, 길이, …] 꼴이고 조각마다 { row, buf }.
+   심벌의 높은 소리가 살도록 드럼은 44.1 kHz로 푼다 */
+function fetchPack(name, rows, sr) {
+  let ctx;
+  try { ctx = U.OfflineCtx(1, 1, sr || SET_SR); } catch (err) { ctx = U.OfflineCtx(1, 1, 44100); }
+  const decode = ab => new Promise((res, rej) => { const r = ctx.decodeAudioData(ab, res, rej); if (r && r.then) r.then(res, rej); });
+  if (typeof fetch !== 'function') return Promise.reject(new Error('fetch 없음'));
+  return fetch('samples/' + name + '.mp3')
+    .then(r => { if (!r.ok) throw new Error(r.status + ' ' + r.url); return r.arrayBuffer(); })
+    .then(decode).then(buf => slicePack({ files: rows }, buf, ctx).map((x, i) => ({ row: rows[i], buf: x.buf })));
+}
 function sampleSet(name) {
   const S = U.SAMPLE_SETS && U.SAMPLE_SETS[name];
   if (!S) return null;
@@ -880,6 +891,6 @@ class Ensemble extends U.Instrument {
 /* 악기 종류의 설정 (미리 듣기 음역 등): demo 대표 음 · low 베이스 줄 · solo 혼자 부는 악기 */
 U.instMeta = (kind, inst) => kind === 'acoustic' ? AC[inst] || AC.grand : kind === 'ensemble' ? EN[inst] || EN.strings : null;
 U.instDemo = (kind, inst) => (U.instMeta(kind, inst) || {}).demo || 60;
-U.acousticDSP = { render: renderNote, AC, EN, sampleSet, loaded: n => !!(SETS.get(n) && SETS.get(n).ok), cacheSize: () => cacheSamples, evictions: () => evicted, cacheCap: CACHE_CAP, busy: () => pwBusy.size, missed: () => missed.slice(), misses: () => missCount };
+U.acousticDSP = { render: renderNote, AC, EN, sampleSet, fetchPack, loaded: n => !!(SETS.get(n) && SETS.get(n).ok), cacheSize: () => cacheSamples, evictions: () => evicted, cacheCap: CACHE_CAP, busy: () => pwBusy.size, missed: () => missed.slice(), misses: () => missCount };
 U.DEVICE_CLASSES = Object.assign(U.DEVICE_CLASSES || {}, { acoustic: Acoustic, ensemble: Ensemble });
 })(window.U = window.U || {});

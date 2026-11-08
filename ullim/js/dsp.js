@@ -38,9 +38,11 @@ function noiseBuffer(ctx) {
   if (!b) {
     const len = Math.floor(ctx.sampleRate * 2);
     b = ctx.createBuffer(2, len, ctx.sampleRate);
+    // 씨앗을 정해 둔 노이즈: 합성 드럼 한 번 렌더가 언제나 같은 소리라서 보관해 둔 소리 · 내보내기가 매번 같다
+    const rnd = U.rng ? U.rng(90210) : Math.random;
     for (let c = 0; c < 2; c++) {
       const d = b.getChannelData(c);
-      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      for (let i = 0; i < len; i++) d[i] = rnd() * 2 - 1;
     }
     noiseCache.set(ctx, b);
   }

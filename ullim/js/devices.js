@@ -574,7 +574,7 @@ function makeDevice(kind, over) {
   const d = DEV[kind];
   if (!d) throw new Error('unknown device ' + kind);
   const dev = { id: U.uid('d'), kind, on: true, p: defaults(kind) };
-  if (kind === 'drums') dev.data = { pads: U.DEFAULT_KIT ? U.clone(U.DEFAULT_KIT) : [], sel: 0 };
+  if (kind === 'drums') dev.data = { pads: U.DEFAULT_KIT ? U.clone(U.DEFAULT_KIT) : [], sel: 0, rec: 1 };
   if (kind === 'looppad') dev.data = fixLoopPad(U.DEFAULT_LOOPKIT ? U.loopKitData(U.DEFAULT_LOOPKIT) : null);
   if (kind === 'sampler') dev.data = { sample: null };
   if (kind === 'eq') dev.data = { sel: 3 };
