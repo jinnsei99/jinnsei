@@ -2,71 +2,68 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<title>울림 스튜디오</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="브라우저에서 돌아가는 음악 작업 앱: 장르 템플릿으로 곡 뼈대 만들기, 스텝 시퀀서, 세션 뷰 클립 런치, 어레인지먼트, 피아노 롤, 신스·드럼 머신·샘플러, 피아노·일렉 기타·베이스·현악·관악·오르간·가야금 같은 진짜 악기 소리와 기타 앰프·밴드 드럼 킷, 키보드 글자나 손가락으로 치는 루프 패드와 터치 건반, 이펙트, 자동화, MIDI 도구, WAV 내보내기">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>울림 스튜디오 — 새 주소로 이사했어요</title>
+<meta name="robots" content="noindex">
 <meta name="theme-color" content="#17181b">
-<meta property="og:type" content="website">
-<meta property="og:title" content="울림 스튜디오">
-<meta property="og:description" content="브라우저에서 바로 쓰는 음악 작업실: 장르 템플릿, 스텝 시퀀서, 루프 패드, 신스, 이펙트, WAV 내보내기">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
-<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="울림">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="app.css">
+<link rel="canonical" href="https://jinnsei99.github.io/ullim/">
+<noscript><meta http-equiv="refresh" content="0; url=https://jinnsei99.github.io/ullim/"></noscript>
+<script>
+// 울림 스튜디오는 2026-11-10에 https://jinnsei99.github.io/ullim/ (저장소 jinnsei99/ullim)로 이사했다.
+// 이 페이지는 옛 주소 /jinnsei/ullim/ 의 북마크와 홈 화면 앱을 새 주소로 넘긴다.
+// 넘기기 전에 옛 주소의 서비스 워커 등록을 풀고 옛 주소 파일만 담긴 캐시를 지운다(새 주소의 캐시는 남긴다).
+// 같은 사이트(origin)라 프로젝트(IndexedDB)와 설정(localStorage)은 그대로 새 주소에서 보인다. 그래서 그것들은 건드리지 않는다.
+(function () {
+  var target = location.origin + '/ullim/' + location.search + location.hash;
+  var here = new URL('./', location.href).href; // 이 폴더(옛 주소) — 끝에 / 가 붙는다
+  var go = function () { location.replace(target); };
+
+  function cleanup() {
+    var jobs = [];
+    if ('serviceWorker' in navigator) {
+      jobs.push(navigator.serviceWorker.getRegistrations().then(function (regs) {
+        return Promise.all(regs.filter(function (r) { return r.scope === here; })
+          .map(function (r) { return r.unregister(); }));
+      }));
+    }
+    if (window.caches) {
+      jobs.push(caches.keys().then(function (names) {
+        return Promise.all(names.filter(function (n) { return n.indexOf('ullim-') === 0; }).map(function (name) {
+          return caches.open(name).then(function (cache) { return cache.keys(); }).then(function (reqs) {
+            var inOld = function (r) { return r.url.indexOf(here) === 0; };
+            var otherSite = function (r) { return new URL(r.url).origin !== location.origin; }; // 글꼴 저장본
+            var onlyOld = reqs.some(inOld) && reqs.every(function (r) { return inOld(r) || otherSite(r); });
+            return onlyOld ? caches.delete(name) : false;
+          });
+        }));
+      }));
+    }
+    return Promise.all(jobs);
+  }
+
+  var timer = setTimeout(go, 1500); // 정리가 늦어도 1.5초 뒤에는 넘어간다
+  try {
+    cleanup().then(function () { clearTimeout(timer); go(); }, function () { clearTimeout(timer); go(); });
+  } catch (e) { clearTimeout(timer); go(); }
+})();
+</script>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #17181b; color: #e8e8ea;
+         font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+  main { max-width: 32rem; padding: 24px 16px; }
+  h1 { font-size: 22px; margin: 0 0 12px; }
+  a { color: #ffb84d; word-break: break-all; }
+  p { margin: 0 0 12px; }
+  .small { color: #a0a0a8; font-size: 14px; }
+</style>
 </head>
 <body>
-<noscript><p style="padding:24px;font:14px sans-serif">울림 스튜디오는 자바스크립트가 켜져 있어야 돌아가요.</p></noscript>
-<script src="js/util.js"></script>
-<script src="js/gestures.js"></script>
-<script src="js/devices.js"></script>
-<script src="js/dsp.js"></script>
-<script src="js/instruments.js"></script>
-<script src="js/effects.js"></script>
-<script src="js/samples.js"></script>
-<script src="js/acoustic.js"></script>
-<script src="js/model.js"></script>
-<script src="js/media.js"></script>
-<script src="js/content.js"></script>
-<script src="js/templates.js"></script>
-<script src="js/engine.js"></script>
-<script src="js/export.js"></script>
-<script src="js/store.js"></script>
-<script src="js/files.js"></script>
-<script src="js/mysounds.js"></script>
-<script src="js/recorder.js"></script>
-<script src="js/tools.js"></script>
-<script src="js/chords.js"></script>
-<script src="js/oldsample.js"></script>
-<script src="js/ui-core.js"></script>
-<script src="js/actions.js"></script>
-<script src="js/quick.js"></script>
-<script src="js/ui-shell.js"></script>
-<script src="js/ui-transport.js"></script>
-<script src="js/ui-session.js"></script>
-<script src="js/ui-mixer.js"></script>
-<script src="js/ui-arrange.js"></script>
-<script src="js/ui-clip.js"></script>
-<script src="js/ui-steps.js"></script>
-<script src="js/ui-devices.js"></script>
-<script src="js/ui-shape.js"></script>
-<script src="js/ui-audioedit.js"></script>
-<script src="js/ui-browser.js"></script>
-<script src="js/ui-keys.js"></script>
-<script src="js/ui-play.js"></script>
-<script src="js/ui-kit.js"></script>
-<script src="js/ui-pads.js"></script>
-<script src="js/ui-start.js"></script>
-<script src="js/input.js"></script>
-<script src="js/ui-midi.js"></script>
-<script src="js/main.js"></script>
+<main>
+  <h1>울림 스튜디오가 새 주소로 이사했어요</h1>
+  <p><a href="https://jinnsei99.github.io/ullim/">https://jinnsei99.github.io/ullim/</a></p>
+  <p>잠시 뒤 자동으로 넘어가요. 넘어가지 않으면 위 주소를 눌러 주세요.</p>
+  <p class="small">이 브라우저에 저장한 프로젝트는 새 주소에서도 그대로 보여요. 아이패드 홈 화면에 추가했던 앱은 새 주소에서 다시 추가하고, 예전 앱에서 받아 둔 프로젝트 파일(.ullim.json)을 열어 옮겨 주세요.</p>
+</main>
 </body>
 </html>

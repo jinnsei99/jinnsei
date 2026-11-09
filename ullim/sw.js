@@ -1,105 +1,25 @@
-// 울림 스튜디오 서비스 워커: 한 번 열어 두면 인터넷이 없어도 열린다.
-// 인터넷이 되면 언제나 새 파일을 먼저 받고(그래서 고친 내용이 바로 보인다), 안 되면 저장해 둔 것을 쓴다.
-// 파일을 더하거나 빼면 CORE를 고치고 CACHE 숫자를 올린다.
-const CACHE = 'ullim-v32';
-const CORE = [
-  "./",
-  "./index.html",
-  "./app.css",
-  "./manifest.webmanifest",
-  "./icons/favicon.svg",
-  "./icons/favicon-32.png",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
-  "./icons/apple-touch-icon.png",
-  "./js/util.js",
-  "./js/gestures.js",
-  "./js/devices.js",
-  "./js/dsp.js",
-  "./js/instruments.js",
-  "./js/effects.js",
-  "./js/samples.js",
-  "./js/acoustic.js",
-  "./js/model.js",
-  "./js/media.js",
-  "./js/content.js",
-  "./js/templates.js",
-  "./js/engine.js",
-  "./js/export.js",
-  "./js/store.js",
-  "./js/files.js",
-  "./js/mysounds.js",
-  "./js/recorder.js",
-  "./js/tools.js",
-  "./js/chords.js",
-  "./js/oldsample.js",
-  "./js/ui-core.js",
-  "./js/actions.js",
-  "./js/quick.js",
-  "./js/ui-shell.js",
-  "./js/ui-transport.js",
-  "./js/ui-session.js",
-  "./js/ui-mixer.js",
-  "./js/ui-arrange.js",
-  "./js/ui-clip.js",
-  "./js/ui-steps.js",
-  "./js/ui-devices.js",
-  "./js/ui-shape.js",
-  "./js/ui-audioedit.js",
-  "./js/ui-browser.js",
-  "./js/ui-keys.js",
-  "./js/ui-play.js",
-  "./js/ui-kit.js",
-  "./js/ui-pads.js",
-  "./js/ui-start.js",
-  "./js/input.js",
-  "./js/ui-midi.js",
-  "./js/main.js"
-];
-
-self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
-});
+// 울림 스튜디오는 https://jinnsei99.github.io/ullim/ 로 이사했다(2026-11-10).
+// 이 파일은 옛 주소 /jinnsei/ullim/ 에 남아 있던 옛 서비스 워커를 대신한다.
+// 옛 서비스 워커는 페이지를 열 때마다 sw.js가 바뀌었는지 확인하므로, 옛 주소를 한 번 열면 이 파일이 들어온다.
+// 들어오면 ① 옛 주소 파일만 담긴 캐시를 지우고(새 주소의 캐시는 남긴다) ② 스스로 등록을 풀고
+// ③ 열려 있던 옛 화면을 다시 불러서 이사 안내 페이지(→ 새 주소)로 보낸다.
+// fetch 처리기가 없으므로, 들어온 순간부터 옛 화면을 저장본으로 보여 주지 않는다.
+self.addEventListener('install', () => self.skipWaiting());
 
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(key => key.startsWith('ullim-') && key !== CACHE).map(key => caches.delete(key))))
-      .then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('fetch', event => {
-  const request = event.request;
-  if (request.method !== 'GET') return;
-  const url = new URL(request.url);
-  const scope = new URL(self.registration.scope);
-
-  // 글꼴: 저장본을 먼저 쓰고 뒤에서 새로 받아 둔다
-  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
-    event.respondWith(caches.open(CACHE).then(async cache => {
-      const cached = await cache.match(request);
-      const network = fetch(request).then(response => {
-        if (response.ok || response.type === 'opaque') cache.put(request, response.clone());
-        return response;
-      }).catch(() => cached);
-      return cached || network;
-    }));
-    return;
-  }
-  // 이 앱 폴더 밖(같은 사이트의 다른 앱 포함)은 건드리지 않는다
-  if (url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
-
-  const key = request.mode === 'navigate' ? './index.html' : request;
-  event.respondWith(
-    fetch(request)
-      .then(response => {
-        if (response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE).then(cache => cache.put(key, copy));
-        }
-        return response;
-      })
-      .catch(() => caches.match(key, { ignoreSearch: true }).then(hit => hit || caches.match(request, { ignoreSearch: true })))
-  );
+  event.waitUntil((async () => {
+    const here = self.registration.scope; // .../jinnsei/ullim/
+    try {
+      for (const name of await caches.keys()) {
+        if (!name.startsWith('ullim-')) continue;
+        const reqs = await (await caches.open(name)).keys();
+        const inOld = r => r.url.startsWith(here);
+        const otherSite = r => new URL(r.url).origin !== self.location.origin; // 글꼴 저장본
+        if (reqs.some(inOld) && reqs.every(r => inOld(r) || otherSite(r))) await caches.delete(name);
+      }
+    } catch (e) { /* 캐시를 못 지워도 등록은 푼다 */ }
+    try { await self.registration.unregister(); } catch (e) { /* 이미 풀렸으면 그대로 */ }
+    const wins = await self.clients.matchAll({ type: 'window' });
+    await Promise.all(wins.map(c => c.navigate(c.url).catch(() => null)));
+  })());
 });
