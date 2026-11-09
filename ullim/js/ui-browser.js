@@ -27,7 +27,14 @@ function setFold(names, shut) {
   U.setPref('brFold', Object.assign({}, FOLD));
   renderList(true);
 }
-let root, listEl, searchEl, catEl;
+let root, listEl, searchEl, catEl, srcEl;
+const SRC_INFO = {
+  rec: '실제 악기를 녹음한 샘플로 쳐요.',
+  synth: '녹음 없이 앱이 계산해서 만든 소리(기계음)로 쳐요.',
+  both: '녹음과 합성 둘 다 돼요. 그냥 넣으면 녹음으로 치고, 위의 합성을 고르고 넣으면 계산한 소리로 쳐요. 넣은 뒤에도 장치 제목 줄에서 바꿔요.'
+};
+// 녹음 · 합성 거르기를 바꾸면 (소리 고르기 창에서 바꿔도) 목록을 다시 그린다
+U.on('srcFilter', () => { if (root) { const seg = srcEl && srcEl.querySelector('.src-filter'); if (seg) seg.replaceWith(U.srcFilterSeg()); st.sel = null; renderList(); } });
 
 function build(el) {
   root = el;
@@ -46,6 +53,7 @@ function build(el) {
     b.addEventListener('click', () => { st.cat = c.id; U.setPref('brCat', c.id); st.sel = null; for (const x of catEl.children) x.setAttribute('aria-selected', 'false'); b.setAttribute('aria-selected', 'true'); renderList(); });
     catEl.append(b);
   }
+  srcEl = h('div', { class: 'br-src' }, U.srcFilterSeg(), h('span', { class: 'br-src-n', text: '합성 = 기계음' }));
   listEl = h('div', { class: 'br-list', tabindex: '0', role: 'listbox', 'aria-label': '브라우저 목록' });
   listEl.addEventListener('keydown', e => {
     if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); move(1); }
@@ -54,7 +62,7 @@ function build(el) {
   });
   const imp = btn({ icon: 'upload', text: '오디오 가져오기', cls: 'sm', info: ['오디오 가져오기', 'WAV·MP3·OGG 같은 파일을 이 브라우저에 넣어요. 화면 어디에든 파일을 끌어다 놓아도 돼요.'], onclick: () => importFiles() });
   const pv = btn({ icon: 'speaker', cls: 'tg sm', toggle: true, on: st.preview, title: '미리듣기', info: ['미리듣기', '켜면 목록에서 고를 때마다 소리를 들려줘요.'], onclick: () => { st.preview = !st.preview; U.setPref('preview', st.preview); U.setPressed(pv, st.preview); if (!st.preview) U.engine.stopPreview(); } });
-  root.append(h('div', { class: 'br-search' }, icon('search'), searchEl), catEl, listEl, h('div', { class: 'br-foot' }, imp, pv));
+  root.append(h('div', { class: 'br-search' }, icon('search'), searchEl), catEl, srcEl, listEl, h('div', { class: 'br-foot' }, imp, pv));
   root.addEventListener('pointerdown', () => { ui.focus = 'browser'; });
   renderList();
 }
@@ -81,26 +89,41 @@ function items() {
   const head = name => out.push({ head: name });
   switch (st.cat) {
     case 'sounds': {
-      // 맨 위에 ★ 즐겨찾기와 최근 쓴 소리 (찾을 때는 같은 소리가 두 번 나오지 않게 뺀다)
+      // 맨 위에 ★ 즐겨찾기와 최근 쓴 소리 (찾을 때는 같은 소리가 두 번 나오지 않게 뺀다).
+      // 녹음 · 합성 거르기: 녹음 · 합성으로 거르면 둘 다 되는 소리도 그 방식으로 넣고 들려준다
+      const f = U.srcFilter();
       const top = U.favs.topGroups().map(([g, l]) => [g, l, true]);
-      for (const [tag, list, special] of top.concat(U.soundGroups(U.allSounds()))) {
+      for (const [tag, all, special] of top.concat(U.soundGroups(U.allSounds()))) {
+        const list = all.filter(s => U.srcMatch(U.soundSrc(s), f));
+        if (!list.length) continue;
         out.push({ head: tag, special });
-        for (const s of list) out.push({
-          label: s.name, sub: U.DEV[s.kind].name + (special ? ' · ' + (s.user ? '내 사운드' : s.tags[0]) : ''), icon: 'sound', find: s.tags.join(' '), dup: special,
-          key: tag + '/' + U.favs.key(s), sound: s,
-          drag: { type: 'sound', item: s }, load: () => A.loadSound(loadTarget('midi'), s),
-          preview: () => previewDev(U.makeDevice(s.kind, { p: s.p, data: s.data }), U.soundRole(s), s),
-          menu: [U.favs.menuItem(s)].concat(s.user ? U.mySoundItems(s) : [])
+        for (const s0 of list) {
+          const s = U.soundAs(s0, f), stag = U.srcTag(U.soundSrc(s0), f);
+          out.push({
+            label: s.name, sub: U.DEV[s.kind].name + (special ? ' · ' + (s.user ? '내 사운드' : s.tags[0]) : ''), icon: 'sound', find: s.tags.join(' ') + (stag ? ' ' + stag.text : ''), dup: special,
+            key: tag + '/' + U.favs.key(s0), sound: s0, tag: stag,
+            drag: { type: 'sound', item: s }, load: () => A.loadSound(loadTarget('midi'), s),
+            preview: () => previewDev(U.makeDevice(s.kind, { p: s.p, data: s.data }), U.soundRole(s), s),
+            menu: [U.favs.menuItem(s0)].concat(s0.user ? U.mySoundItems(s0) : [])
+          });
+        }
+      }
+      break;
+    }
+    case 'drums': {
+      // 녹음 킷 바로 뒤에 같은 킷의 합성 버전 '(합성)'. 거르기를 따른다
+      const f = U.srcFilter();
+      for (const k of U.KITS) {
+        const inf = U.kitSrc(k);
+        if (!U.srcMatch(inf, f)) continue;
+        const stag = U.srcTag(inf, f);
+        out.push({
+          label: k.name, sub: k.tags.join(' · '), icon: 'drum', find: stag ? stag.text : '', tag: stag, drag: { type: 'kit', item: k }, load: () => A.loadKit(loadTarget('midi'), k),
+          preview: () => previewDev(U.kitDevice(k), 'drums')
         });
       }
       break;
     }
-    case 'drums':
-      for (const k of U.KITS) out.push({
-        label: k.name, sub: k.tags.join(' · '), icon: 'drum', drag: { type: 'kit', item: k }, load: () => A.loadKit(loadTarget('midi'), k),
-        preview: () => previewDev(U.kitDevice(k), 'drums')
-      });
-      break;
     case 'pads':
       for (const k of U.LOOPKITS) out.push({
         label: k.name, sub: k.tags.join(' · '), icon: 'pads', drag: { type: 'loopkit', item: k }, infoText: k.info,
@@ -180,6 +203,7 @@ function items() {
 }
 function renderList(keepScroll) {
   if (!listEl) return;
+  if (srcEl) srcEl.hidden = !(st.cat === 'sounds' || st.cat === 'drums');
   if (st.cat === 'user' && !st.userList) refreshUser();
   if (st.cat === 'projects' && !st.projList) refreshProjects();
   const sy = keepScroll ? listEl.scrollTop : 0;
@@ -216,9 +240,9 @@ function renderList(keepScroll) {
       return;
     }
     if (it.empty) { listEl.append(h('p', { class: 'br-empty', text: it.empty })); return; }
-    const row = h('div', { class: 'br-item' + (it.indent ? ' indent' : '') + (st.sel === i ? ' sel' : '') + (it.sound ? ' fav-row' : ''), role: 'option', dataset: { i, k: it.key || it.label + '/' + (it.sub || '') } }, icon(it.icon || 'file'), h('span', { class: 'bi-l', text: it.label }), it.sub ? h('span', { class: 'bi-s', text: it.sub }) : null);
+    const row = h('div', { class: 'br-item' + (it.indent ? ' indent' : '') + (st.sel === i ? ' sel' : '') + (it.sound ? ' fav-row' : '') + (it.tag ? ' has-tag' : ''), role: 'option', dataset: { i, k: it.key || it.label + '/' + (it.sub || '') } }, icon(it.icon || 'file'), h('span', { class: 'bi-l', text: it.label }), it.tag ? h('span', { class: 'src-tag ' + it.tag.cls, text: it.tag.text }) : null, it.sub ? h('span', { class: 'bi-s', text: it.sub }) : null);
     if (it.sound) row.append(favStar(it.sound));
-    info(row, it.label, (it.infoText || it.sub || '') + (it.load ? ' 두 번 누르거나 Enter로 넣고, 끌어서 원하는 곳에 놓아요.' : ''));
+    info(row, it.label + (it.tag ? ' · ' + it.tag.text : ''), (it.infoText || it.sub || '') + (it.tag ? ' ' + SRC_INFO[it.tag.cls] : '') + (it.load ? ' 두 번 누르거나 Enter로 넣고, 끌어서 원하는 곳에 놓아요.' : ''));
     row.addEventListener('pointerdown', e => {
       if (e.button !== 0) return;
       // 손가락은 목록을 밀어 넘기려고 대는 일이 많아서, 떼었을 때(click) 고르고 들려준다

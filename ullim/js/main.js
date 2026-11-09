@@ -521,7 +521,7 @@ function aboutDialog() {
     title: '울림 스튜디오', width: '420px',
     body: h('div', { class: 'xp' },
       h('p', { text: '브라우저에서 돌아가는 음악 작업 앱이에요. 장르 템플릿, 세션 뷰의 클립 런치, 어레인지먼트, 스텝 시퀀서와 피아노 롤, 루프 패드, 신스·드럼 머신·샘플러, 이펙트, 자동화, MIDI 도구, 오디오 내보내기를 담았어요.' }),
-      h('p', { class: 'hint', text: '신스와 전자 드럼은 Web Audio로 직접 계산해서 만들어요. 피아노, 현악 · 관악 · 색소폰, 파이프 오르간, 하프 · 마림바 같은 말렛, 베이스 기타 · 업라이트 베이스, 재즈 · 일렉 기타, 우리처, 밴드 · 재즈 · 로파이 드럼 킷은 무료로 공개된 녹음 샘플을 써요 (처음 쓸 때 받아 두고, 받는 동안에는 계산한 소리로 쳐요).' }),
+      h('p', { class: 'hint', text: '신스와 전자 드럼은 Web Audio로 직접 계산해서 만들어요. 피아노, 현악 · 관악 · 색소폰, 파이프 오르간, 하프 · 마림바 같은 말렛, 베이스 기타 · 업라이트 베이스, 재즈 · 일렉 기타, 우리처, 밴드 · 재즈 · 로파이 드럼 킷은 무료로 공개된 녹음 샘플을 써요 (처음 쓸 때 받아 두고, 받는 동안에는 계산한 소리로 쳐요). 장치 제목 줄의 녹음 · 합성이나 브라우저의 거르기로 녹음과 계산한 소리 중에 골라요.' }),
       h('h3', { text: '소리 출처' }),
       h('ul', { class: 'credits' },
         h('li', null, h('b', { text: '그랜드 피아노' }), document.createTextNode(' — Salamander Grand Piano V3, Alexander Holm, '), h('a', { href: 'https://creativecommons.org/licenses/by/3.0/', target: '_blank', rel: 'noopener', text: 'CC BY 3.0' })),
