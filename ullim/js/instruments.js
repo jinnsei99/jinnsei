@@ -495,7 +495,7 @@ class Drums extends Instrument {
         pn = this.pads[i] = { gain: gainNode(this.ctx, 1), pan: this.ctx.createStereoPanner(), key: null, buffer: null };
         pn.gain.connect(pn.pan); pn.pan.connect(this.out);
       }
-      if (!pd) { pn.buffer = null; pn.key = null; continue; }
+      if (!pd) { pn.buffer = null; pn.key = null; pn.wait = null; continue; }
       const lvl = pd.mute ? 0 : dbToGain(pd.level || 0), pan = pd.pan || 0;
       if (fresh) { pn.gain.gain.value = lvl; pn.pan.pan.value = pan; }
       else { const t = this.ctx.currentTime; smooth(pn.gain.gain, lvl, t); smooth(pn.pan.pan, pan, t); }
@@ -512,7 +512,10 @@ class Drums extends Instrument {
         const job = pd.src === 'sample'
           ? (pd.sample ? U.media.get(pd.sample, this.ctx.sampleRate) : Promise.resolve(null))
           : U.renderDrum(pd.type, { tune: pd.tune || 0, decay: pd.decay != null ? pd.decay : 0.5, tone: pd.tone != null ? pd.tone : 0.5 }, this.ctx.sampleRate);
-        jobs.push(job.then(buf => { if (pn.key === key) pn.buffer = buf; }, err => { console.warn(err); }));
+        const done = job.then(buf => { if (pn.key === key) pn.buffer = buf; }, err => { console.warn(err); });
+        jobs.push(done);
+        // 이 패드가 처음 소리를 낼 수 있게 되는 때: 합성 대체음이나 녹음 중 먼저 오는 쪽 (앞 소리가 남아 있으면 그것으로 친다)
+        pn.wait = Promise.race([done].concat(pn.rec ? [pn.rec.e.promise.then(() => {}, () => {})] : []));
       }
     }
     this.ready = Promise.all(jobs);
@@ -586,6 +589,40 @@ class Drums extends Instrument {
     return { amp, srcs: [src], nodes, choke: pd.choke, end, pad: i, rec: true, layer: l, take: pn.rr };
   }
   release() { /* 드럼은 끝까지 울린다 */ }
+  /* 킷을 막 넣어서 이 패드가 아직 아무 소리도 못 내면(합성 대체음을 만드는 중 · 녹음을 받는 중) 그 음을 버리지 않고
+     준비되는 대로 친다. 너무 늦으면(박에 맞춰 친 음 0.15초 · 손으로 친 음 0.6초) 박이 어긋나지 않게 버린다 */
+  noteOn(p, v, t, live) {
+    const vo = super.noteOn(p, v, t, live);
+    if (vo || !this.on) return vo;
+    const i = p - 36, pn = this.pads[i], pd = this.dev.data && this.dev.data.pads[i];
+    if (!pd || pd.mute || !pn || !pn.wait || pn.buffer || (pn.rec && pn.rec.e.ok)) return null;
+    const w = { p, v, t, live: !!live, dead: false };
+    if (!this.waiting) this.waiting = new Set();
+    this.waiting.add(w);
+    pn.wait.then(() => {
+      this.waiting.delete(w);
+      if (w.dead || !this.on || this.gone) return;
+      const now = this.ctx.currentTime;
+      if (now - t > (w.live ? 0.6 : 0.15)) return;
+      const late = super.noteOn(p, v, Math.max(t, now + 0.004), live);
+      if (late) this.lateHits = (this.lateHits || 0) + 1;
+    });
+    return null;
+  }
+  /* 기다리던 음도 멈춘다: t 뒤의 음, 지금 멈추면 모두 */
+  cut(t, withLive) {
+    if (this.waiting) for (const w of this.waiting) if ((withLive || !w.live) && (w.t >= t - 1e-4 || t <= this.ctx.currentTime + 0.02)) w.dead = true;
+    super.cut(t, withLive);
+  }
+  stopAll(t) { if (this.waiting) for (const w of this.waiting) w.dead = true; super.stopAll(t); }
+  dispose() { this.gone = true; if (this.waiting) for (const w of this.waiting) w.dead = true; super.dispose(); }
+  /* 소리를 아직 못 내는 패드가 있으면 그 준비를 기다리는 약속 (재생을 시작하기 전에 잠깐 기다린다), 없으면 null */
+  pendingSilent() {
+    const pads = (this.dev.data && this.dev.data.pads) || [];
+    const ws = [];
+    this.pads.forEach((pn, i) => { const pd = pads[i]; if (pd && !pd.mute && pn && pn.wait && !pn.buffer && !(pn.rec && pn.rec.e.ok)) ws.push(pn.wait); });
+    return ws.length ? Promise.all(ws) : null;
+  }
   param(id) { if (id === 'vol' && this.on) smooth(this.out.gain, this.outLevel(), this.ctx.currentTime); }
   get isPads() { return true; }
   /* 화면에서 패드를 눌렀을 때 */

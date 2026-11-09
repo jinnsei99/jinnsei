@@ -297,6 +297,13 @@ class Engine {
     if (this.offline && this.ctx.currentTime === 0) { param.cancelScheduledValues(0); param.value = v; return; }
     smooth(param, v, this.ctx.currentTime, tc || 0.012);
   }
+  /* 재생을 시작하기 전에: 아직 소리를 못 내는 드럼 패드(막 넣은 킷)가 있으면 그 준비를 기다리는 약속 (최대 maxMs), 없으면 null */
+  waitPlayable(maxMs) {
+    const jobs = [];
+    for (const n of this.nodes.values()) if (n.inst && n.inst.pendingSilent) { const w = n.inst.pendingSilent(); if (w) jobs.push(w); }
+    if (!jobs.length) return null;
+    return Promise.race([Promise.all(jobs), new Promise(r => setTimeout(r, maxMs || 1500))]);
+  }
   ready() {
     const jobs = [];
     for (const n of this.nodes.values()) for (const d of n.devs.values()) jobs.push(d.ready);

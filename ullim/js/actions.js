@@ -143,9 +143,16 @@ A.loadSound = function (trackId, sound, o) {
 A.loadKit = function (trackId, kit) {
   let t = T(trackId);
   if (!t || t.type !== 'midi') t = A.addTrack('midi');
-  removeInstrument(t);
-  const d = U.kitDevice(kit);
-  t.devices.splice(insertIndex(t, 'drums'), 0, d);
+  const d = U.kitDevice(kit), cur = U.instrumentOf(t);
+  // 이미 드럼 머신(딸린 이펙트 없음)이면 그 장치에 새 킷을 담는다: 엔진이 새 소리를 준비하는 동안 앞 킷 소리가 이어서 나서 박이 씹히지 않는다
+  if (cur && cur.kind === 'drums' && !(cur.grp && t.devices.some(x => x !== cur && x.grp === cur.grp))) {
+    dropAuto(t, cur.id);
+    Object.assign(cur, { p: d.p, data: d.data, preset: d.preset, on: true });
+    delete cur.grp;
+  } else {
+    removeInstrument(t);
+    t.devices.splice(insertIndex(t, 'drums'), 0, d);
+  }
   if (!t.name || /MIDI$/.test(U.trackLabel(pr(), t))) t.name = kit.name;
   U.ui.track = t.id;
   commit(kit.name + ' 불러오기');
@@ -410,7 +417,17 @@ A.setAuto = function (trackId, key, pts, final) {
 };
 
 /* ================= 트랜스포트 ================= */
-A.play = function () { U.ensureAudio(); A.cancelCountIn(true); eng().play(pr().pos); };
+/* 재생 시작: 막 넣은 드럼 킷처럼 아직 소리를 못 내는 패드가 있으면 준비될 때까지 잠깐(최대 1.5초) 기다렸다가 (첫 박이 씹히지 않게).
+   기다리는 동안 다시 누르면 시작하지 않는다 */
+function startPlay(from) {
+  const e = eng();
+  const w = e.waitPlayable && e.waitPlayable(1500);
+  if (!w) { e.starting = null; e.play(from); return; }
+  const tok = {};
+  e.starting = tok;
+  w.then(() => { if (e.starting === tok) { e.starting = null; if (!e.playing) e.play(from); } });
+}
+A.play = function () { U.ensureAudio(); A.cancelCountIn(true); startPlay(pr().pos); };
 A.stop = function () {
   const e = eng();
   if (A.cancelCountIn()) return;
@@ -426,8 +443,9 @@ A.togglePlay = function (cont) {
   U.ensureAudio();
   const e = eng();
   if (A.cancelCountIn()) return;
+  if (e.starting) { e.starting = null; return; }
   if (e.playing) e.stop();
-  else e.play(cont && e.lastStopB != null ? e.lastStopB : pr().pos);
+  else startPlay(cont && e.lastStopB != null ? e.lastStopB : pr().pos);
 };
 A.setTempo = function (bpm, final) {
   bpm = U.clamp(U.round(bpm, 2), 20, 999);
