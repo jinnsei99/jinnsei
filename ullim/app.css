@@ -364,6 +364,21 @@ body[data-view="session"] .v-session, body[data-view="arrange"] .v-arrange, body
 .br-item.has-tag > .bi-s { grid-column: 2 / 4; grid-row: 2; }
 .br-item.has-tag.fav-row > .bi-fav { grid-column: 4; }
 .src-filter .seg-b[aria-pressed="true"]:nth-child(2) { box-shadow: inset 0 -2px 0 var(--play); }
+/* 녹음 · 합성 단추 두 개: 둘 다 되는 소리 옆 (브라우저 줄 · 소리 고르기 창). 누르면 그 방식으로 넣는다 */
+.src-ver { flex: none; display: inline-flex; border: 1px solid var(--line-2); border-radius: 3px; overflow: hidden; }
+.src-chip { border: 0; background: var(--panel); color: var(--fg-2); padding: 0 6px; min-height: 18px; font: 600 10px var(--font-kr); white-space: nowrap; cursor: pointer; }
+.src-chip + .src-chip { border-left: 1px solid var(--line-2); }
+.src-chip.rec:hover, .src-chip.rec[aria-pressed="true"] { color: var(--play); }
+.src-chip.synth:hover, .src-chip.synth[aria-pressed="true"] { color: var(--cue); }
+.src-chip[aria-pressed="true"] { background: var(--panel-3); box-shadow: inset 0 -2px 0 currentColor; }
+html.touch .src-chip { min-height: 30px; padding: 0 10px; font-size: 11.5px; }
+.br-item.has-tag > .src-ver { grid-column: 3; grid-row: 1; justify-self: end; }
+.snd-ver-g { display: inline-flex; align-items: stretch; }
+.snd-ver-g > .inst-b { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.snd-ver-g > .src-ver { border-left: 0; border-radius: 0 4px 4px 0; }
+.snd-panel .src-chip { min-height: 28px; padding: 0 8px; font-size: 11px; }
+.in-ver { display: flex; align-items: center; gap: 8px; padding: 2px 12px 6px; }
+.in-ver-l { color: var(--fg-3); font-size: 11px; }
 .src-filter .seg-b[aria-pressed="true"]:nth-child(3) { box-shadow: inset 0 -2px 0 var(--cue); }
 .br-foot { display: flex; gap: 6px; padding: 6px 8px; border-top: 1px solid var(--line-2); }
 .br-foot .btn:first-child { flex: 1 1 auto; }

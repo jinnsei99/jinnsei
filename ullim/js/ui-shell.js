@@ -340,8 +340,10 @@ function renderInsp() {
   const body = h('div', { class: 'in-body' });
   // 소리 고르기
   if (t.type === 'midi' && d && d.kind !== 'drums' && d.kind !== 'looppad') {
-    const [pick, prev, next] = U.soundPicker(t);
+    const [pick, prev, next, ver] = U.soundPicker(t, { ver: true });
     body.append(h('div', { class: 'in-pick' }, prev, pick, next));
+    // 이 악기를 녹음으로 칠지 합성으로 칠지 (Acoustic · Ensemble)
+    if (ver) body.append(h('div', { class: 'in-ver' }, h('span', { class: 'in-ver-l', text: '소리 방식' }), ver));
   }
   // 소리 다듬기
   if (t.type === 'midi' && d) body.append(U.shapePanel(t));
