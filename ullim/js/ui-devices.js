@@ -188,6 +188,9 @@ function soundPicker(t, o) {
 U.soundPicker = soundPicker;
 U.soundPanel = soundPanel;
 
+/* 다시 그려도 보던 자리 그대로: 손잡이를 돌리거나 패드를 고칠 때마다 장치 줄을 통째로 다시 그려서,
+   트랙마다 밀어 둔 가로 자리와 장치마다 내려 둔 세로 자리를 기억했다가 돌려놓는다 */
+const chainScroll = new Map(), bodyScroll = new Map();
 function render(el) {
   root = el;
   U.clear(root);
@@ -196,6 +199,8 @@ function render(el) {
   const t = U.selTrack();
   if (!t) return;
   chainEl = h('div', { class: 'chain' });
+  const myChain = chainEl;
+  myChain.addEventListener('scroll', () => chainScroll.set(t.id, myChain.scrollLeft), { passive: true });
   const head = h('div', { class: 'chain-title' }, h('span', { class: 'ct-sw', style: { background: U.colorOf(t.color) } }), h('span', { text: U.trackLabel(pr(), t) }));
   root.append(head, chainEl);
   root.addEventListener('pointerdown', () => { ui.focus = 'devices'; });
@@ -212,6 +217,17 @@ function render(el) {
       h('p', { text: t.type === 'midi' ? '악기가 없어서 소리가 나지 않아요.' : '장치가 없어요.' }),
       h('p', { class: 'muted', text: '브라우저에서 악기·사운드·이펙트를 끌어다 여기에 놓거나 두 번 누르세요.' })));
   }
+  const back = () => {
+    if (chainEl !== myChain) return;
+    const x = chainScroll.get(t.id);
+    if (x && myChain.scrollLeft !== x) myChain.scrollLeft = x;
+    for (const p of panels) {
+      const b = p.el.querySelector('.dev-body'), y = bodyScroll.get(p.d.id);
+      if (b && y && b.scrollTop !== y) b.scrollTop = y;
+    }
+  };
+  back();
+  requestAnimationFrame(back);   // 그래프 · 패드처럼 나중에 크기가 정해지는 칸이 있어서 한 번 더
 }
 function dropGap(t, i, last) {
   const el = h('div', { class: 'drop-gap' + (last ? ' last' : '') });
@@ -279,6 +295,7 @@ function panel(t, d) {
   const close = btn({ icon: 'close', cls: 'ghost sm', title: '장치 지우기', onclick: () => A.removeDevice(t.id, d.id) });
   const head = h('div', { class: 'dev-head' }, act, title, spec.type === 'instrument' ? srcHead(d) : null, menuB, close);
   const body = h('div', { class: 'dev-body' });
+  body.addEventListener('scroll', () => bodyScroll.set(d.id, body.scrollTop), { passive: true });
   el.append(head, body);
   el.addEventListener('pointerdown', () => { ui.selDevice = d.id; });
   const ctls = [];
