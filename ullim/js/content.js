@@ -124,6 +124,12 @@ recKit('kvintage', seventies, { tone: 0.4, decay: 0.45, pad: { 5: { tune: -3 } }
 recKit('kjazz', { 0: 'drk_70s:kick', 1: 'drk_70s:stick', 2: 'drk_70s:snare', 3: 'drk_brush:snare', 5: 'drk_brush:tom_low', 6: 'drk_brush:hat', 7: 'drk_brush:tom_hi', 9: 'drk_70s:tom_hi', 10: 'drk_brush:open', 11: 'drk_brush:stir', 13: 'drk_brush:crash', 15: 'drk_brush:ride' }, { tone: 0.45, lv: { 0: 1.6, 1: 3.7, 2: -3.3, 3: -0.2, 5: -0.7, 6: -6.2, 7: -0.9, 9: -2.1, 10: -4.6, 11: -0.5, 13: -2.2, 15: 1.2 } });
 recKit('klofi', { 0: 'drk_lofi:kick', 1: 'drk_lofi:stick', 2: 'drk_lofi:snare', 5: 'drk_lofi:tom_low', 6: 'drk_lofi:hat', 7: 'drk_lofi:tom_low', 9: 'drk_lofi:tom_hi', 10: 'drk_lofi:open', 13: 'drk_rock:crash', 15: 'drk_rock:ride' },
   { pad: { 7: { tune: 3 }, 13: { tone: 0.3, decay: 0.4 }, 15: { tone: 0.3, decay: 0.4 } }, lv: { 0: 1.8, 1: 4, 2: -3.2, 5: -0.8, 6: -4.3, 7: -0.6, 9: -1.8, 10: -3.6, 13: -0.8, 15: -2.9 } });
+// 녹음으로 바꾼 킷마다 예전의 합성 킷도 '(합성)'으로 바로 뒤에 둔다 — 녹음과 기계음 중에 고를 수 있게
+for (const k of KITS.filter(x => x.synthPads)) {
+  const v = { id: k.id + '_syn', name: k.name + ' (합성)', tags: k.tags, pads: U.clone(k.synthPads), synthOf: k.id };
+  k.synthKit = v.id;
+  KITS.splice(KITS.indexOf(k) + 1, 0, v);
+}
 U.KITS = KITS;
 U.DEFAULT_KIT = KITS[0].pads;
 U.kitById = id => KITS.find(k => k.id === id) || KITS[0];
@@ -307,6 +313,42 @@ U.soundGroups = list => {
   }
   const rank = g => { const i = GROUP_ORDER.indexOf(g); return i < 0 ? GROUP_ORDER.length : i; };
   return [...groups].sort((a, b) => rank(a[0]) - rank(b[0]));
+};
+
+/* ================= 소리 방식: 녹음 · 합성 =================
+   rec(녹음): 실제 악기를 녹음한 샘플로 친다 · synth(합성): 녹음 없이 앱이 계산해서 만든 소리(기계음).
+   srcInfo → { cur: 지금 방식 ('rec' · 'synth', 모르면 null), both: 녹음과 합성 둘 다로 칠 수 있는지 } */
+const SRC_LABEL = { rec: '녹음', synth: '합성' };
+function srcInfo(kind, p, data) {
+  p = p || {};
+  if (kind === 'acoustic' || kind === 'ensemble') {
+    const inst = p.inst || U.DEV[kind].byId.inst.def;
+    const both = !!(U.acousticDSP && U.acousticDSP.hasRec(kind, inst));
+    return { cur: both && p.src !== 'synth' ? 'rec' : 'synth', both };
+  }
+  if (kind === 'polysynth' || kind === 'fm') return { cur: 'synth', both: false };
+  if (kind === 'drums') {
+    // 녹음 드럼 패드가 하나라도 있으면 녹음 킷 (클랩 같은 몇 개는 계산한 소리여도)
+    const pads = ((data && data.pads) || []).filter(Boolean);
+    return { cur: pads.some(pd => pd.src === 'rec') ? 'rec' : pads.some(pd => pd.src === 'synth') ? 'synth' : null, both: false };
+  }
+  // 샘플러: 내장 소리(gen:)는 계산해서 만든 소리, 가져온 오디오는 그 파일 나름이라 표시하지 않는다
+  if (kind === 'sampler') { const smp = data && data.sample; return { cur: typeof smp === 'string' && smp.startsWith('gen:') ? 'synth' : null, both: false }; }
+  return { cur: null, both: false };
+}
+U.SRC_LABEL = SRC_LABEL;
+U.srcInfo = srcInfo;
+U.soundSrc = s => srcInfo(s.kind, s.p, s.data);
+U.kitSrc = k => srcInfo('drums', null, { pads: k.pads });
+U.devSrc = d => srcInfo(d.kind, d.p, d.data);
+/* 거르기: 'all' 전체 · 'rec' 녹음으로 칠 수 있는 것 · 'synth' 합성으로 칠 수 있는 것 */
+U.srcMatch = (inf, f) => f === 'rec' ? inf.cur === 'rec' || inf.both : f === 'synth' ? inf.cur === 'synth' || inf.both : true;
+/* 이 방식으로 칠 사운드: 둘 다 되는 소리만 src를 바꾼 사본 (전체로 고르면 그대로 — 녹음이 있으면 녹음) */
+U.soundAs = (s, f) => (f === 'rec' || f === 'synth') && U.soundSrc(s).both ? Object.assign({}, s, { p: Object.assign({}, s.p, { src: f }) }) : s;
+/* 목록에 붙일 꼬리표: 둘 다 되는 소리는 '전체'에서 '녹음 · 합성', 거른 방식에서는 그 방식 */
+U.srcTag = (inf, f) => {
+  if (inf.both) return f === 'rec' || f === 'synth' ? { cls: f, text: SRC_LABEL[f] } : { cls: 'both', text: '녹음 · 합성', cur: inf.cur };
+  return inf.cur ? { cls: inf.cur, text: SRC_LABEL[inf.cur] } : null;
 };
 
 /* ================= 이펙트 프리셋 ================= */

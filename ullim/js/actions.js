@@ -200,7 +200,10 @@ A.setParam = function (devId, pid, v, final) {
 A.applyPreset = function (devId, name, p) {
   const r = U.deviceById(pr(), devId);
   if (!r) return;
+  // 녹음 · 합성 고른 것은 프리셋을 바꿔도 그대로 (프리셋이 따로 정하지 않으면)
+  const src = r.dev.p.src;
   r.dev.p = Object.assign(U.defaults(r.dev.kind), p);
+  if (src != null && (!p || p.src == null) && 'src' in r.dev.p) r.dev.p.src = src;
   r.dev.preset = name;
   commit(name + ' 프리셋');
 };

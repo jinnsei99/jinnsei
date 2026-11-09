@@ -199,9 +199,10 @@ function commands() {
   // 소리 · 드럼 · 루프 패드 · 이펙트 · 새 곡
   for (const s of U.allSounds()) {
     if (s.name === '빈 샘플러') continue;
-    add('snd:' + skey(s), s.name, () => A.loadSound(midiTarget(), s), { kind: (isFav(s) ? '★ ' : '') + '소리 · ' + s.tags[0], keys: s.tags.join(' ') + ' ' + U.DEV[s.kind].name + ' sound 소리 악기' });
+    const inf = U.soundSrc(s), src = inf.both ? '녹음 합성' : inf.cur ? U.SRC_LABEL[inf.cur] : '';
+    add('snd:' + skey(s), s.name, () => A.loadSound(midiTarget(), s), { kind: (isFav(s) ? '★ ' : '') + '소리 · ' + s.tags[0], keys: s.tags.join(' ') + ' ' + U.DEV[s.kind].name + ' sound 소리 악기 ' + src });
   }
-  for (const k of U.KITS) add('kit:' + k.name, k.name, () => A.loadKit(midiTarget(), k), { kind: '드럼 킷', keys: k.tags.join(' ') + ' drum kit 드럼' });
+  for (const k of U.KITS) { const ks = U.kitSrc(k).cur; add('kit:' + k.name, k.name, () => A.loadKit(midiTarget(), k), { kind: '드럼 킷' + (ks ? ' · ' + U.SRC_LABEL[ks] : ''), keys: k.tags.join(' ') + ' drum kit 드럼 ' + (ks ? U.SRC_LABEL[ks] : '') }); }
   for (const k of U.LOOPKITS) add('lp:' + k.name, k.name, () => { const tr = A.loadLoopKit(midiTarget(), k); if (tr) ui.padTrack = tr.id; }, { kind: '루프 패드', keys: k.tags.join(' ') + ' loop pad 패드 찹' });
   for (const kind of Object.keys(U.DEV).filter(k => U.DEV[k].type === 'audio')) {
     add('fx:' + kind, '이펙트 넣기 · ' + U.DEV[kind].name, () => { const tr = U.selTrack(); if (tr) A.addDevice(tr.id, kind); }, { kind: '이펙트', keys: 'effect fx 이펙트 효과 ' + kind });

@@ -352,6 +352,19 @@ body[data-view="session"] .v-session, body[data-view="arrange"] .v-arrange, body
 .bi-l { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bi-s { grid-column: 2; color: var(--fg-3); font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .br-empty { padding: 10px 12px; color: var(--fg-3); font: 12px/1.5 var(--font-kr); }
+/* 녹음 · 합성 거르기 줄과 줄마다의 꼬리표 */
+.br-src { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-bottom: 1px solid var(--line-2); min-width: 0; }
+.br-src[hidden] { display: none; }
+.br-src .src-filter { flex: none; }
+.br-src .seg-b { padding: 0 8px; white-space: nowrap; }
+.br-src-n { min-width: 0; color: var(--fg-3); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.br-item.has-tag { grid-template-columns: 14px minmax(0, 1fr) auto; }
+.br-item.has-tag.fav-row { grid-template-columns: 14px minmax(0, 1fr) auto auto; }
+.br-item.has-tag > .src-tag { grid-column: 3; grid-row: 1; justify-self: end; }
+.br-item.has-tag > .bi-s { grid-column: 2 / 4; grid-row: 2; }
+.br-item.has-tag.fav-row > .bi-fav { grid-column: 4; }
+.src-filter .seg-b[aria-pressed="true"]:nth-child(2) { box-shadow: inset 0 -2px 0 var(--play); }
+.src-filter .seg-b[aria-pressed="true"]:nth-child(3) { box-shadow: inset 0 -2px 0 var(--cue); }
 .br-foot { display: flex; gap: 6px; padding: 6px 8px; border-top: 1px solid var(--line-2); }
 .br-foot .btn:first-child { flex: 1 1 auto; }
 
@@ -535,6 +548,10 @@ html.touch .amp-models .inst-b { min-height: 34px; }
 .inst-b { min-height: 20px; padding: 0 7px; border: 1px solid var(--line-2); border-radius: 4px; background: var(--panel); color: var(--fg-2); font: 11px var(--font-kr); white-space: nowrap; }
 .inst-b:hover { color: var(--fg); border-color: var(--fg-3); }
 .inst-b[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+/* 녹음 샘플이 있는 악기: 오른쪽 위에 작은 점 (버튼 크기는 그대로) */
+.inst-b.has-rec { position: relative; }
+.inst-b.has-rec::after { content: ""; position: absolute; top: 2px; right: 2px; width: 4px; height: 4px; border-radius: 50%; background: var(--play); }
+.inst-b.has-rec[aria-pressed="true"]::after { background: var(--accent-fg); }
 .snd-panel { display: flex; flex-direction: column; gap: 6px; }
 .snd-panel .insts-g { width: 62px; padding-top: 7px; font-size: 11px; }
 .snd-panel .inst-b { min-height: 28px; padding: 0 10px; font-size: 12.5px; }
@@ -585,6 +602,17 @@ html.touch .amp-models .inst-b { min-height: 34px; }
 .dev.off { opacity: 0.55; }
 .dev-head { display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 2px 0 6px; background: var(--panel-3); }
 .dev-act { width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--line); background: var(--sunk); padding: 0; flex: none; }
+/* 녹음 · 합성: 제목 줄의 고르기(Acoustic · Ensemble)와 꼬리표 */
+.dev-head .src-seg { flex: none; }
+.dev-head .src-seg .seg-b { min-height: 18px; padding: 0 7px; font-size: 10.5px; }
+html.touch .dev-head .src-seg .seg-b { min-height: 22px; padding: 0 9px; font-size: 11px; }
+.src-seg .seg-b:disabled { opacity: 0.4; cursor: default; }
+.src-seg .seg-b[aria-pressed="true"]:first-child { box-shadow: inset 0 -2px 0 var(--play); }
+.src-seg .seg-b[aria-pressed="true"]:last-child { box-shadow: inset 0 -2px 0 var(--cue); }
+.src-tag { flex: none; display: inline-block; padding: 0 5px; border: 1px solid currentColor; border-radius: 3px; font: 600 9.5px/14px var(--font-kr); white-space: nowrap; opacity: 0.9; }
+.src-tag.rec { color: var(--play); }
+.src-tag.synth { color: var(--cue); }
+.src-tag.both { color: var(--fg-2); }
 .dev-act[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); }
 .dev-name { flex: 1 1 auto; display: flex; align-items: baseline; gap: 6px; min-width: 0; cursor: grab; }
 .dn { font-weight: 600; white-space: nowrap; }

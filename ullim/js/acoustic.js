@@ -479,8 +479,8 @@ class Acoustic extends U.Instrument {
     this.prewarmSoon();
   }
   cfg() { return AC[this.v.inst] || AC.grand; }
-  /* 이 종류의 녹음 샘플 세트 (없는 종류면 null) */
-  samples() { return sampleSet(this.v.inst); }
+  /* 이 종류의 녹음 샘플 세트 (없는 종류이거나 '합성'을 고르면 null — 계산한 소리로 친다) */
+  samples() { return this.v.src === 'synth' ? null : sampleSet(this.v.inst); }
   loadSamples() { const e = this.samples(); this.ready = e ? e.promise : Promise.resolve(); return this.ready; }
   /* 샘플로 칠 수 있거나 받는 중이면 계산한 소리를 미리 만들지 않는다 */
   usesSamples() { const e = this.samples(); return !!e && !e.failed; }
@@ -592,8 +592,8 @@ class Acoustic extends U.Instrument {
   }
   param(id, v, t) {
     if (id === 'vol') { if (this.on) smooth(this.out.gain, this.outLevel(), t); return; }
-    if (id === 'inst') this.loadSamples();
-    if (id === 'inst' || id === 'tone' || id === 'decay' || id === 'body') this.prewarmSoon();
+    if (id === 'inst' || id === 'src') this.loadSamples();
+    if (id === 'inst' || id === 'src' || id === 'tone' || id === 'decay' || id === 'body') this.prewarmSoon();
   }
   /* 쉬는 틈에 이 트랙 클립에 쓰인 음과 가운데 음역을 미리 계산해 둔다 (재생 중에 계산하느라 늦지 않게) */
   prewarmSoon() {
@@ -715,8 +715,8 @@ class Ensemble extends U.Instrument {
     this.loadSamples();
   }
   cfg() { return EN[this.v.inst] || EN.strings; }
-  /* 이 종류의 녹음 샘플 세트들 (현악 합주 · 브라스 섹션은 여러 세트를 음역대로 겹친다). 없는 종류면 [] */
-  sets() { return (this.cfg().smp || []).map(sampleSet).filter(Boolean); }
+  /* 이 종류의 녹음 샘플 세트들 (현악 합주 · 브라스 섹션은 여러 세트를 음역대로 겹친다). 없는 종류이거나 '합성'을 고르면 [] */
+  sets() { return this.v.src === 'synth' ? [] : (this.cfg().smp || []).map(sampleSet).filter(Boolean); }
   loadSamples() { const es = this.sets(); this.ready = Promise.all(es.map(e => e.promise)); return this.ready; }
   /* 샘플 소리의 밝기: Bright 0.5면 녹음 그대로, 낮추면 로우패스로 어둡게 */
   scut() {
@@ -878,7 +878,7 @@ class Ensemble extends U.Instrument {
   param(id, v, t) {
     if (id === 'vol') { if (this.on) smooth(this.out.gain, this.outLevel(), t); return; }
     if (id === 'inst' || id === 'vib') this.applyType(t);
-    if (id === 'inst') this.loadSamples();
+    if (id === 'inst' || id === 'src') this.loadSamples();
     if (id === 'bright') { const c = this.cfg(); for (const vo of this.activeVoices(t)) smooth(vo.lp.frequency, vo.smp ? this.scut() : this.cutoff(c, mtof(vo.p), 100), t); }
   }
   dispose() {
@@ -891,6 +891,13 @@ class Ensemble extends U.Instrument {
 /* 악기 종류의 설정 (미리 듣기 음역 등): demo 대표 음 · low 베이스 줄 · solo 혼자 부는 악기 */
 U.instMeta = (kind, inst) => kind === 'acoustic' ? AC[inst] || AC.grand : kind === 'ensemble' ? EN[inst] || EN.strings : null;
 U.instDemo = (kind, inst) => (U.instMeta(kind, inst) || {}).demo || 60;
-U.acousticDSP = { render: renderNote, AC, EN, sampleSet, fetchPack, loaded: n => !!(SETS.get(n) && SETS.get(n).ok), cacheSize: () => cacheSamples, evictions: () => evicted, cacheCap: CACHE_CAP, busy: () => pwBusy.size, missed: () => missed.slice(), misses: () => missCount };
+/* 이 악기 종류에 녹음 샘플이 있나 (Acoustic은 같은 이름의 세트, Ensemble은 smp 세트가 다 있어야) */
+function hasRec(kind, inst) {
+  const S = U.SAMPLE_SETS || {};
+  if (kind === 'acoustic') return !!S[inst];
+  if (kind === 'ensemble') { const c = EN[inst]; return !!(c && c.smp && c.smp.length && c.smp.every(n => S[n])); }
+  return false;
+}
+U.acousticDSP = { render: renderNote, AC, EN, sampleSet, fetchPack, hasRec, loaded: n => !!(SETS.get(n) && SETS.get(n).ok), cacheSize: () => cacheSamples, evictions: () => evicted, cacheCap: CACHE_CAP, busy: () => pwBusy.size, missed: () => missed.slice(), misses: () => missCount };
 U.DEVICE_CLASSES = Object.assign(U.DEVICE_CLASSES || {}, { acoustic: Acoustic, ensemble: Ensemble });
 })(window.U = window.U || {});
