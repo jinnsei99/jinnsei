@@ -5,7 +5,7 @@
 const { h, ui, info, clamp, btn } = U;
 const LABEL_W = 104, HEAD_H = 18;
 let hold = null;   // 손가락으로 누르고 있는 찍힌 칸 (길게 누르면 세기 바꾸기)
-const ST = ui.steps = { res: +U.pref('stepRes', 0.25), vel: 100, row: 0 };
+const ST = ui.steps = { res: +U.pref('stepRes', 0.25), vel: 100, row: 0, scroll: null };   // scroll: 밀어 둔 자리 {id, left, top}
 let cur = null, cvGrid = null, cvLabels = null, main = null;
 let geo = null, index = new Map(), lastCol = null;
 
@@ -63,14 +63,29 @@ function build(editor, ref) {
   cvGrid = h('canvas', { class: 'st-grid', tabindex: '0' });
   main = h('div', { class: 'st-main' }, h('div', { class: 'st-inner' }, cvLabels, cvGrid));
   editor.append(main);
+  // 칸을 찍을 때마다 클립 칸을 통째로 다시 그려서, 밀어 둔 자리(뒤쪽 마디 · 아래쪽 패드)를 기억했다가 그대로 돌려놓는다
+  main.addEventListener('scroll', () => { ST.scroll = { id: c.id, left: main.scrollLeft, top: main.scrollTop }; }, { passive: true });
   // 두 손가락으로 밀면 칸이 많은 패턴을 옆으로·아래로 넘겨 봐요
   U.gestures.pan(main, { pan: (dx, dy) => { main.scrollLeft -= dx; main.scrollTop -= dy; } });
   info(cvGrid, '스텝 시퀀서', '칸을 누르면 찍히고, 찍힌 칸을 누르면 지워져요. 누른 채 끌면 이어서 찍거나 지워요. 오른쪽 클릭으로 세기를 바꿔요. 밝을수록 세게 쳐요.');
   info(cvLabels, '패드 줄', '이름을 누르면 소리를 들어 보고 그 줄을 골라요. 위의 "줄 채우기"는 고른 줄에 적용돼요. 글자는 패드에 정한 키예요.');
   bind();
-  new ResizeObserver(() => { layout(); draw(); }).observe(main);
+  // 다시 그리면 앞의 칸은 버려진다: 버려진 칸의 관찰자는 스스로 끊는다 (새 칸에 앞 클립의 자리를 덮어쓰지 않게)
+  const mine = main;
+  const ro = new ResizeObserver(() => {
+    if (main !== mine || !mine.isConnected) { ro.disconnect(); return; }
+    layout(); draw(); restoreScroll(mine, c);
+  });
+  ro.observe(mine);
   layout();
   draw();
+  restoreScroll(mine, c);
+}
+function restoreScroll(el, c) {
+  const sc = ST.scroll;
+  if (!el || !sc || sc.id !== c.id) return;
+  if (el.scrollLeft !== sc.left) el.scrollLeft = sc.left;
+  if (el.scrollTop !== sc.top) el.scrollTop = sc.top;
 }
 function layout() {
   if (!main) return;
