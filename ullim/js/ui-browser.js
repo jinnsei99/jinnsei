@@ -101,7 +101,7 @@ function items() {
           const s = U.soundAs(s0, f), stag = U.srcTag(U.soundSrc(s0), f);
           out.push({
             label: s.name, sub: U.DEV[s.kind].name + (special ? ' · ' + (s.user ? '내 사운드' : s.tags[0]) : ''), icon: 'sound', find: s.tags.join(' ') + (stag ? ' ' + stag.text : ''), dup: special,
-            key: tag + '/' + U.favs.key(s0), sound: s0, tag: stag,
+            key: tag + '/' + U.favs.key(s0), sound: s0, tag: stag, ver: f === 'all' && U.soundSrc(s0).both,
             drag: { type: 'sound', item: s }, load: () => A.loadSound(loadTarget('midi'), s),
             preview: () => previewDev(U.makeDevice(s.kind, { p: s.p, data: s.data }), U.soundRole(s), s),
             menu: [U.favs.menuItem(s0)].concat(s0.user ? U.mySoundItems(s0) : [])
@@ -240,7 +240,7 @@ function renderList(keepScroll) {
       return;
     }
     if (it.empty) { listEl.append(h('p', { class: 'br-empty', text: it.empty })); return; }
-    const row = h('div', { class: 'br-item' + (it.indent ? ' indent' : '') + (st.sel === i ? ' sel' : '') + (it.sound ? ' fav-row' : '') + (it.tag ? ' has-tag' : ''), role: 'option', dataset: { i, k: it.key || it.label + '/' + (it.sub || '') } }, icon(it.icon || 'file'), h('span', { class: 'bi-l', text: it.label }), it.tag ? h('span', { class: 'src-tag ' + it.tag.cls, text: it.tag.text }) : null, it.sub ? h('span', { class: 'bi-s', text: it.sub }) : null);
+    const row = h('div', { class: 'br-item' + (it.indent ? ' indent' : '') + (st.sel === i ? ' sel' : '') + (it.sound ? ' fav-row' : '') + (it.tag ? ' has-tag' : ''), role: 'option', dataset: { i, k: it.key || it.label + '/' + (it.sub || '') } }, icon(it.icon || 'file'), h('span', { class: 'bi-l', text: it.label }), it.ver ? verChips(it.sound) : it.tag ? h('span', { class: 'src-tag ' + it.tag.cls, text: it.tag.text }) : null, it.sub ? h('span', { class: 'bi-s', text: it.sub }) : null);
     if (it.sound) row.append(favStar(it.sound));
     info(row, it.label + (it.tag ? ' · ' + it.tag.text : ''), (it.infoText || it.sub || '') + (it.tag ? ' ' + SRC_INFO[it.tag.cls] : '') + (it.load ? ' 두 번 누르거나 Enter로 넣고, 끌어서 원하는 곳에 놓아요.' : ''));
     row.addEventListener('pointerdown', e => {
@@ -271,6 +271,19 @@ function topRow() {
     if (r.bottom > top + 1) return { k: el.dataset.k, off: r.top - top };
   }
   return null;
+}
+/* 녹음 · 합성 둘 다 되는 소리 줄의 단추 두 개: 누르면 그 방식으로 고른 트랙에 넣고 들려준다.
+   고른 트랙에 지금 이 소리가 있으면 그 방식에 불이 들어온다 */
+function verChips(s) {
+  const tr = U.selTrack ? U.selTrack() : null, d = tr && U.instrumentOf(tr);
+  const on = d && d.kind === s.kind && d.preset === s.name ? U.devSrc(d).cur : null;
+  const el = U.verChips(v => {
+    const x = U.soundAs(s, v);
+    A.loadSound(loadTarget('midi'), x);
+    if (st.preview) previewDev(U.makeDevice(x.kind, { p: x.p, data: x.data }), U.soundRole(x), x);
+  });
+  for (const b of el.children) b.setAttribute('aria-pressed', b.dataset.v === on ? 'true' : 'false');
+  return el;
 }
 /* 소리 줄의 별: 누르면 즐겨찾기에 넣고 뺀다 (줄을 고르거나 끌지 않게 막는다) */
 function favStar(s) {

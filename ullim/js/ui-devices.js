@@ -41,10 +41,24 @@ function audition(t, p) {
   setTimeout(() => e.liveOff(t.id, p), 650);
 }
 /* 넘겨 들어 보는 중이라 '최근 쓴 소리'에는 창을 닫을 때 남은 소리만 남긴다 */
-function chooseSound(t, s) {
-  A.loadSound(t.id, U.soundAs(s, U.srcFilter()), { browse: true });
+function chooseSound(t, s, ver) {
+  A.loadSound(t.id, U.soundAs(s, ver || U.srcFilter()), { browse: true });
   audition(t, demoPitch(s));
 }
+/* 녹음 · 합성 둘 다 되는 소리 옆의 작은 단추 두 개: 누르면 그 방식으로 넣는다 (onPick(v)) */
+function verChips(onPick, cls) {
+  const el = h('span', { class: 'src-ver' + (cls ? ' ' + cls : ''), role: 'group', 'aria-label': '녹음 · 합성' });
+  for (const v of ['rec', 'synth']) {
+    const b = h('button', { type: 'button', class: 'src-chip ' + v, text: U.SRC_LABEL[v], 'aria-pressed': 'false', dataset: { v } });
+    info(b, U.SRC_LABEL[v] + '으로 넣기', SRC_TIP[v]);
+    b.addEventListener('pointerdown', e => e.stopPropagation());
+    b.addEventListener('dblclick', e => e.stopPropagation());
+    b.addEventListener('click', e => { e.stopPropagation(); onPick(v); });
+    el.append(b);
+  }
+  return el;
+}
+U.verChips = verChips;
 const curSound = t => {
   const tr = U.trackById(pr(), t.id), d = tr && U.instrumentOf(tr);
   return d ? U.allSounds().find(s => isCurSound(d, s)) || null : null;
@@ -57,15 +71,20 @@ function soundMenu(s, at) {
 function soundPanel(t) {
   const body = h('div', { class: 'snd-panel' });
   let btns = [];
+  let chips = [];
   const mark = () => {
     const tr = U.trackById(pr(), t.id), d = tr && U.instrumentOf(tr);
     for (const [b, s] of btns) b.setAttribute('aria-pressed', isCurSound(d, s) ? 'true' : 'false');
+    // 지금 소리의 녹음 · 합성 단추 중 지금 방식에 불
+    const cur = d && U.devSrc(d).cur;
+    for (const [c, s] of chips) for (const x of c.children) x.setAttribute('aria-pressed', isCurSound(d, s) && x.dataset.v === cur ? 'true' : 'false');
   };
   // 내 사운드를 저장하거나 이름을 바꾸면 다시 채운다.
   // 묶음은 이름을 눌러 열고 닫는다: 처음엔 지금 소리가 든 묶음과 내 사운드만 펼치고, 누른 대로 기억한다
   const fill = () => {
     U.clear(body);
     btns = [];
+    chips = [];
     const tr = U.trackById(pr(), t.id), cur = tr && U.instrumentOf(tr);
     const SF = Object.assign({}, U.pref('sndFold', {}));
     const rows = [];
@@ -78,7 +97,7 @@ function soundPanel(t) {
     const openAll = btn({ text: '모두 펴기', cls: 'ghost sm', info: ['모두 펴기', '모든 묶음을 펼쳐요.'], onclick: () => rows.forEach(r => setShut(r, false, true)) });
     const shutAll = btn({ text: '모두 접기', cls: 'ghost sm', info: ['모두 접기', '모든 묶음을 접어서 묶음 이름만 보여요.'], onclick: () => rows.forEach(r => setShut(r, true, true)) });
     const f = U.srcFilter();
-    body.append(h('div', { class: 'snd-top' }, U.srcFilterSeg(), save, openAll, shutAll, h('span', { class: 'hint', text: '점(●)은 녹음 샘플로 치는 소리예요. 소리를 길게 누르거나 오른쪽 클릭하면 ★ 즐겨찾기에 넣어요.' + (U.mySounds.list().length ? ' 내 사운드는 거기서 이름을 바꾸고 지워요.' : '') })));
+    body.append(h('div', { class: 'snd-top' }, U.srcFilterSeg(), save, openAll, shutAll, h('span', { class: 'hint', text: '점(●)은 녹음 샘플로 치는 소리예요. 녹음과 합성 둘 다 되는 소리는 옆의 녹음 · 합성 단추로 골라요. 소리를 길게 누르거나 오른쪽 클릭하면 ★ 즐겨찾기에 넣어요.' + (U.mySounds.list().length ? ' 내 사운드는 거기서 이름을 바꾸고 지워요.' : '') })));
     // 맨 위에 ★ 즐겨찾기와 최근 쓴 소리 (처음엔 펼쳐 둔다). 녹음 · 합성 거르기를 따른다
     const special = U.favs.topGroups().map(([g, l]) => [g, l.filter(s => U.srcMatch(U.soundSrc(s), f))]).filter(([, l]) => l.length);
     const opens = ['내 사운드'].concat(special.map(x => x[0]));
@@ -90,7 +109,11 @@ function soundPanel(t) {
         b.addEventListener('click', () => { chooseSound(t, s); mark(); });
         b.addEventListener('contextmenu', e => { e.preventDefault(); soundMenu(s, { x: e.clientX, y: e.clientY }); });
         btns.push([b, s]);
-        bs.append(b);
+        if (f === 'all' && inf.both) {
+          const c = verChips(v => { chooseSound(t, s, v); mark(); });
+          chips.push([c, s]);
+          bs.append(h('span', { class: 'snd-ver-g' }, b, c));
+        } else bs.append(b);
       }
       const lab = h('button', { type: 'button', class: 'insts-g fold', dataset: { n: list.length }, text: g });
       const r = { g, lab, row: h('div', { class: 'insts-row' + (special.some(x => x[0] === g) ? ' special' : ''), dataset: { g } }, lab, bs) };
@@ -127,7 +150,25 @@ function soundPanel(t) {
   if (on) on[0].scrollIntoView({ block: 'nearest' });
   return dlg;
 }
-function soundPicker(t) {
+/* 이 트랙 악기의 녹음 | 합성 (Acoustic · Ensemble만. 녹음이 없는 악기는 합성만) */
+function verSeg(t) {
+  const tr = U.trackById(pr(), t.id) || t, d = tr && U.instrumentOf(tr);
+  if (!d || !(d.kind === 'acoustic' || d.kind === 'ensemble')) return null;
+  const inf = U.devSrc(d);
+  const el = U.seg([['rec', '녹음', SRC_TIP.rec], ['synth', '합성', SRC_TIP.synth]], inf.cur, v => {
+    const dd = U.instrumentOf(U.trackById(pr(), t.id));
+    if (dd && U.devSrc(dd).cur !== v) { A.setParam(dd.id, 'src', v, true); audition(t, U.instDemo(dd.kind, dd.p.inst)); }
+  }, 'src-seg snd-ver');
+  el.setAttribute('aria-label', '이 악기의 소리: 녹음 · 합성');
+  if (!inf.both) {
+    el.children[0].disabled = true;
+    el.classList.add('only');
+    info(el, '합성만 있어요', '이 악기는 녹음 샘플이 없어서 늘 계산한 소리로 쳐요.');
+  }
+  return el;
+}
+U.verSeg = verSeg;
+function soundPicker(t, o) {
   const d = U.instrumentOf(t);
   const b = btn({ text: (d ? d.preset || U.devName(d) : '악기 없음') + ' ▾', cls: 'sm snd-pick', title: '소리 고르기', info: ['소리 고르기', '이 트랙의 악기 소리를 바꿔요. 창에서 누를 때마다 바뀌고 한 음 들려줘요. ◀ ▶로 하나씩 넘길 수도 있어요. 되돌리기로 돌아가요.'], onclick: () => soundPanel(t) });
   // ◀ ▶로 넘기다 멈춘 소리는 조금 뒤에 '최근 쓴 소리'에 남긴다
@@ -142,7 +183,7 @@ function soundPicker(t) {
   };
   const prev = btn({ text: '◀', cls: 'sm snd-step', title: '앞 소리', onclick: () => step(-1) });
   const next = btn({ text: '▶', cls: 'sm snd-step', title: '다음 소리', onclick: () => step(1) });
-  return [b, prev, next];
+  return [b, prev, next, o && o.ver ? verSeg(t) : null];
 }
 U.soundPicker = soundPicker;
 U.soundPanel = soundPanel;

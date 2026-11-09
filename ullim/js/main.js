@@ -177,7 +177,7 @@ function renderDetail() {
   const fold = btn({ icon: 'detail', cls: 'ghost sm dt-fold', title: '아래 칸 접기', info: ['아래 칸 접기', '클립·장치 칸을 접거나 펼쳐요. 경계선을 두 번 눌러도 돼요.'], onclick: () => U.toggleDetail() });
   // 건반 악기 트랙이면 악기 소리를 여기서 바로 바꾼다 (클립을 고치다가도). 드럼·루프 패드는 장치의 키트 메뉴로 바꾼다
   const st = ui.detail === 'clip' ? r && r.track : t, sti = st && U.instrumentOf(st);
-  const pick = st && st.type === 'midi' && !(sti && (sti.kind === 'drums' || sti.kind === 'looppad')) ? h('span', { class: 'snd-pickers' }, h('span', { class: 'snd-l', text: '소리' }), ...U.soundPicker(st)) : null;
+  const pick = st && st.type === 'midi' && !(sti && (sti.kind === 'drums' || sti.kind === 'looppad')) ? h('span', { class: 'snd-pickers' }, h('span', { class: 'snd-l', text: '소리' }), ...U.soundPicker(st, { ver: true })) : null;
   els.dtHead.append(...[tabs, title, pick, h('span', { class: 'cb-flex' }), fold].filter(Boolean));
   if (!U.detailShown()) return;
   if (ui.detail === 'clip') U.clipView.render(els.dtBody);

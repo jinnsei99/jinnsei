@@ -635,7 +635,7 @@ function keysBar(bar, t, laySeg) {
   const vel = U.numBox({ cls: 'sm pv-vel', label: '세기', get: () => ui.padVel, set: (v, f) => { ui.padVel = v; if (f) U.setPref('padVel', v); }, fmt: v => '세기 ' + Math.round(v), parse: s => parseInt(String(s).replace(/[^\d]/g, ''), 10), min: 1, max: 127, step: 1, def: 110, range: 300 });
   info(vel, '세기', '건반을 칠 때의 세기(벨로시티)예요. 끌거나 두 번 눌러 입력해요.');
   const stop = btn({ icon: 'stop', text: '모두 멈춤', cls: 'sm', info: ['모두 멈춤', '이 트랙에서 울리는 음을 모두 멈춰요.'], onclick: () => { U.touchKeys.releaseAll(); stopAll(t); } });
-  bar.append(...[arm, sep(), ...U.soundPicker(t), sep(), laySeg, ...U.touchKeys.controls(t, render), sep(), vel, h('span', { class: 'cb-flex' }), bigBtn(), stop].filter(Boolean));
+  bar.append(...[arm, sep(), ...U.soundPicker(t, { ver: true }), sep(), laySeg, ...U.touchKeys.controls(t, render), sep(), vel, h('span', { class: 'cb-flex' }), bigBtn(), stop].filter(Boolean));
   return bar;
 }
 /* 악기 모양 화면의 도구 막대: 녹음 준비, 소리, 화면, 그 화면의 손잡이(자리 · 옥타브 …), 세기 */
@@ -645,7 +645,7 @@ function instBar(bar, t, lay, laySeg) {
   const vel = U.numBox({ cls: 'sm pv-vel', label: '세기', get: () => ui.padVel, set: (v, f) => { ui.padVel = v; if (f) U.setPref('padVel', v); }, fmt: v => '세기 ' + Math.round(v), parse: s => parseInt(String(s).replace(/[^\d]/g, ''), 10), min: 1, max: 127, step: 1, def: 110, range: 300 });
   info(vel, '세기', '칠 때의 가장 센 세기(벨로시티)예요. 줄을 빠르게 쓸수록, 음판·북의 가운데를 칠수록 이 세기에 가까워져요.');
   const stop = btn({ icon: 'stop', text: '모두 멈춤', cls: 'sm', info: ['모두 멈춤', '이 트랙에서 울리는 음을 모두 멈춰요.'], onclick: () => { U.play.stopAll(); stopAll(t); } });
-  bar.append(...[arm, sep(), ...U.soundPicker(t), sep(), laySeg, ...U.play.controls(t, lay, render), sep(), vel, h('span', { class: 'cb-flex' }), bigBtn(), stop].filter(Boolean));
+  bar.append(...[arm, sep(), ...U.soundPicker(t, { ver: true }), sep(), laySeg, ...U.play.controls(t, lay, render), sep(), vel, h('span', { class: 'cb-flex' }), bigBtn(), stop].filter(Boolean));
   return bar;
 }
 function emptyState() {
